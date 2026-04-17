@@ -211,10 +211,23 @@ jobs:
     needs: [build-binaries, build-python-client, build-java-client, build-docker]
     runs-on: ubuntu-latest
     steps:
-      - name: Download artifacts
+      - name: Download binaries artifact
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          name: binaries-linux-amd64
+          path: artifacts/binaries-linux-amd64
+
+      - name: Download Python client artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: python-client
+          path: artifacts/python-client
+
+      - name: Download Java client artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: java-client
+          path: artifacts/java-client
 
       - name: Flatten assets
         run: |
