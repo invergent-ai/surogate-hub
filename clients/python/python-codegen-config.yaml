@@ -1,0 +1,13 @@
+files:
+  client.mustache:
+    templateType: SupportingFiles
+    folder: surogate_hub_sdk
+    destinationFilename: client.py
+
+  requirements.mustache:
+    templateType: SupportingFiles
+    destinationFilename: requirements.txt
+
+  pyproject.mustache:
+    templateType: SupportingFiles
+    destinationFilename: pyproject.toml

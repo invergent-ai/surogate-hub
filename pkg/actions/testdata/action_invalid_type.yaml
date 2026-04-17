@@ -1,0 +1,8 @@
+name: invalid hook type
+on:
+  pre-merge:
+    branches:
+      - main
+hooks:
+  - id: no_temp
+    type: command

@@ -1,0 +1,26 @@
+---
+database:
+  type: local
+
+logging:
+  format: text
+  level: NONE
+  output: "-"
+
+auth:
+  encrypt:
+    secret_key: "required in config"
+
+blockstore:
+  type: s3
+  s3:
+    region: us-west-2
+    profile: other
+    credentials_file: /path/to/aws/credentials
+
+gateways:
+  s3:
+    domain_name: s3.example.com
+    region: us-east-1
+
+listen_address: "0.0.0.0:8005"

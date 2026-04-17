@@ -1,0 +1,34 @@
+listen_address: 0.0.0.0:8000
+database:
+  type: local
+  local:
+    path: ./config/db
+auth:
+  encrypt:
+    secret_key: 3c2iMoO05OQqCHOkF42aV2v1k5zldbJt
+blockstore:
+  type: local
+  signing:
+    secret_key: sk-1234
+  local:
+    import_enabled: true
+    path: ./config/store
+committed:
+  local_cache:
+    dir: ./config/cache
+ui:
+  enabled: true
+tls:
+  enabled: false
+  cert_file: ./config/certificate.crt
+  key_file: ./config/private.key
+gateways:
+  s3:
+    domain_name:
+    - lakefs-s3.densemax.local
+    - lakefs.statemesh.svc
+    - lakefs-s3.statemesh.svc
+cors:
+    allowed_origins:
+    - https://*.densemax.local
+    - https://localhost:4200

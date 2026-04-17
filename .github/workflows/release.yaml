@@ -1,0 +1,168 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-binaries:
+    name: Build lakefs & lakectl (linux/amd64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Resolve version
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate code (API, protos, UI)
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          make gen-ui gen-api gen-code
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ cmake ninja-build libssl-dev
+
+      - name: Build binaries
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: '1'
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          LDFLAGS="-X github.com/treeverse/lakefs/pkg/version.Version=${VERSION}"
+          mkdir -p dist
+          go build -ldflags "${LDFLAGS}" -o dist/lakefs ./cmd/lakefs
+          go build -ldflags "${LDFLAGS}" -o dist/lakectl ./cmd/lakectl
+
+      - name: Package archive
+        id: archive
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          NAME="lakefs_${VERSION}_linux_amd64"
+          mkdir -p out
+          tar -C dist -czf "out/${NAME}.tar.gz" lakefs lakectl
+          echo "asset=out/${NAME}.tar.gz" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-linux-amd64
+          path: ${{ steps.archive.outputs.asset }}
+          if-no-files-found: error
+
+  build-python-client:
+    name: Build Python client SDK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate & build Python SDK
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          make package-python-sdk
+
+      - name: Stage artifacts
+        run: |
+          mkdir -p out
+          cp clients/python/dist/* out/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-client
+          path: out/*
+          if-no-files-found: error
+
+  build-java-client:
+    name: Build Java client SDK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+
+      - name: Resolve version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Java client
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: make client-java
+
+      - name: Build Java client
+        working-directory: clients/java
+        run: mvn -B -DskipTests package
+
+      - name: Stage artifacts
+        run: |
+          mkdir -p out
+          find clients/java/target -maxdepth 1 -type f \( -name '*.jar' -o -name '*.pom' \) -exec cp {} out/ \;
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-client
+          path: out/*
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    needs: [build-binaries, build-python-client, build-java-client]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten assets
+        run: |
+          mkdir -p release-assets
+          find artifacts -type f -exec cp {} release-assets/ \;
+          ls -la release-assets
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: release-assets/*

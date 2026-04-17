@@ -1,0 +1,8 @@
+go 1.24
+
+use (
+	.
+	./webui
+	./modules/block/factory
+	./modules/config/factory
+)

@@ -1,0 +1,8 @@
+.bloop/
+.bsp/
+.metals/
+metals.sbt
+
+*egg-info/
+dist/
+build/
