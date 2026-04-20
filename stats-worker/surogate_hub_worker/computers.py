@@ -44,11 +44,16 @@ def register_view(con: duckdb.DuckDBPyConnection, urls: List[str]) -> None:
     con.execute("SET home_directory='/tmp'")
     con.execute("INSTALL httpfs")
     con.execute("LOAD httpfs")
-    # ``union_by_name=True`` fills missing columns with NULL when splits on
+    # ``union_by_name=true`` fills missing columns with NULL when splits on
     # the same parquet branch diverge in schema (e.g. an HF dataset where a
     # pipeline injects a ``synthetic`` split alongside ``train`` / ``test``).
-    # Without this DuckDB refuses the glob with a schema-mismatch error.
-    con.register(_VIEW_NAME, con.from_parquet(urls, union_by_name=True))
+    # Use the SQL form, not Python ``from_parquet(urls, union_by_name=True)``
+    # — the latter hangs in DuckDB 1.5.2 on multi-file fsspec-routed reads.
+    quoted = ", ".join("'" + u.replace("'", "''") + "'" for u in urls)
+    con.execute(
+        f"CREATE OR REPLACE VIEW {_VIEW_NAME} AS "
+        f"SELECT * FROM read_parquet([{quoted}], union_by_name=true)"
+    )
 
 
 def _ensure_table(arrow_result) -> pa.Table:
