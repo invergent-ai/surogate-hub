@@ -42,6 +42,8 @@ log = logging.getLogger(__name__)
 
 _SPLIT_NAMES = frozenset({"train", "test", "validation", "val", "eval", "dev"})
 _SUPPORTED_EXTS = frozenset({"parquet", "jsonl", "json", "csv"})
+# HF save_to_disk metadata files we should never treat as data shards.
+_HF_METADATA_FILES = frozenset({"dataset_info.json", "state.json", "dataset_dict.json"})
 _BATCH_SIZE = 10_000
 
 
@@ -119,15 +121,23 @@ class DatasetConverter:
 
         result = ConversionResult(configs_seen=["default"])
         for split_name, shard_paths in splits.items():
+            if not shard_paths:
+                log.warning(
+                    "no shards found for split %s under save_to_disk layout — skipping",
+                    split_name,
+                )
+                if result.error is None:
+                    result.error = f"no shards for split {split_name!r}"
+                continue
             try:
-                content, rows, schema = _arrow_shards_to_parquet(fs, shard_paths)
+                content, rows, schema = _shards_to_parquet(fs, shard_paths)
             except Exception as exc:
                 log.warning(
-                    "arrow->parquet failed for split %s: %s",
+                    "shard->parquet failed for split %s: %s",
                     split_name, exc, exc_info=True,
                 )
                 if result.error is None:
-                    result.error = f"arrow->parquet {split_name!r}: {exc}"
+                    result.error = f"shard->parquet {split_name!r}: {exc}"
                 continue
             result.splits.append(ConvertedSplit(
                 config_name="default", split_name=split_name,
@@ -176,18 +186,30 @@ class DatasetConverter:
             with fs.open(dict_path, "rb") as fh:
                 payload = json.load(fh)
             split_names = payload.get("splits") or []
-            return {name: self._arrow_shards(base_path, fs, name) for name in split_names}
+            return {name: self._split_shards(base_path, fs, name) for name in split_names}
         if fs.exists(f"{base_path}/dataset_info.json"):
-            return {"train": self._arrow_shards(base_path, fs, "")}
+            return {"train": self._split_shards(base_path, fs, "")}
         return {}
 
-    def _arrow_shards(self, base_path: str, fs, split_name: str) -> List[str]:
+    def _split_shards(self, base_path: str, fs, split_name: str) -> List[str]:
+        """Per-split shard URLs in a save_to_disk layout.
+
+        Accepts arrow IPC shards (the HF default) or any
+        ``_SUPPORTED_EXTS`` format (parquet/jsonl/csv) so splits added
+        outside HF's ``save_to_disk`` (e.g. a synthetic pipeline run
+        dropping a single parquet) convert to the mirror cleanly.
+        """
         split_dir = f"{base_path}/{split_name}" if split_name else base_path
-        return sorted(
-            _as_shub_url(e["name"])
-            for e in fs.ls(split_dir, detail=True)
-            if e["type"] == "file" and e["name"].endswith(".arrow")
-        )
+        urls: List[str] = []
+        for entry in fs.ls(split_dir, detail=True):
+            if entry["type"] != "file":
+                continue
+            name = entry["name"].rsplit("/", 1)[-1]
+            if name in _HF_METADATA_FILES:
+                continue
+            if name.endswith(".arrow") or _extension_of(name) in _SUPPORTED_EXTS:
+                urls.append(_as_shub_url(entry["name"]))
+        return sorted(urls)
 
 
 def _discover_source_layout(fs, base_path: str) -> Dict[str, List[str]]:
@@ -239,10 +261,31 @@ def _stream_urls_to_parquet(
     return _batches_to_parquet(_iter_urls_batches(fs, urls))
 
 
-def _arrow_shards_to_parquet(
+def _shards_to_parquet(
     fs, shard_paths: List[str],
 ) -> Tuple[bytes, int, pa.Schema]:
-    return _batches_to_parquet(_iter_arrow_shards(fs, shard_paths))
+    """save_to_disk shard → parquet, dispatching on the per-shard extension."""
+    return _batches_to_parquet(_iter_shard_batches(fs, shard_paths))
+
+
+def _iter_shard_batches(fs, shard_paths: List[str]):
+    """Yield batches from arrow/parquet/jsonl/csv shards.
+
+    HF ``save_to_disk`` emits arrow IPC shards; pipelines that add a
+    split out-of-band (e.g. a synthetic run writing a parquet) mix in
+    non-arrow shards.  Dispatch per-shard instead of assuming a single
+    format across the split.
+    """
+    for shard in shard_paths:
+        url = shard if "://" in shard else _as_shub_url(shard)
+        ext = _extension_of(url)
+        if ext == "arrow" or ext == "":
+            with fs.open(url, "rb") as fh:
+                reader = _open_arrow_reader(fh)
+                for batch in reader:
+                    yield batch
+        else:
+            yield from _iter_urls_batches(fs, [url])
 
 
 def _batches_to_parquet(batches) -> Tuple[bytes, int, pa.Schema]:
@@ -284,15 +327,6 @@ def _iter_urls_batches(fs, urls: List[str]):
                 raise ValueError(f"unsupported extension: {ext!r}")
 
 
-def _iter_arrow_shards(fs, shard_paths: List[str]):
-    for shard in shard_paths:
-        url = shard if "://" in shard else _as_shub_url(shard)
-        with fs.open(url, "rb") as fh:
-            reader = _open_arrow_reader(fh)
-            for batch in reader:
-                yield batch
-
-
 def _open_arrow_reader(fh):
     try:
         return ipc.open_stream(fh)
@@ -316,4 +350,3 @@ def _schema_to_hf_features(schema) -> Dict[str, Any]:
         return Features.from_arrow_schema(schema).to_dict()
     except Exception:  # pragma: no cover
         return {field.name: str(field.type) for field in schema}
-        return ipc.open_file(fh)
