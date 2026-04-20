@@ -25,3 +25,10 @@
 git_push.sh
 .git*
 .github/**
+
+# Hand-written extensions preserved across regeneration
+surogate_hub_sdk/fs/**
+surogate_hub_sdk/parquet/**
+surogate_hub_sdk/stats/**
+test/test_parquet.py
+test/test_stats.py

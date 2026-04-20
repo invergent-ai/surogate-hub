@@ -20,7 +20,6 @@ RUN $UPDATE_PACKAGES
 RUN $ADD_PACKAGES $BUILD_PACKAGES
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg go mod download
-RUN go install github.com/go-delve/delve/cmd/dlv@latest
 COPY . ./
 
 FROM build AS build-lakefs
@@ -30,32 +29,38 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -gcflags "all=-N -l" -ldflags "-X github.com/treeverse/lakefs/pkg/version.Version=${VERSION}" -o lakefs ./cmd/lakefs
 
-FROM build AS build-lakectl
-ARG VERSION TARGETOS TARGETARCH ADD_PACKAGES BUILD_PACKAGES UPDATE_PACKAGES
-RUN --mount=type=cache,target=/root/.cache/go-build \
-    --mount=type=cache,target=/go/pkg \
-    GOOS=$TARGETOS GOARCH=$TARGETARCH \
-    go build -ldflags "-X github.com/treeverse/lakefs/pkg/version.Version=${VERSION}" -o lakectl ./cmd/lakectl
-
-FROM $IMAGE_REPO:$IMAGE_TAG AS lakectl
+# Build the stats worker virtualenv on the same base as the final image so
+# the Python binary in the venv is ABI-compatible at runtime.
+FROM $IMAGE_REPO:$IMAGE_TAG AS build-stats-worker
 ARG ADD_PACKAGES IMAGE_PACKAGES UPDATE_PACKAGES
+RUN $UPDATE_PACKAGES \
+    && $ADD_PACKAGES ca-certificates python3 python3-venv python3-pip
+WORKDIR /src
+COPY clients/python /src/clients/python
+COPY stats-worker /src/stats-worker
+RUN python3 -m venv /opt/stats-worker-venv \
+    && /opt/stats-worker-venv/bin/pip install --no-cache-dir --upgrade pip \
+    && /opt/stats-worker-venv/bin/pip install --no-cache-dir \
+        /src/clients/python \
+        /src/stats-worker
+
+FROM $IMAGE_REPO:$IMAGE_TAG AS lakefs
+ARG ADD_PACKAGES IMAGE_PACKAGES UPDATE_PACKAGES
+LABEL org.opencontainers.image.source=https://github.com/invergent-ai/surogate-hub
 WORKDIR /app
 ENV PATH=/app:$PATH
-COPY --from=build-lakectl /build/lakectl /app/
-COPY --from=build-lakectl /go/bin/dlv /usr/local/bin/
-RUN $UPDATE_PACKAGES
-RUN $ADD_PACKAGES $IMAGE_PACKAGES
+RUN $UPDATE_PACKAGES \
+    && $ADD_PACKAGES $IMAGE_PACKAGES python3 \
+    && rm -rf /var/lib/apt/lists/*
 RUN addgroup --system lakefs && adduser --system --ingroup lakefs lakefs
+COPY --from=build-lakefs /build/lakefs /app/
+COPY ./scripts/wait-for /app/
+COPY --from=build-stats-worker /opt/stats-worker-venv /opt/stats-worker-venv
+RUN printf '#!/bin/sh\nexec /opt/stats-worker-venv/bin/python -m surogate_hub_worker "$@"\n' \
+        > /app/stats-worker \
+    && chmod +x /app/stats-worker
 USER lakefs
 WORKDIR /home/lakefs
-ENTRYPOINT ["/app/lakectl"]
-
-FROM lakectl AS lakefs
-LABEL org.opencontainers.image.source=https://github.com/invergent-ai/surogate-hub
-COPY ./scripts/wait-for /app/
-COPY --from=build-lakefs /build/lakefs /app/
 EXPOSE 8000/tcp
-EXPOSE 2345/tcp
-# ENTRYPOINT ["/usr/local/bin/dlv", "--listen=:2345", "--headless=true", "--api-version=2", "--accept-multiclient", "exec", "--", "/app/lakefs"]
 ENTRYPOINT ["/app/lakefs"]
 CMD ["run"]

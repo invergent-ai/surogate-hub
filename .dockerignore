@@ -5,6 +5,7 @@
 Makefile
 README.md
 clients/
+!clients/python/
 cmd/lakectl/lakefs
 cmd/lakefs/lakefs
 cover.out

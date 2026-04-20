@@ -86,9 +86,15 @@ tools: ## Install tools
 client-python: sdk-python
 
 sdk-python: api/swagger.yml  ## Generate SDK for Python client - openapi generator version 7.20.0
-	# remove the build folder as it also holds surogate_hub_sdk folder which keeps because we skip it during find
+	# Wipe everything generated from last run, except:
+	#   * files we hand-maintain (Gemfile, .openapi-generator-ignore, mustache templates, etc.)
+	#   * anything under surogate_hub_sdk/ (the generator rewrites its own files and .openapi-generator-ignore
+	#     protects our hand-written subpackages surogate_hub_sdk/stats and surogate_hub_sdk/parquet)
+	#   * our hand-written SDK tests (test_stats.py, test_parquet.py)
+	# NOTE: do NOT use `-depth` + `-name surogate_hub_sdk -prune` here — GNU find's `-delete` auto-enables
+	# `-depth`, which disables `-prune`, so descendants get deleted anyway. We guard with `-path` instead.
 	rm -rf clients/python/build; cd clients/python && \
-		find . -depth -name surogate_hub_sdk -prune -o ! \( -name Gemfile -or -name Gemfile.lock -or -name _config.yml -or -name .openapi-generator-ignore -or -name templates -or -name pyproject.mustache -or -name setup.mustache -or -name client.mustache -or -name requirements.mustache -or -name scripts -or -name pydantic.sh -or -name python-codegen-config.yaml \) -delete
+		find . -type f ! \( -path './surogate_hub_sdk/*' -or -name Gemfile -or -name Gemfile.lock -or -name _config.yml -or -name .openapi-generator-ignore -or -name pyproject.mustache -or -name setup.mustache -or -name client.mustache -or -name requirements.mustache -or -name pydantic.sh -or -name python-codegen-config.yaml -or -name test_stats.py -or -name test_parquet.py \) -delete
 	$(PY_OPENAPI_GENERATOR) generate \
 		-i /mnt/$< \
 		-g python \
