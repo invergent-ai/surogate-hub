@@ -461,6 +461,36 @@ func TestPostBinaryShardRegistersFileAndChunks(t *testing.T) {
 	require.JSONEq(t, `{"created_at":0,"size":12,"num_xorbs":1,"num_chunks":1}`, string(meta.Value))
 }
 
+func TestPostRootShardRegistersFileAndChunks(t *testing.T) {
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
+	handler := NewHandler(registry, WithXorbStore(xorbStore))
+
+	xorbHash := "111122223333444455556666777788889999aaaabbbbccccddddeeeeffff0000"
+	chunkHash := "aaaaaaaaaaaaaaaa000000000000000000000000000000000000000000000000"
+	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: 12,
+	}})
+	require.NoError(t, err)
+	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len("xorb-bytes")), bytes.NewReader([]byte("xorb-bytes")))
+	require.NoError(t, err)
+	shard := testXETBinaryShard(t, fileHash, xorbHash, chunkHash)
+
+	req := httptest.NewRequest(http.MethodPost, "/shards", bytes.NewReader(shard))
+	req.Header.Set("Content-Type", "application/octet-stream")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.JSONEq(t, `{"result":1}`, rec.Body.String())
+	hasShard, err := registry.HasShard(ctx, fileHash)
+	require.NoError(t, err)
+	require.True(t, hasShard)
+}
+
 func TestGetReconstructionReturnsV2Manifest(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))

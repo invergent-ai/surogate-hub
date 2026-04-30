@@ -157,6 +157,7 @@ func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler
 	r.Get("/v1/xorbs/{prefix}/{hash}", h.getXorbProxy)
 	r.With(h.requireXETScope("read")).Get("/v2/reconstructions/{file_hash}", h.getReconstruction)
 	r.Post("/v1/token", h.postToken)
+	r.With(h.requireXETScope("write")).Post("/shards", h.postShard)
 	r.With(h.requireXETScope("write")).Post("/v1/shards", h.postShard)
 	r.With(h.requireXETScope("write")).Post("/v1/xorbs/{prefix}/{hash}", h.postXorb)
 	return r
