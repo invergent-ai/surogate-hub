@@ -256,8 +256,14 @@ func setupClientWithAdmin(t testing.TB) (apigen.ClientWithResponsesInterface, *d
 	return clt, deps
 }
 
+func setupXETHandler(t testing.TB) (http.Handler, *dependencies) {
+	t.Helper()
+	viper.Set(config.BlockstoreTypeKey, block.BlockstoreTypeMem)
+	return setupHandler(t)
+}
+
 func TestServeXETChunkDedupRoute(t *testing.T) {
-	handler, deps := setupHandler(t)
+	handler, deps := setupXETHandler(t)
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(deps.catalog.KVStore)
 	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
@@ -286,7 +292,7 @@ func TestServeXETChunkDedupRoute(t *testing.T) {
 }
 
 func TestServeXETChunkDedupRouteRequiresAuth(t *testing.T) {
-	handler, deps := setupHandler(t)
+	handler, deps := setupXETHandler(t)
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(deps.catalog.KVStore)
 	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
@@ -305,7 +311,7 @@ func TestServeXETChunkDedupRouteRequiresAuth(t *testing.T) {
 }
 
 func TestServeXETXorbUploadRoute(t *testing.T) {
-	handler, _ := setupHandler(t)
+	handler, _ := setupXETHandler(t)
 	server := setupServer(t, handler)
 	clt := setupClientByEndpoint(t, server.URL, "", "")
 	cred := createDefaultAdminUser(t, clt)
@@ -335,7 +341,7 @@ func TestServeXETXorbUploadRoute(t *testing.T) {
 }
 
 func TestServeXETReconstructionRequiresLiveLogicalContext(t *testing.T) {
-	handler, deps := setupHandler(t)
+	handler, deps := setupXETHandler(t)
 	ctx := context.Background()
 	repo := testUniqueRepoName()
 	const branch = "main"
@@ -409,7 +415,7 @@ func TestServeXETReconstructionRequiresLiveLogicalContext(t *testing.T) {
 }
 
 func TestServeXETReconstructionUsesFileRefFallback(t *testing.T) {
-	handler, deps := setupHandler(t)
+	handler, deps := setupXETHandler(t)
 	ctx := context.Background()
 	repo := testUniqueRepoName()
 	const branch = "main"
