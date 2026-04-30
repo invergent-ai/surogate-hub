@@ -36,7 +36,3 @@ linters-settings:
   mnd:
     ignored-files:
       - 'pkg/actions/lua/.*'
-
-issues:
-  exclude-dirs:
-    - pkg/metastore/hive/gen-go
