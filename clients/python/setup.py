@@ -31,6 +31,9 @@ REQUIRES = [
     "fsspec >= 2024.0.0",
     "duckdb == 1.5.2",
 ]
+EXTRAS_REQUIRES = {
+    "xet": ["hf_xet >= 1.4.3"],
+}
 
 with open('README.md') as f:
     import re
@@ -50,6 +53,7 @@ setup(
     keywords=["OpenAPI", "OpenAPI-Generator", "Surogate Hub API"],
     python_requires=">=3.6",
     install_requires=REQUIRES,
+    extras_require=EXTRAS_REQUIRES,
     packages=find_packages(exclude=["test", "tests"]),
     include_package_data=True,
     license="Apache 2.0",
