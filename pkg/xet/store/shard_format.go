@@ -31,6 +31,11 @@ var internalNodeHashKey = [32]byte{
 	93, 221, 83, 111, 55, 199, 109, 210, 248, 99, 82, 230, 74, 83, 113, 63,
 }
 
+var dataHashKey = [32]byte{
+	102, 151, 245, 119, 91, 149, 80, 222, 49, 53, 203, 172, 165, 151, 24, 28,
+	157, 228, 33, 16, 155, 235, 43, 88, 180, 208, 176, 75, 147, 173, 242, 41,
+}
+
 type ShardInfo struct {
 	Files       []ShardFileInfo
 	XorbHashes  []string
@@ -289,6 +294,21 @@ func ComputeFileMerkleHash(chunks []ShardChunkInfo) (string, error) {
 	if len(chunks) == 0 {
 		return "0000000000000000000000000000000000000000000000000000000000000000", nil
 	}
+	xorbHash, err := ComputeXorbMerkleHash(chunks)
+	if err != nil {
+		return "", err
+	}
+	rawHash, err := mdbHexToRaw(xorbHash)
+	if err != nil {
+		return "", err
+	}
+	return keyedHashHex(make([]byte, 32), rawHash), nil
+}
+
+func ComputeXorbMerkleHash(chunks []ShardChunkInfo) (string, error) {
+	if len(chunks) == 0 {
+		return "0000000000000000000000000000000000000000000000000000000000000000", nil
+	}
 	hashes := append([]ShardChunkInfo(nil), chunks...)
 	for len(hashes) > 1 {
 		writeIndex := 0
@@ -309,7 +329,11 @@ func ComputeFileMerkleHash(chunks []ShardChunkInfo) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return keyedHashHex(make([]byte, 32), rawHash), nil
+	return mdbHexFromRaw(rawHash), nil
+}
+
+func ComputeDataHash(data []byte) string {
+	return keyedHashHex(dataHashKey[:], data)
 }
 
 func nextMergeCut(hashes []ShardChunkInfo) int {

@@ -1,6 +1,7 @@
 package cas
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -65,7 +66,23 @@ func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	result, err := h.xorbs.Put(r.Context(), chi.URLParam(r, "prefix"), chi.URLParam(r, "hash"), r.ContentLength, r.Body)
+	hash := chi.URLParam(r, "hash")
+	body := r.Body
+	size := r.ContentLength
+	if isXETHash(hash) {
+		data, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err := validateSerializedXorb(hash, data); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		body = io.NopCloser(bytes.NewReader(data))
+		size = int64(len(data))
+	}
+	result, err := h.xorbs.Put(r.Context(), chi.URLParam(r, "prefix"), hash, size, body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

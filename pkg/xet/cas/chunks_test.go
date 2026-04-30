@@ -68,6 +68,41 @@ func TestPostXorbStoresBytesAndReportsIdempotency(t *testing.T) {
 	require.Equal(t, []byte("xorb-bytes"), body)
 }
 
+func TestPostXorbRejectsMismatchedSerializedHash(t *testing.T) {
+	ctx := context.Background()
+	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
+	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
+	xorbHash, xorbBytes := testSerializedXorb(t, []byte("chunk-data"))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/0000000000000000000000000000000000000000000000000000000000000000", bytes.NewReader(xorbBytes))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	require.NotEqual(t, xorbHash, "0000000000000000000000000000000000000000000000000000000000000000")
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Contains(t, rec.Body.String(), "xorb hash does not match body")
+}
+
+func TestPostXorbAcceptsMatchingSerializedHash(t *testing.T) {
+	ctx := context.Background()
+	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
+	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
+	xorbHash, xorbBytes := testSerializedXorb(t, []byte("chunk-data"))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/"+xorbHash, bytes.NewReader(xorbBytes))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.JSONEq(t, `{"was_inserted":true}`, rec.Body.String())
+	reader, err := xorbStore.Get(ctx, "default", xorbHash)
+	require.NoError(t, err)
+	defer reader.Close()
+	body, err := io.ReadAll(reader)
+	require.NoError(t, err)
+	require.Equal(t, xorbBytes, body)
+}
+
 func TestPostShardRegistersChunkDedupIndex(t *testing.T) {
 	ctx := context.Background()
 	kvStore := kvtest.GetStore(ctx, t)
@@ -292,4 +327,50 @@ func testWriteU32(b *bytes.Buffer, value uint32) {
 
 func testWriteU64(b *bytes.Buffer, value uint64) {
 	_ = binary.Write(b, binary.LittleEndian, value)
+}
+
+func testSerializedXorb(t *testing.T, chunk []byte) (string, []byte) {
+	t.Helper()
+	chunkHash := xetstore.ComputeDataHash(chunk)
+	xorbHash, err := xetstore.ComputeXorbMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: uint64(len(chunk)),
+	}})
+	require.NoError(t, err)
+
+	var b bytes.Buffer
+	b.WriteByte(0)
+	writeThreeByteLE(&b, uint32(len(chunk)))
+	b.WriteByte(0)
+	writeThreeByteLE(&b, uint32(len(chunk)))
+	b.Write(chunk)
+
+	chunkBoundary := uint32(b.Len())
+	b.WriteString("XETBLOB")
+	b.WriteByte(1)
+	testWriteHash(t, &b, xorbHash)
+
+	b.WriteString("XBLBHSH")
+	b.WriteByte(0)
+	testWriteU32(&b, 1)
+	testWriteHash(t, &b, chunkHash)
+
+	b.WriteString("XBLBBND")
+	b.WriteByte(1)
+	testWriteU32(&b, 1)
+	testWriteU32(&b, chunkBoundary)
+	testWriteU32(&b, uint32(len(chunk)))
+	testWriteU32(&b, 1)
+	testWriteU32(&b, 92)
+	testWriteU32(&b, 48)
+	b.Write(make([]byte, 16))
+	testWriteU32(&b, 132)
+
+	return xorbHash, b.Bytes()
+}
+
+func writeThreeByteLE(b *bytes.Buffer, value uint32) {
+	b.WriteByte(byte(value))
+	b.WriteByte(byte(value >> 8))
+	b.WriteByte(byte(value >> 16))
 }

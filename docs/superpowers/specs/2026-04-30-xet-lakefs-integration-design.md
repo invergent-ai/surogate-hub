@@ -438,6 +438,7 @@ Last updated: 2026-04-30.
 - [x] Added `application/octet-stream` shard registration that validates referenced xorbs, registers extracted file hashes, and stores the raw binary shard bytes for dedup probes.
 - [x] Decode binary shard summary metadata into `xet/shard_meta/<file_hash>` during registration.
 - [x] Added real XET file MerkleHash recomputation from parsed chunk sequences and reject binary shards whose embedded file hash does not match.
+- [x] Added initial serialized-xorb upload validation for real 64-hex xorb hashes: parse V1 footer metadata, verify no-compression chunk hashes/boundaries, and reject mismatched xorb hashes.
 
 **In progress:**
 
@@ -450,10 +451,11 @@ Last updated: 2026-04-30.
   - [x] Run focused parser and CAS handler tests.
   - [x] Commit as focused binary-shard parser/registration/metadata/hash-verification slices.
 - [ ] Verify xorb upload content:
-  - [ ] Parse/decompress xorb payloads enough to recompute and validate the uploaded xorb hash.
+  - [x] Parse V1 xorb footer metadata and no-compression chunk payloads enough to recompute and validate the uploaded xorb hash.
+  - [ ] Add LZ4 and BG4-LZ4 decompression support for compressed xorb chunks.
   - [ ] Add `xet.verify.max_concurrent` CPU-bound verification control.
   - [ ] Keep idempotent duplicate-upload behavior unchanged.
-  - [ ] Add focused CAS tests for mismatched xorb body hash and duplicate upload behavior.
+  - [x] Add focused CAS tests for matching and mismatched serialized xorb body hashes while preserving duplicate upload behavior.
 
 **Remaining TODOs:**
 
