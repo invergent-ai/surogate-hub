@@ -15,6 +15,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -27,6 +28,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-openapi/swag"
 	"github.com/go-test/deep"
+	"github.com/golang-jwt/jwt"
 	"github.com/hashicorp/go-multierror"
 	nanoid "github.com/matoous/go-nanoid/v2"
 	"github.com/rs/xid"
@@ -42,6 +44,7 @@ import (
 	"github.com/treeverse/lakefs/pkg/config"
 	"github.com/treeverse/lakefs/pkg/graveler"
 	"github.com/treeverse/lakefs/pkg/httputil"
+	"github.com/treeverse/lakefs/pkg/kv"
 	"github.com/treeverse/lakefs/pkg/permissions"
 	"github.com/treeverse/lakefs/pkg/stats"
 	"github.com/treeverse/lakefs/pkg/testutil"
@@ -144,6 +147,83 @@ func TestController_LinkXETPhysicalAddressRejectsMissingShard(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, resp.StatusCode())
 }
 
+func TestController_LinkXETPhysicalAddressCrashAfterGravelerWrite(t *testing.T) {
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	const path = "models/checkpoint.bin"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+
+	chunk := []byte("hello world!")
+	xorbHash, xorbBytes := testAPISerializedXorb(t, chunk)
+	chunkHash := xetstore.ComputeDataHash(chunk)
+	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: uint64(len(chunk)),
+	}})
+	require.NoError(t, err)
+	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_lakefs_xet")
+	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
+	require.NoError(t, err)
+	registry := xetstore.NewRegistry(deps.catalog.KVStore)
+	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: fileHash,
+		Shard:    testAPIXETBinaryShard(t, fileHash, xorbHash, chunkHash, uint32(len(chunk))),
+	})
+	require.NoError(t, err)
+
+	failingStore := &failOnceFileRefSetStore{Store: deps.catalog.KVStore}
+	deps.catalog.KVStore = failingStore
+	physicalAddress := "xet://" + fileHash
+	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, repo, branch, &apigen.LinkPhysicalAddressParams{
+		Path: path,
+	}, apigen.LinkPhysicalAddressJSONRequestBody{
+		Checksum:  "checksum-a",
+		SizeBytes: int64(len(chunk)),
+		Staging: apigen.StagingLocation{
+			PhysicalAddress: &physicalAddress,
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode())
+
+	entry, err := deps.catalog.GetEntry(ctx, repo, branch, path, catalog.GetEntryParams{})
+	require.NoError(t, err)
+	require.Equal(t, physicalAddress, entry.PhysicalAddress)
+	refs, err := xetstore.NewRegistry(deps.catalog.KVStore).ListFileRefs(ctx, fileHash, 32)
+	require.NoError(t, err)
+	require.Empty(t, refs)
+
+	getResp, err := clt.GetObjectWithResponse(ctx, repo, branch, &apigen.GetObjectParams{Path: path})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, getResp.StatusCode(), "body: %s", string(getResp.Body))
+	require.Equal(t, chunk, getResp.Body)
+
+	token := signedXETTokenForTest(t, "admin")
+	req, err := http.NewRequest(
+		http.MethodGet,
+		deps.server.URL+"/xet/v2/reconstructions/"+fileHash+"?repo="+url.QueryEscape(repo)+"&ref=main&path="+url.QueryEscape(path),
+		nil,
+	)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+token)
+	reconstructionResp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer reconstructionResp.Body.Close()
+	require.Equal(t, http.StatusOK, reconstructionResp.StatusCode)
+
+	refs, err = xetstore.NewRegistry(deps.catalog.KVStore).ListFileRefs(ctx, fileHash, 32)
+	require.NoError(t, err)
+	require.Contains(t, refs, xetstore.FileRef{
+		FileHash: fileHash,
+		Repo:     repo,
+		Ref:      branch,
+		Path:     path,
+	})
+}
+
 func TestController_GetObjectXETPhysicalAddressRange(t *testing.T) {
 	clt, deps := setupClientWithAdmin(t)
 	ctx := context.Background()
@@ -187,6 +267,33 @@ func TestController_GetObjectXETPhysicalAddressRange(t *testing.T) {
 	require.NoError(t, err)
 	require.Equalf(t, http.StatusPartialContent, resp.StatusCode(), "body: %s", string(resp.Body))
 	require.Equal(t, []byte("lo wor"), resp.Body)
+}
+
+type failOnceFileRefSetStore struct {
+	kv.Store
+	failed bool
+}
+
+func (s *failOnceFileRefSetStore) Set(ctx context.Context, partitionKey, key, value []byte) error {
+	if string(partitionKey) == xetstore.Partition && strings.HasPrefix(string(key), "xet/file_refs/") && !s.failed {
+		s.failed = true
+		return errors.New("injected file_refs failure")
+	}
+	return s.Store.Set(ctx, partitionKey, key, value)
+}
+
+func signedXETTokenForTest(t testing.TB, subject string) string {
+	t.Helper()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":   subject,
+		"aud":   "xet",
+		"scope": "read write",
+		"iat":   time.Now().Unix(),
+		"exp":   time.Now().Add(time.Hour).Unix(),
+	})
+	signed, err := token.SignedString([]byte("some secret"))
+	require.NoError(t, err)
+	return signed
 }
 
 func TestController_ListRepositoriesHandler(t *testing.T) {
