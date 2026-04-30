@@ -9,10 +9,10 @@ import (
 	"strconv"
 
 	"github.com/cockroachdb/pebble/sstable"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/committed"
-	"github.com/treeverse/lakefs/pkg/ident"
-	"github.com/treeverse/lakefs/pkg/pyramid"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/committed"
+	"github.com/invergent-ai/surogate-hub/pkg/ident"
+	"github.com/invergent-ai/surogate-hub/pkg/pyramid"
 )
 
 const (

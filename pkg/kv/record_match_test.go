@@ -4,10 +4,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/actions"
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/actions"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 

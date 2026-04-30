@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/go-openapi/swag"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/testutil"
 )
 
 const RepoName = "repo1"

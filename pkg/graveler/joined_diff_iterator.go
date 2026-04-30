@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 // JoinedDiffIterator calculate the union diff between 2 iterators.

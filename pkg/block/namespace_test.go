@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
 )
 
 func TestResolveNamespace(t *testing.T) {

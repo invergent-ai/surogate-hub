@@ -3,7 +3,7 @@ package pyramid
 import (
 	"sync"
 
-	"github.com/treeverse/lakefs/pkg/pyramid/params"
+	"github.com/invergent-ai/surogate-hub/pkg/pyramid/params"
 )
 
 // fileTracker tracks file open requests in TierFS to avoid race conditions with cache rejection/eviction

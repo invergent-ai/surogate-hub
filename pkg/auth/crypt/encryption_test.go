@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/auth/crypt"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/crypt"
 )
 
 func TestSecretStore_Encrypt(t *testing.T) {

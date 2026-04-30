@@ -11,16 +11,16 @@ import (
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/go-test/deep"
+	blockfactory "github.com/invergent-ai/surogate-hub/modules/block/factory"
+	configfactory "github.com/invergent-ai/surogate-hub/modules/config/factory"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block/gs"
+	"github.com/invergent-ai/surogate-hub/pkg/block/local"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 	"github.com/spf13/viper"
-	blockfactory "github.com/treeverse/lakefs/modules/block/factory"
-	configfactory "github.com/treeverse/lakefs/modules/config/factory"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/block/gs"
-	"github.com/treeverse/lakefs/pkg/block/local"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/testutil"
 )
 
 func newConfigFromFile(fn string) (*config.BaseConfig, error) {

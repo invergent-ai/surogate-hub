@@ -5,7 +5,7 @@ package committed
 import (
 	"context"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
 // Iterator iterates over all Range headers and values of a MetaRange, allowing seeking by entire

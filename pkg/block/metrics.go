@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/httputil"
+	"github.com/invergent-ai/surogate-hub/pkg/httputil"
 )
 
 type MetricsAdapter struct {

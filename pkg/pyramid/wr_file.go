@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 // WRFile pyramid wrapper for os.file that triggers pyramid hooks for file actions.

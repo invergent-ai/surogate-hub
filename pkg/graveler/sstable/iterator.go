@@ -2,7 +2,7 @@ package sstable
 
 import (
 	"github.com/cockroachdb/pebble/sstable"
-	"github.com/treeverse/lakefs/pkg/graveler/committed"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/committed"
 )
 
 // Iterator returns ordered iteration of the SSTable entries

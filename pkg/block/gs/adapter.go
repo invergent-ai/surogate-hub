@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	"google.golang.org/api/iterator"
 )
 

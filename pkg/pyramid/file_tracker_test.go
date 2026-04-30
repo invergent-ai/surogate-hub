@@ -3,9 +3,9 @@ package pyramid_test
 import (
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/pyramid"
+	"github.com/invergent-ai/surogate-hub/pkg/pyramid/params"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/pyramid"
-	"github.com/treeverse/lakefs/pkg/pyramid/params"
 )
 
 var testFileMap map[string]bool

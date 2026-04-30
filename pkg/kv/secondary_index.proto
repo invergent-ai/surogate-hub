@@ -1,5 +1,5 @@
 syntax = "proto3";
-option go_package = "github.com/treeverse/lakefs/kv";
+option go_package = "github.com/invergent-ai/surogate-hub/kv";
 
 package io.treeverse.lakefs.kv;
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/actions/lua/path"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/path"
 )
 
 func TestIsHidden(t *testing.T) {

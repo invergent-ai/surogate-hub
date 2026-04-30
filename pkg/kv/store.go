@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
 )
 
 // KV Schema versions

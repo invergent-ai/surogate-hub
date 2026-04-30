@@ -1,5 +1,5 @@
 syntax = "proto3";
-option go_package = "github.com/treeverse/lakefs/actions";
+option go_package = "github.com/invergent-ai/surogate-hub/actions";
 
 import "google/protobuf/timestamp.proto";
 

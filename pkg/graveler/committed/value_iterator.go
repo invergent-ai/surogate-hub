@@ -1,6 +1,6 @@
 package committed
 
-import "github.com/treeverse/lakefs/pkg/graveler"
+import "github.com/invergent-ai/surogate-hub/pkg/graveler"
 
 type valueIterator struct {
 	it Iterator

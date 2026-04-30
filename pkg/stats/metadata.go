@@ -3,13 +3,13 @@ package stats
 import (
 	"context"
 
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/cloud"
-	"github.com/treeverse/lakefs/pkg/cloud/aws"
-	"github.com/treeverse/lakefs/pkg/cloud/azure"
-	"github.com/treeverse/lakefs/pkg/cloud/gcp"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/cloud"
+	"github.com/invergent-ai/surogate-hub/pkg/cloud/aws"
+	"github.com/invergent-ai/surogate-hub/pkg/cloud/azure"
+	"github.com/invergent-ai/surogate-hub/pkg/cloud/gcp"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 const BlockstoreTypeKey = "blockstore_type"

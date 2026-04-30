@@ -3,7 +3,7 @@ package stress_test
 import (
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/testutil/stress"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil/stress"
 )
 
 func TestHistogram_Add(t *testing.T) {

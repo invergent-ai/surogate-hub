@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/fileutil"
+	"github.com/invergent-ai/surogate-hub/pkg/local"
+	"github.com/invergent-ai/surogate-hub/pkg/uri"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/fileutil"
-	"github.com/treeverse/lakefs/pkg/local"
-	"github.com/treeverse/lakefs/pkg/uri"
 	"golang.org/x/exp/slices"
 )
 

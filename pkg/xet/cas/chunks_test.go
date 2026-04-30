@@ -20,14 +20,14 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	"github.com/invergent-ai/surogate-hub/pkg/block/mem"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
+	"github.com/invergent-ai/surogate-hub/pkg/xet/reconstruct"
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 	"github.com/pierrec/lz4/v4"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/auth"
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	"github.com/treeverse/lakefs/pkg/block/mem"
-	"github.com/treeverse/lakefs/pkg/kv/kvtest"
-	"github.com/treeverse/lakefs/pkg/xet/reconstruct"
-	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 func TestPostTokenIssuesScopedJWT(t *testing.T) {

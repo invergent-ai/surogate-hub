@@ -5,10 +5,10 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block/blocktest"
+	"github.com/invergent-ai/surogate-hub/pkg/block/gs"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/block/blocktest"
-	"github.com/treeverse/lakefs/pkg/block/gs"
-	"github.com/treeverse/lakefs/pkg/config"
 )
 
 func newAdapter() *gs.Adapter {

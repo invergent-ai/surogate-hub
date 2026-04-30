@@ -9,9 +9,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	"github.com/treeverse/lakefs/pkg/gateway/errors"
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 // Implements the "signing protocol" as exists at aws-sdk-java @ 1.12.390 (commit 07926f08a70).

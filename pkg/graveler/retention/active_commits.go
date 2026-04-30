@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 type CommitNode struct {

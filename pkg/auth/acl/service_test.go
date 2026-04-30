@@ -9,15 +9,15 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	authacl "github.com/invergent-ai/surogate-hub/pkg/auth/acl"
+	authtestutil "github.com/invergent-ai/surogate-hub/pkg/auth/acl/testutil"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/crypt"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	authparams "github.com/invergent-ai/surogate-hub/pkg/auth/params"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/auth"
-	authacl "github.com/treeverse/lakefs/pkg/auth/acl"
-	authtestutil "github.com/treeverse/lakefs/pkg/auth/acl/testutil"
-	"github.com/treeverse/lakefs/pkg/auth/crypt"
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	authparams "github.com/treeverse/lakefs/pkg/auth/params"
-	"github.com/treeverse/lakefs/pkg/kv/kvtest"
-	"github.com/treeverse/lakefs/pkg/permissions"
 )
 
 const creationDate = 12345678

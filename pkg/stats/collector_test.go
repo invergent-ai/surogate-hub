@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/invergent-ai/surogate-hub/pkg/stats"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/stats"
 )
 
 type mockSender struct {

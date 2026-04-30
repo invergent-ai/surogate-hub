@@ -54,7 +54,7 @@ jobs:
           CGO_ENABLED: '1'
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          LDFLAGS="-X github.com/treeverse/lakefs/pkg/version.Version=${VERSION}"
+          LDFLAGS="-X github.com/invergent-ai/surogate-hub/pkg/version.Version=${VERSION}"
           mkdir -p dist
           go build -ldflags "${LDFLAGS}" -o dist/lakefs ./cmd/lakefs
           go build -ldflags "${LDFLAGS}" -o dist/lakectl ./cmd/lakectl

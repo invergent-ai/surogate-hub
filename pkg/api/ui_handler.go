@@ -10,11 +10,11 @@ import (
 
 	"github.com/NYTimes/gziphandler"
 	gomime "github.com/cubewise-code/go-mime"
-	"github.com/treeverse/lakefs/pkg/api/params"
-	gwerrors "github.com/treeverse/lakefs/pkg/gateway/errors"
-	"github.com/treeverse/lakefs/pkg/gateway/operations"
-	"github.com/treeverse/lakefs/pkg/gateway/sig"
-	"github.com/treeverse/lakefs/webui"
+	"github.com/invergent-ai/surogate-hub/pkg/api/params"
+	gwerrors "github.com/invergent-ai/surogate-hub/pkg/gateway/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/operations"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/sig"
+	"github.com/invergent-ai/surogate-hub/webui"
 )
 
 const (

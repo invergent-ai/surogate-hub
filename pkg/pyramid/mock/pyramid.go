@@ -10,7 +10,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	pyramid "github.com/treeverse/lakefs/pkg/pyramid"
+	pyramid "github.com/invergent-ai/surogate-hub/pkg/pyramid"
 )
 
 // MockFS is a mock of FS interface.

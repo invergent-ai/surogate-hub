@@ -3,9 +3,9 @@ package kv
 import (
 	"context"
 
+	"github.com/invergent-ai/surogate-hub/pkg/httputil"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/treeverse/lakefs/pkg/httputil"
 )
 
 var (

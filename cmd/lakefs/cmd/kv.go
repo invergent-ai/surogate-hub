@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"os"
 
-	_ "github.com/treeverse/lakefs/pkg/actions"
-	_ "github.com/treeverse/lakefs/pkg/auth"
-	_ "github.com/treeverse/lakefs/pkg/auth/model"
-	_ "github.com/treeverse/lakefs/pkg/graveler"
+	_ "github.com/invergent-ai/surogate-hub/pkg/actions"
+	_ "github.com/invergent-ai/surogate-hub/pkg/auth"
+	_ "github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	_ "github.com/invergent-ai/surogate-hub/pkg/graveler"
 
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
 	"github.com/spf13/cobra"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
 )
 
 const (

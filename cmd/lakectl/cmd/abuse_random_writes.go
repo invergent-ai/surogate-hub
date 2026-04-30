@@ -6,8 +6,8 @@ import (
 	"os"
 	"syscall"
 
+	"github.com/invergent-ai/surogate-hub/pkg/testutil/stress"
 	"github.com/spf13/cobra"
-	"github.com/treeverse/lakefs/pkg/testutil/stress"
 )
 
 var abuseRandomWritesCmd = &cobra.Command{

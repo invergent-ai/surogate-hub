@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
+	"github.com/invergent-ai/surogate-hub/pkg/api/helpers"
+	"github.com/invergent-ai/surogate-hub/pkg/local"
+	"github.com/invergent-ai/surogate-hub/pkg/uri"
 	"github.com/spf13/cobra"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
-	"github.com/treeverse/lakefs/pkg/api/helpers"
-	"github.com/treeverse/lakefs/pkg/local"
-	"github.com/treeverse/lakefs/pkg/uri"
 )
 
 var fsUploadCmd = &cobra.Command{

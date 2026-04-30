@@ -3,8 +3,8 @@ package auth
 import (
 	"strings"
 
-	"github.com/treeverse/lakefs/pkg/auth/wildcard"
-	"github.com/treeverse/lakefs/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/wildcard"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
 )
 
 type Arn struct {

@@ -4,7 +4,7 @@ import (
 	"encoding/xml"
 	"net/http"
 
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
 )
 
 /*

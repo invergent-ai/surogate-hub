@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/ref"
-	"github.com/treeverse/lakefs/pkg/testutil"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/ref"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 )
 
 type MockCommitGetter struct {

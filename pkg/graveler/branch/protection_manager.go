@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/gobwas/glob"
-	"github.com/treeverse/lakefs/pkg/cache"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/settings"
+	"github.com/invergent-ai/surogate-hub/pkg/cache"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/settings"
 )
 
 const ProtectionSettingKey = "protected_branches"

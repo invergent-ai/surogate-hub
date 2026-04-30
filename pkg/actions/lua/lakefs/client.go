@@ -13,11 +13,11 @@ import (
 
 	"github.com/Shopify/go-lua"
 	"github.com/go-chi/chi/v5"
-	"github.com/treeverse/lakefs/pkg/actions/lua/util"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
-	"github.com/treeverse/lakefs/pkg/auth"
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	"github.com/treeverse/lakefs/pkg/version"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/util"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	"github.com/invergent-ai/surogate-hub/pkg/version"
 )
 
 // LuaClientUserAgent is the default user agent that will be sent to the Surogate Hub server instance

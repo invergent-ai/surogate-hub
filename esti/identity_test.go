@@ -3,8 +3,8 @@ package esti
 import (
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
 )
 
 func TestIdentity(t *testing.T) {

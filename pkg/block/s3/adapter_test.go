@@ -6,11 +6,11 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block/blocktest"
+	"github.com/invergent-ai/surogate-hub/pkg/block/params"
+	s3a "github.com/invergent-ai/surogate-hub/pkg/block/s3"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/block/blocktest"
-	"github.com/treeverse/lakefs/pkg/block/params"
-	s3a "github.com/treeverse/lakefs/pkg/block/s3"
-	"github.com/treeverse/lakefs/pkg/config"
 )
 
 func getS3BlockAdapter(t *testing.T, opts []s3a.AdapterOption) *s3a.Adapter {

@@ -1,6 +1,6 @@
 package local
 
-import "github.com/treeverse/lakefs/pkg/api/apiutil"
+import "github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
 
 const (
 	// DefaultDirectoryPermissions Octal representation of default folder permissions

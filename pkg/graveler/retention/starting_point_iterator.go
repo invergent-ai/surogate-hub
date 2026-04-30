@@ -1,6 +1,6 @@
 package retention
 
-import "github.com/treeverse/lakefs/pkg/graveler"
+import "github.com/invergent-ai/surogate-hub/pkg/graveler"
 
 // A GCStartingPoint represents a commit from which the GC algorithm should start scanning.
 // It could be either a branch HEAD, or a dangling commit.

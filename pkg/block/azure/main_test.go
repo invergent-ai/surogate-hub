@@ -11,8 +11,8 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/benburkert/dns"
+	"github.com/invergent-ai/surogate-hub/pkg/block/azure"
 	"github.com/ory/dockertest/v3"
-	"github.com/treeverse/lakefs/pkg/block/azure"
 )
 
 const (

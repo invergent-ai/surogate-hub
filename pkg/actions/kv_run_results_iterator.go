@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/treeverse/lakefs/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
 )
 
 var ErrParamConflict = errors.New("parameters conflict")

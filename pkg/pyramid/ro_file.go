@@ -3,7 +3,7 @@ package pyramid
 import (
 	"os"
 
-	"github.com/treeverse/lakefs/pkg/pyramid/params"
+	"github.com/invergent-ai/surogate-hub/pkg/pyramid/params"
 )
 
 // ROFile is pyramid wrapper for os.File that implements io.ReadCloser

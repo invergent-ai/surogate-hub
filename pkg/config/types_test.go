@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 	"github.com/mitchellh/mapstructure"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/testutil"
 )
 
 type StringsStruct struct {

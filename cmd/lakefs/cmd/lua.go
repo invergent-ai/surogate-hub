@@ -5,9 +5,9 @@ import (
 	"os"
 
 	"github.com/Shopify/go-lua"
+	lualibs "github.com/invergent-ai/surogate-hub/pkg/actions/lua"
+	luautil "github.com/invergent-ai/surogate-hub/pkg/actions/lua/util"
 	"github.com/spf13/cobra"
-	lualibs "github.com/treeverse/lakefs/pkg/actions/lua"
-	luautil "github.com/treeverse/lakefs/pkg/actions/lua/util"
 )
 
 var luaCmd = &cobra.Command{

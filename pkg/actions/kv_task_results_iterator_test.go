@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/actions"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/actions"
-	"github.com/treeverse/lakefs/pkg/kv/kvtest"
 )
 
 func TestTaskResultsIterator(t *testing.T) {

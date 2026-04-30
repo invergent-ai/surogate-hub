@@ -8,16 +8,16 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/treeverse/lakefs/pkg/auth"
-	authacl "github.com/treeverse/lakefs/pkg/auth/acl"
-	"github.com/treeverse/lakefs/pkg/auth/crypt"
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	authparams "github.com/treeverse/lakefs/pkg/auth/params"
-	"github.com/treeverse/lakefs/pkg/auth/wildcard"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	authacl "github.com/invergent-ai/surogate-hub/pkg/auth/acl"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/crypt"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	authparams "github.com/invergent-ai/surogate-hub/pkg/auth/params"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/wildcard"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
 )
 
 const (

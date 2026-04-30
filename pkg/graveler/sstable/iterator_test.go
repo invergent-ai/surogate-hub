@@ -8,9 +8,9 @@ import (
 	"github.com/cockroachdb/pebble"
 	pebblesst "github.com/cockroachdb/pebble/sstable"
 	"github.com/golang/mock/gomock"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/committed"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/sstable"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/graveler/committed"
-	"github.com/treeverse/lakefs/pkg/graveler/sstable"
 )
 
 func TestIteratorSuccess(t *testing.T) {

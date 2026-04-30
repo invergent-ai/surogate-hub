@@ -11,9 +11,9 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/go-openapi/swag"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
 )
 
 func TestCreatePresignMultipartUpload(t *testing.T) {

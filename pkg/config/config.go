@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
+	apiparams "github.com/invergent-ai/surogate-hub/pkg/api/params"
+	blockparams "github.com/invergent-ai/surogate-hub/pkg/block/params"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	"github.com/mitchellh/go-homedir"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
-	apiparams "github.com/treeverse/lakefs/pkg/api/params"
-	blockparams "github.com/treeverse/lakefs/pkg/block/params"
-	"github.com/treeverse/lakefs/pkg/logging"
 )
 
 var (

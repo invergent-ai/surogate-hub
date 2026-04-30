@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/uri"
+	"github.com/invergent-ai/surogate-hub/pkg/uri"
 )
 
 func strp(v string) *string {

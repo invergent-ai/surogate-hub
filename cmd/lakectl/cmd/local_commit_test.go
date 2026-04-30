@@ -10,11 +10,11 @@ import (
 	"testing"
 
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
+	"github.com/invergent-ai/surogate-hub/pkg/local"
+	"github.com/invergent-ai/surogate-hub/pkg/uri"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
-	"github.com/treeverse/lakefs/pkg/local"
-	"github.com/treeverse/lakefs/pkg/uri"
 )
 
 const (

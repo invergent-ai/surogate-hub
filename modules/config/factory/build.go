@@ -1,7 +1,7 @@
 package factory
 
 import (
-	"github.com/treeverse/lakefs/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
 )
 
 func BuildConfig(cfgType string) (config.Config, error) {

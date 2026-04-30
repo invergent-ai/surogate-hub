@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/gateway"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway"
 )
 
 func TestParseRequestParts(t *testing.T) {

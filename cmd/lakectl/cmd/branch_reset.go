@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
 	"github.com/spf13/cobra"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
 )
 
 // lakectl branch reset lakefs://myrepo/main --commit commitId --prefix path --object path

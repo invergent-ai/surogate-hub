@@ -5,7 +5,7 @@ import (
 	"io"
 	"path"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
 type HookOutputWriter struct {

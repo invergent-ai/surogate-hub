@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/api/helpers"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/helpers"
 
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
 	"github.com/ory/dockertest/v3"

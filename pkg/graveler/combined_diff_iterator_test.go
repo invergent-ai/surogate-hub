@@ -9,9 +9,9 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
-	"github.com/treeverse/lakefs/pkg/catalog/testutils"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/mock"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog/testutils"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/mock"
 )
 
 func val(key string, id string) *graveler.ValueRecord {

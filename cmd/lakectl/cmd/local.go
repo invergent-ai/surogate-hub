@@ -8,12 +8,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/fileutil"
+	"github.com/invergent-ai/surogate-hub/pkg/git"
+	"github.com/invergent-ai/surogate-hub/pkg/local"
+	"github.com/invergent-ai/surogate-hub/pkg/uri"
 	"github.com/spf13/cobra"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/fileutil"
-	"github.com/treeverse/lakefs/pkg/git"
-	"github.com/treeverse/lakefs/pkg/local"
-	"github.com/treeverse/lakefs/pkg/uri"
 	"golang.org/x/sync/errgroup"
 )
 

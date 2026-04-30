@@ -13,7 +13,7 @@ import (
 	"github.com/csimplestring/delta-go/action"
 	"github.com/csimplestring/delta-go/storage"
 	deltaStore "github.com/csimplestring/delta-go/store"
-	luautil "github.com/treeverse/lakefs/pkg/actions/lua/util"
+	luautil "github.com/invergent-ai/surogate-hub/pkg/actions/lua/util"
 )
 
 type storageType string

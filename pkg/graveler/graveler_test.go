@@ -9,13 +9,13 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog/testutils"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/mock"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/testutil"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/catalog"
-	"github.com/treeverse/lakefs/pkg/catalog/testutils"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/mock"
-	"github.com/treeverse/lakefs/pkg/graveler/testutil"
-	"github.com/treeverse/lakefs/pkg/kv"
 )
 
 type Hooks struct {

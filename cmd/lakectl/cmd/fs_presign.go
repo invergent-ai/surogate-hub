@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/swag"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
 	"github.com/spf13/cobra"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
 )
 
 var fsPresignCmd = &cobra.Command{

@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/auth/acl"
-	"github.com/treeverse/lakefs/pkg/auth/crypt"
-	authparams "github.com/treeverse/lakefs/pkg/auth/params"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/kv/kvtest"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/acl"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/crypt"
+	authparams "github.com/invergent-ai/surogate-hub/pkg/auth/params"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
 )
 
 func SetupService(t *testing.T, ctx context.Context, secret []byte) (*acl.AuthService, kv.Store) {

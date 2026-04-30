@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/treeverse/lakefs/pkg/fileutil"
-	"github.com/treeverse/lakefs/pkg/uri"
+	"github.com/invergent-ai/surogate-hub/pkg/fileutil"
+	"github.com/invergent-ai/surogate-hub/pkg/uri"
 	"gopkg.in/yaml.v3"
 )
 

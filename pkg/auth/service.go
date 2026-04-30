@@ -1,6 +1,6 @@
 package auth
 
-//go:generate go run github.com/treeverse/lakefs/tools/wrapgen --package auth --output ./service_wrapper.gen.go --interface Service ./service.go
+//go:generate go run github.com/invergent-ai/surogate-hub/tools/wrapgen --package auth --output ./service_wrapper.gen.go --interface Service ./service.go
 
 // Must run goimports after wrapgen: it adds unused imports.
 //go:generate go run golang.org/x/tools/cmd/goimports@latest -w ./service_wrapper.gen.go
@@ -10,11 +10,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/treeverse/lakefs/pkg/auth/crypt"
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	"github.com/treeverse/lakefs/pkg/auth/wildcard"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/crypt"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/wildcard"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
 )
 
 type AuthorizationRequest struct {

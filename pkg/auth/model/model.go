@@ -10,8 +10,8 @@ import (
 
 	"github.com/go-openapi/swag"
 	"github.com/google/uuid"
-	"github.com/treeverse/lakefs/pkg/auth/crypt"
-	"github.com/treeverse/lakefs/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/crypt"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"

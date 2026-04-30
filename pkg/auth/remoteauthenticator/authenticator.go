@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/go-openapi/swag"
-	"github.com/treeverse/lakefs/pkg/auth"
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 const remoteAuthSource = "remote_authenticator"

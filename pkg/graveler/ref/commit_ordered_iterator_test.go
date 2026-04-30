@@ -11,10 +11,10 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/ref"
-	"github.com/treeverse/lakefs/pkg/kv/mock"
-	"github.com/treeverse/lakefs/pkg/testutil"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/ref"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/mock"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 )
 
 func newFakeAddressProvider(commits []*graveler.Commit) *fakeAddressProvider {

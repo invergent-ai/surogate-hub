@@ -5,10 +5,10 @@ import (
 	"strings"
 
 	"github.com/go-openapi/swag"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/diff"
+	"github.com/invergent-ai/surogate-hub/pkg/local"
 	"github.com/spf13/cobra"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/diff"
-	"github.com/treeverse/lakefs/pkg/local"
 	"golang.org/x/sync/errgroup"
 )
 

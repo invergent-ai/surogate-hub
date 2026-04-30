@@ -10,14 +10,14 @@ import (
 	"testing"
 
 	"cloud.google.com/go/storage"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block/gs"
+	"github.com/invergent-ai/surogate-hub/pkg/block/mem"
+	"github.com/invergent-ai/surogate-hub/pkg/block/params"
+	blocks3 "github.com/invergent-ai/surogate-hub/pkg/block/s3"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ory/dockertest/v3"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/block/gs"
-	"github.com/treeverse/lakefs/pkg/block/mem"
-	"github.com/treeverse/lakefs/pkg/block/params"
-	blocks3 "github.com/treeverse/lakefs/pkg/block/s3"
 )
 
 const (

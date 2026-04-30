@@ -8,9 +8,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/ory/dockertest/v3"
-	"github.com/treeverse/lakefs/pkg/testutil"
 )
 
 const (

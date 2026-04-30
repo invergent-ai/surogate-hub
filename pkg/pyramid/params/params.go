@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	"github.com/mitchellh/go-homedir"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/logging"
 )
 
 // RelativePath is the path of the file under TierFS, used in the Eviction interface.

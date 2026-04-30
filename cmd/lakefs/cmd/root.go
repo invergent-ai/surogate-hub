@@ -8,16 +8,16 @@ import (
 	"strings"
 	"sync"
 
+	configfactory "github.com/invergent-ai/surogate-hub/modules/config/factory"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/local"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/mem"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/version"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	configfactory "github.com/treeverse/lakefs/modules/config/factory"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/kv/local"
-	"github.com/treeverse/lakefs/pkg/kv/mem"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/version"
 	"golang.org/x/exp/slices"
 )
 

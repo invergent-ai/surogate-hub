@@ -6,12 +6,12 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/postgres"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 	"github.com/jackc/pgx/v5"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
-	"github.com/treeverse/lakefs/pkg/kv/kvtest"
-	"github.com/treeverse/lakefs/pkg/kv/postgres"
-	"github.com/treeverse/lakefs/pkg/testutil"
 )
 
 func TestPostgresKV(t *testing.T) {

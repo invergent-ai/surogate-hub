@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/go-openapi/swag"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
 )
 
 func TestResetAll(t *testing.T) {

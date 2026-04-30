@@ -17,10 +17,10 @@ import (
 	"strings"
 
 	"github.com/go-openapi/swag"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
-	"github.com/treeverse/lakefs/pkg/block/azure"
-	"github.com/treeverse/lakefs/pkg/httputil"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
+	"github.com/invergent-ai/surogate-hub/pkg/block/azure"
+	"github.com/invergent-ai/surogate-hub/pkg/httputil"
 	"golang.org/x/sync/errgroup"
 )
 

@@ -1,6 +1,6 @@
 package catalog
 
-import "github.com/treeverse/lakefs/pkg/graveler"
+import "github.com/invergent-ai/surogate-hub/pkg/graveler"
 
 type entryDiffIterator struct {
 	it    graveler.DiffIterator

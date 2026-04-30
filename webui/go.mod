@@ -1,4 +1,4 @@
-module github.com/treeverse/lakefs/webui
+module github.com/invergent-ai/surogate-hub/webui
 
 go 1.23
 

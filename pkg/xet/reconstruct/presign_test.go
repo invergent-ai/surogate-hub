@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/block"
 )
 
 func TestPresignedRangeResolverReturnsURLAndBytes(t *testing.T) {

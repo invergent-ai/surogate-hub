@@ -13,11 +13,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-openapi/swag"
 	"github.com/hashicorp/go-multierror"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 	"github.com/spf13/viper"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/testutil"
 )
 
 const (

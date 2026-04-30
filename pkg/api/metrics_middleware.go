@@ -7,8 +7,8 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/routers/legacy"
+	"github.com/invergent-ai/surogate-hub/pkg/httputil"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/treeverse/lakefs/pkg/httputil"
 )
 
 func MetricsMiddleware(swagger *openapi3.Swagger) func(http.Handler) http.Handler {

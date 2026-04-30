@@ -9,8 +9,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/cloud"
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/cloud"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 const azureMetadataIP = "169.254.169.254"

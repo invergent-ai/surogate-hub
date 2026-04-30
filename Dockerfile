@@ -27,9 +27,9 @@ ARG VERSION TARGETOS TARGETARCH ADD_PACKAGES BUILD_PACKAGES UPDATE_PACKAGES
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg \
     GOOS=$TARGETOS GOARCH=$TARGETARCH \
-    go build -gcflags "all=-N -l" -ldflags "-X github.com/treeverse/lakefs/pkg/version.Version=${VERSION}" -o lakefs ./cmd/lakefs \
+    go build -gcflags "all=-N -l" -ldflags "-X github.com/invergent-ai/surogate-hub/pkg/version.Version=${VERSION}" -o lakefs ./cmd/lakefs \
     && GOOS=$TARGETOS GOARCH=$TARGETARCH \
-    go build -ldflags "-X github.com/treeverse/lakefs/pkg/version.Version=${VERSION}" -o lakectl ./cmd/lakectl
+    go build -ldflags "-X github.com/invergent-ai/surogate-hub/pkg/version.Version=${VERSION}" -o lakectl ./cmd/lakectl
 
 # Build the stats worker virtualenv on the same base as the final image so
 # the Python binary in the venv is ABI-compatible at runtime.

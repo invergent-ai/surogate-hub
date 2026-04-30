@@ -1,6 +1,6 @@
 package api
 
-import "github.com/treeverse/lakefs/pkg/version"
+import "github.com/invergent-ai/surogate-hub/pkg/version"
 
 type AuditChecker interface {
 	LastCheck() (*version.AuditResponse, error)

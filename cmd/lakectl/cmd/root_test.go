@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/go-openapi/swag"
+	"github.com/invergent-ai/surogate-hub/pkg/osinfo"
+	"github.com/invergent-ai/surogate-hub/pkg/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/osinfo"
-	"github.com/treeverse/lakefs/pkg/version"
 )
 
 func TestLakectlUserAgentString(t *testing.T) {

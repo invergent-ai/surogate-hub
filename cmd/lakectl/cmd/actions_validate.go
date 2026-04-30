@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/invergent-ai/surogate-hub/pkg/actions"
+	"github.com/invergent-ai/surogate-hub/pkg/cmdutils"
 	"github.com/spf13/cobra"
-	"github.com/treeverse/lakefs/pkg/actions"
-	"github.com/treeverse/lakefs/pkg/cmdutils"
 )
 
 const actionsValidateRequiredArgs = 1

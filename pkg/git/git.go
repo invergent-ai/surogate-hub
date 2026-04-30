@@ -11,9 +11,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/treeverse/lakefs/pkg/fileutil"
-	giterror "github.com/treeverse/lakefs/pkg/git/errors"
-	"github.com/treeverse/lakefs/pkg/git/internal"
+	"github.com/invergent-ai/surogate-hub/pkg/fileutil"
+	giterror "github.com/invergent-ai/surogate-hub/pkg/git/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/git/internal"
 	"golang.org/x/exp/slices"
 )
 

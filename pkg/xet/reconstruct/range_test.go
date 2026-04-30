@@ -3,8 +3,8 @@ package reconstruct
 import (
 	"testing"
 
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 	"github.com/stretchr/testify/require"
-	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 func TestMapRangeReturnsOverlappingChunkTerms(t *testing.T) {

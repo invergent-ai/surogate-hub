@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/block"
 )
 
 // AdapterTest Test suite of basic adapter functionality

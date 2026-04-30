@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
 )
 
 const (

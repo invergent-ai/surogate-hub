@@ -4,7 +4,7 @@ import (
 	"container/heap"
 	"context"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
 type CommitGetter interface {

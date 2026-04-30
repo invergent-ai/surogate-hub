@@ -7,11 +7,11 @@ import (
 	"time"
 
 	pebblesst "github.com/cockroachdb/pebble/sstable"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/committed"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/sstable"
 	"github.com/spf13/cobra"
-	"github.com/treeverse/lakefs/pkg/catalog"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/committed"
-	"github.com/treeverse/lakefs/pkg/graveler/sstable"
 	"google.golang.org/protobuf/proto"
 )
 

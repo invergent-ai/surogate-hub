@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/kv/kvtest"
 )
 
 func TestRegisterShardWritesCanonicalShardAndIndexesChunks(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/treeverse/lakefs/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
 	"go.uber.org/atomic"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )

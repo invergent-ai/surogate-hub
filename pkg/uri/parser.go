@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/treeverse/lakefs/pkg/validator"
+	"github.com/invergent-ai/surogate-hub/pkg/validator"
 )
 
 const (

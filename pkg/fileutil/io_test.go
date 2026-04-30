@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/fileutil"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/fileutil"
 )
 
 func TestFindInParents(t *testing.T) {

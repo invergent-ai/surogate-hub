@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/treeverse/lakefs/cmd/lakefs/cmd"
-	"github.com/treeverse/lakefs/pkg/auth"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/kv/kvtest"
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/cmd/lakefs/cmd"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 func TestNewAuthService_ReturnsACLService(t *testing.T) {

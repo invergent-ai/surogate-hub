@@ -3,9 +3,9 @@ package cmd
 import (
 	"path/filepath"
 
+	"github.com/invergent-ai/surogate-hub/pkg/local"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
-	"github.com/treeverse/lakefs/pkg/local"
 )
 
 const (

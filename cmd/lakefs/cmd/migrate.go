@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/migrations"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	"github.com/spf13/cobra"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
-	"github.com/treeverse/lakefs/pkg/kv/migrations"
-	"github.com/treeverse/lakefs/pkg/logging"
 )
 
 // migrateCmd represents the migrate command

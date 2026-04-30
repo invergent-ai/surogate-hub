@@ -4,8 +4,8 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/testutil"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/testutil"
 )
 
 func TestStartingPointIterator(t *testing.T) {

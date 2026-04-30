@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/committed"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/committed"
 )
 
 // FakeRangeWriter is a RangeWriter that is safe to use in goroutines.  (mock.RangeWriter is

@@ -1,4 +1,4 @@
-module github.com/treeverse/lakefs/modules/block/factory
+module github.com/invergent-ai/surogate-hub/modules/block/factory
 
 go 1.23
 

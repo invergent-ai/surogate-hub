@@ -10,9 +10,9 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/mock"
-	"github.com/treeverse/lakefs/pkg/graveler/testutil"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/mock"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/testutil"
 )
 
 type testCommit struct {

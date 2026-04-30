@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/git"
+	giterror "github.com/invergent-ai/surogate-hub/pkg/git/errors"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/git"
-	giterror "github.com/treeverse/lakefs/pkg/git/errors"
 )
 
 func TestIsRepository(t *testing.T) {

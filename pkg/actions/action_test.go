@@ -9,10 +9,10 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
+	"github.com/invergent-ai/surogate-hub/pkg/actions"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/mock"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/actions"
-	"github.com/treeverse/lakefs/pkg/actions/mock"
-	"github.com/treeverse/lakefs/pkg/graveler"
 	"gopkg.in/yaml.v3"
 )
 

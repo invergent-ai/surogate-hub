@@ -3,7 +3,7 @@ package auth
 import (
 	"errors"
 
-	"github.com/treeverse/lakefs/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
 )
 
 var (

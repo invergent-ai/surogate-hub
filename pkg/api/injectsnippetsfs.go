@@ -8,7 +8,7 @@ import (
 	"io/fs"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/api/params"
+	"github.com/invergent-ai/surogate-hub/pkg/api/params"
 )
 
 type InjectSnippetsFS struct {

@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/kv/kvtest"
-	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 func TestDryRunReportsStaleFileRefs(t *testing.T) {

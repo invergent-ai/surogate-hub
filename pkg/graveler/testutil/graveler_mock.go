@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/mock"
-	kvmock "github.com/treeverse/lakefs/pkg/kv/mock"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/mock"
+	kvmock "github.com/invergent-ai/surogate-hub/pkg/kv/mock"
 )
 
 type GravelerTest struct {

@@ -1,4 +1,4 @@
-module github.com/treeverse/lakefs
+module github.com/invergent-ai/surogate-hub
 
 go 1.24
 

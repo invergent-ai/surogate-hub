@@ -14,16 +14,16 @@ import (
 	"github.com/Shopify/go-lua"
 	"github.com/spf13/viper"
 
-	lualibs "github.com/treeverse/lakefs/pkg/actions/lua"
-	"github.com/treeverse/lakefs/pkg/actions/lua/hook"
-	"github.com/treeverse/lakefs/pkg/actions/lua/lakefs"
-	luautil "github.com/treeverse/lakefs/pkg/actions/lua/util"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
-	"github.com/treeverse/lakefs/pkg/auth"
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/stats"
+	lualibs "github.com/invergent-ai/surogate-hub/pkg/actions/lua"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/hook"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/lakefs"
+	luautil "github.com/invergent-ai/surogate-hub/pkg/actions/lua/util"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/stats"
 )
 
 type LuaHook struct {

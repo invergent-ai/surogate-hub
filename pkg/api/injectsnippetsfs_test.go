@@ -6,8 +6,8 @@ import (
 	"io/fs"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/api"
-	apiparams "github.com/treeverse/lakefs/pkg/api/params"
+	"github.com/invergent-ai/surogate-hub/pkg/api"
+	apiparams "github.com/invergent-ai/surogate-hub/pkg/api/params"
 )
 
 //go:embed testdata/*.html

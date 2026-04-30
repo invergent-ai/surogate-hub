@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
 // Define errors we raise from this package - do not convert underlying errors, optionally wrap if needed to consolidate

@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/treeverse/lakefs/pkg/actions"
-	"github.com/treeverse/lakefs/pkg/actions/mock"
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/actions"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/mock"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
 func TestHookWriter_OutputWritePath(t *testing.T) {

@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/treeverse/lakefs/pkg/catalog"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog"
 )
 
 func transformDifferenceTypeToString(d catalog.DifferenceType) string {

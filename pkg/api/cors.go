@@ -2,7 +2,7 @@ package api
 
 import (
 	"github.com/go-chi/cors"
-	"github.com/treeverse/lakefs/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
 	"net/http"
 )
 

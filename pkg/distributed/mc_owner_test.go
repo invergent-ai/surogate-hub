@@ -19,11 +19,11 @@ import (
 
 	"github.com/go-test/deep"
 
-	"github.com/treeverse/lakefs/pkg/distributed"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
-	_ "github.com/treeverse/lakefs/pkg/kv/mem"
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/distributed"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
+	_ "github.com/invergent-ai/surogate-hub/pkg/kv/mem"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 // TestMostlyCorrectOwnerSingleThreaded tests behaviour with a single owner.

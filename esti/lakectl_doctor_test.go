@@ -5,9 +5,9 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
 )
 
 func TestLakectlDoctor(t *testing.T) {

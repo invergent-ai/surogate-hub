@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/api/helpers"
-	lakefs_ci "github.com/treeverse/lakefs/pkg/dockertest"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/helpers"
+	lakefs_ci "github.com/invergent-ai/surogate-hub/pkg/dockertest"
 
 	"github.com/ory/dockertest/v3"
 )

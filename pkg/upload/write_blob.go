@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
 )
 
 type Blob struct {

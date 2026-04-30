@@ -3,7 +3,7 @@ package auth_test
 import (
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/auth"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
 )
 
 func TestParseARN(t *testing.T) {

@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/pyramid/params"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/pyramid/params"
 )
 
 func TestPyramidWriteFile(t *testing.T) {

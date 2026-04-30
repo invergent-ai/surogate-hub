@@ -19,7 +19,7 @@ package wildcard_test
 import (
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/auth/wildcard"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/wildcard"
 )
 
 // TestMatch - Tests validate the logic of wild card matching.

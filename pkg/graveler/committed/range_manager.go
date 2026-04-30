@@ -3,7 +3,7 @@ package committed
 import (
 	"context"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
 //go:generate go run github.com/golang/mock/mockgen@v1.6.0 -source=range_manager.go -destination=mock/range_manager.go -package=mock

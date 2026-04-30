@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/invergent-ai/surogate-hub/pkg/local"
 	"github.com/spf13/cobra"
-	"github.com/treeverse/lakefs/pkg/local"
 )
 
 var localCheckoutCmd = &cobra.Command{

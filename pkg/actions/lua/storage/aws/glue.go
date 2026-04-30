@@ -11,8 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/glue"
 	"github.com/aws/aws-sdk-go-v2/service/glue/types"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/util"
 	"github.com/mitchellh/mapstructure"
-	"github.com/treeverse/lakefs/pkg/actions/lua/util"
 )
 
 func newGlueClient(ctx context.Context) lua.Function {

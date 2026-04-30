@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/committed"
-	"github.com/treeverse/lakefs/pkg/graveler/testutil"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/committed"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/testutil"
 )
 
 var baseKeyToIdentity = map[string]string{"k1": "i1", "k2": "i2", "k3": "i3", "k4": "i4", "k6": "i6"}
