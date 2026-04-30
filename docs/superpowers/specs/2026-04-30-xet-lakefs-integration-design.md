@@ -26,7 +26,7 @@ Background reading: see the brief at the top of this design's brainstorming sess
 | 1 | Build a CAS server that speaks the XET wire protocol, hosted inside Surogate-Hub | (A) Use HF's hosted CAS — rejected, defeats cost-reduction goal; (C) Implement only the concepts in Go — rejected, loses HF client ecosystem |
 | 2 | Smart client speaks XET; existing S3 PUT path is *not* required for XET-stored objects (uploads go through XET only). S3 GET *is* required (S3 reads must transparently work on XET-stored files). | Pure server-side chunking on S3 PUT — rejected, doesn't deliver upload speedup; bidirectional — rejected, write-side overlap unnecessary |
 | 3 | HF wire-format compatibility (Option B) — reuse `hf_xet` as the client | Roll our own Go client — deferred to follow-up |
-| 4 | Global instance-wide dedup (Option C) | Per-repo / per-namespace — rejected, smaller savings; cross-tenant chunk-existence info-leak is accepted |
+| 4 | Global instance-wide dedup (Option C) | Per-repo / per-namespace — rejected, smaller savings; cross-tenant dedup metadata leak is accepted (`/v1/chunks` reveals shard bytes for matching chunks) |
 | 5 | Single instance-wide CAS bucket | Multi-region — deferred |
 | 6 | Eager xorb refcount table — *removed* in §6 in favour of mark-sweep GC; only the file-refs auth index is maintained eagerly | Eager refcount everywhere — rejected, unnecessary bookkeeping |
 | 7 | Capability check on reconstruction reads (verify the file_hash is reachable via *some* lakeFS path the user can read) | Trust file_hash as a capability per HF's model — rejected, closes share-the-hash escalation |
@@ -47,9 +47,9 @@ HTTP routes mounted on the existing lakeFS HTTP server (same process):
 |---|---|---|---|
 | `POST` | `/xet/v1/xorbs/{prefix}/{hash}` | Upload a xorb | `write` |
 | `POST` | `/xet/v1/shards` | Register a shard (file → xorb refs) | `write` |
-| `GET`  | `/xet/v1/chunks/{prefix}/{hash}` | Global dedup probe | `read` |
+| `GET`  | `/xet/v1/chunks/{prefix}/{hash}` | Global dedup probe; returns dedup shard bytes | `read` |
 | `GET`  | `/xet/v2/reconstructions/{file_hash}` | Return manifest + presigned xorb URLs | `read` + capability |
-| `GET`  | `/xet/v1/xorbs/{prefix}/{hash}` | Server-side proxy for xorb bytes (presign fallback) | `read` + capability |
+| `GET`  | `/xet/v1/xorbs/{prefix}/{hash}?grant=...` | Server-side proxy for xorb bytes (presign fallback) | signed reconstruction grant |
 | `POST` | `/xet/v1/token` | Exchange lakeFS creds for a short-lived JWT | (any lakeFS auth) |
 | `GET`  | `/xet/v1/token/refresh` | Refresh a still-valid JWT | (current JWT) |
 
@@ -59,8 +59,8 @@ Endpoints implement the HF XET wire format byte-for-byte so `hf_xet` and `huggin
 
 - **Xorbs** → existing `block.Adapter` at instance-wide path `<cas-namespace>/_xet/xorbs/<hash[0:2]>/<hash[2:4]>/<hash>`. Reuses S3/GCS/Azure adapters; durability inherited from the underlying bucket.
 - **Shards (file manifests)** → `pkg/kv` under partition `xet`, key `xet/shard/<file_hash>`, value = raw HF binary shard bytes (verbatim, no re-encoding). A small companion `xet/shard_meta/<file_hash>` holds decoded summary fields.
-- **Global dedup index** → KV: `xet/chunk/<chunk_hash>` → `<shard_hash>` (first-writer-wins; not overwritten).
-- **File-refs index** (for the §5 capability check) → KV: one key per tuple, `xet/file_refs/<file_hash>/<repo>/<branch>/<path>` with empty value (presence = membership). Enumerated via `Scan` with prefix `xet/file_refs/<file_hash>/`. One key per tuple avoids read-modify-write contention on a shared "set" value, since the KV layer in [pkg/kv/store.go](../../../pkg/kv/store.go) only exposes single-key `Get`/`Set`/`SetIf`/`Delete`/`Scan`. Append-only on link; pruned by GC. Tolerates stale entries; the read-time check (§8.4) additionally verifies path → file_hash.
+- **Global dedup index** → KV: `xet/chunk/<chunk_hash>` → `<file_hash>` (first-writer-wins; not overwritten). The value names the canonical `xet/shard/<file_hash>` key that contains a valid dedup shard for this chunk.
+- **File-refs index** (for the §8.4 capability check) → KV: one key per tuple, `xet/file_refs/<file_hash>/<repo>/<ref>/<path>` with empty value (presence = membership). Enumerated via `Scan` with prefix `xet/file_refs/<file_hash>/`. One key per tuple avoids read-modify-write contention on a shared "set" value, since the KV layer in [pkg/kv/store.go](../../../pkg/kv/store.go) only exposes single-key `Get`/`Set`/`SetIf`/`Delete`/`Scan`. Append-only on link/direct-context backfill; pruned by GC. Tolerates stale entries; the read-time check (§8.4) additionally verifies path → file_hash.
 
 ### 4.3 `pkg/xet/reconstruct` — read-side reconstruction
 
@@ -88,8 +88,8 @@ Reader-side detection is a single string-prefix check on `physical_address`.
 ```
 xet/shard/<file_hash>                                  → raw HF shard bytes
 xet/shard_meta/<file_hash>                             → { created_at, size, num_xorbs, num_chunks }
-xet/chunk/<chunk_hash>                                 → <shard_hash>     # first-writer-wins
-xet/file_refs/<file_hash>/<repo>/<branch>/<path>       → ""               # presence = membership; one key per tuple
+xet/chunk/<chunk_hash>                                 → <file_hash>      # first-writer-wins; points at xet/shard/<file_hash>
+xet/file_refs/<file_hash>/<repo>/<ref>/<path>          → ""               # presence = membership; one key per tuple
 ```
 
 ### 5.3 Block storage layout
@@ -141,7 +141,7 @@ This reuses lakeFS's existing physical-address linking. The only change required
 - Return `{ "file_hash": "...", "was_inserted": <bool> }` once the canonical shard write (step 1 of §6.5) has succeeded. The chunk-index writes are best-effort and may complete after the response, which is safe because dedup index misses only cost a re-upload, never correctness.
 
 **`GET /xet/v1/chunks/{prefix}/{hash}`**
-- KV lookup `xet/chunk/<hash>` → `<shard_hash>` → load `xet/shard/<shard_hash>` → return raw shard bytes (HF binary format). 404 if unknown.
+- KV lookup `xet/chunk/<hash>` → `<file_hash>` → load `xet/shard/<file_hash>` → return raw shard bytes (HF binary format). 404 if unknown.
 
 ### 6.4 Concurrency model
 
@@ -179,7 +179,7 @@ We sequence the writes as a state machine, ordered so that any partial state obs
 
 **Reader tolerance rules:**
 
-- **R1.** `GET /xet/v1/chunks/{prefix}/{hash}` reads `xet/chunk/<hash>` → `<shard_hash>` → `xet/shard/<shard_hash>`. If the shard is absent (race with deletion or partial write before step 1 commits), return 404; the client falls through to upload the chunk. Always correct.
+- **R1.** `GET /xet/v1/chunks/{prefix}/{hash}` reads `xet/chunk/<hash>` → `<file_hash>` → `xet/shard/<file_hash>`. If the shard is absent (race with deletion or partial write before step 1 commits), return 404; the client falls through to upload the chunk. Always correct.
 - **R2.** Anywhere we read `xet/shard_meta/<file_hash>`: tolerate absence by parsing summary fields out of `xet/shard/<file_hash>` instead. Meta is a cache, not a source of truth.
 - **R3.** Reconstruction paths read `xet/shard/<file_hash>` only. If absent → 404. Step 1 is the visibility gate.
 
@@ -196,16 +196,31 @@ A crashed registration where step 1 completed but step 3 didn't fully run leaves
 
 ### 7.1 XET smart-client read (the fast path)
 
-`GET /xet/v2/reconstructions/{file_hash}`
+`GET /xet/v2/reconstructions/{file_hash}` with optional query parameters `repo`, `ref`, and `path` when the caller knows the lakeFS logical object being reconstructed.
 
-1. Auth: bearer JWT, `read` scope, capability check (§8.4).
+1. Auth: bearer JWT, `read` scope, capability check (§8.4). The Surogate Python wrapper supplies `repo/ref/path` after upload/link so the direct logical-context check is the normal path; unmodified HF clients can still rely on the `file_refs` scan fallback.
 2. Load shard from KV. Optional `Range:` header narrows returned terms.
 3. For each referenced xorb, generate presigned GET URLs with byte-ranges via `block.Adapter.GetPreSignedURL` ([pkg/block/adapter.go:194](../../../pkg/block/adapter.go#L194)).
 4. Return JSON manifest in the exact V2 wire format: `{ offset_into_first_range, terms[], xorbs{hash → [{url, ranges}]} }`.
 
 Bytes flow object-storage → client directly. lakeFS handles only metadata. This is the path that delivers the upload-speed and download-speed wins.
 
-**Presigning fallback.** When the underlying adapter can't presign (`mem`, `transient`, restricted deployments, or browser CORS contexts), the manifest contains URLs pointing at the server-side proxy: `GET /xet/v1/xorbs/{prefix}/{hash}` with `Range:`.
+**Presigning fallback.** When the underlying adapter can't presign (`mem`, `transient`, restricted deployments, or browser CORS contexts), the manifest contains URLs pointing at the server-side proxy: `GET /xet/v1/xorbs/{prefix}/{hash}?grant=<signed-grant>` with `Range:`.
+
+The signed grant is minted only after the reconstruction capability check succeeds. It is an HMAC-signed compact token using the same XET JWT signing key, with claims:
+
+```json
+{
+  "sub": "<lakefs-user-id>",
+  "file_hash": "<file_hash>",
+  "xorb_hash": "<xorb_hash>",
+  "ranges": [{"start": 0, "end": 131071}],
+  "iat": <epoch>,
+  "exp": <epoch + 15m>
+}
+```
+
+`GET /xet/v1/xorbs/{prefix}/{hash}` verifies the grant signature, expiry, `xorb_hash`, and requested `Range:` against the granted byte ranges. It does **not** try to re-run the `file_refs` capability scan, because the proxy route does not carry a logical lakeFS path and cannot safely infer one from an xorb hash alone.
 
 ### 7.2 S3-gateway / lakeFS API read (server-side reconstruction)
 
@@ -272,24 +287,25 @@ Response:
 
 ### 8.4 Capability check on reconstruction (cross-tenant mitigation)
 
-Before serving a reconstruction or proxy-xorb-read, authorize the request via a two-step check:
+Before serving a reconstruction (and before minting any proxy-xorb grant), authorize the request via one of two paths:
 
-1. **Candidate enumeration.** `Scan` with prefix `xet/file_refs/<file_hash>/` to enumerate the candidate `(repo, branch, path)` tuples that have ever been linked to this file_hash. The enumerated set may include stale tuples (paths that have since been deleted, overwritten, or GC'd) — that's fine.
-2. **Verify a current, accessible reference exists.** For each candidate tuple, check that (a) the requester has `fs:ReadObject` on `(repo, branch, path)` AND (b) graveler currently resolves that path to `physical_address = xet://<file_hash>`. Authorize if any tuple passes both. Short-circuit on first match.
+1. **Direct logical-context check (preferred).** If the request carries `(repo, ref, path)` context, check that (a) the requester has `fs:ReadObject` on `(repo, ref, path)` AND (b) graveler currently resolves that path to `physical_address = xet://<file_hash>`. Authorize if both pass. If this succeeds and the corresponding `file_refs` key is missing, backfill `xet/file_refs/<file_hash>/<repo>/<ref>/<path>` best-effort.
+2. **Candidate enumeration fallback.** If no logical context is supplied, `Scan` with prefix `xet/file_refs/<file_hash>/` to enumerate candidate `(repo, ref, path)` tuples that have ever been linked to this file_hash. The enumerated set may include stale tuples (paths that have since been deleted, overwritten, or GC'd) — that's fine.
+3. **Verify a current, accessible reference exists.** For each candidate tuple, check that (a) the requester has `fs:ReadObject` on `(repo, ref, path)` AND (b) graveler currently resolves that path to `physical_address = xet://<file_hash>`. Authorize if any tuple passes both. Short-circuit on first match.
 
 If no tuple passes, return 404 (not 403; don't leak existence).
 
 **Why this is safe under the §6.5 model:**
 
-- `file_refs` is append-only on link (§5.1, §11 Phase 2). It can be stale (point at deleted paths) but never under-counts a currently-live reference.
+- `file_refs` is append-only on successful link (§5.1, §11 Phase 2). It can be stale (point at deleted paths). It may under-count only after a crash between the graveler write and the `file_refs` write; the direct logical-context check repairs that state by verifying graveler directly and backfilling the missing key.
 - Step (b) re-verifies through graveler — the source of truth for "what is this path's physical_address right now?" — so stale `file_refs` entries can never grant access.
-- The link ordering rule (graveler entry written before `file_refs` entry — §11 Phase 2) ensures that any `file_refs` entry observed has at some point been backed by a real graveler entry. The reverse race (graveler entry not yet visible when read) is not a concern because the smart client itself is the one that linked the entry; subsequent reads from any party come *after* the link API returns.
+- The link ordering rule (graveler entry written before `file_refs` entry — §11 Phase 2) ensures that any `file_refs` entry observed has at some point been backed by a real graveler entry. The reverse state (graveler entry exists but `file_refs` does not) is safe: S3/lakeFS path reads still authorize through the normal path, and XET reconstruction can authorize via direct logical context or converge after a retried link/repair.
 
 **Performance:**
 
-A `Scan` plus per-tuple graveler lookup is a few KV ops per read, all hot (recently-touched keys). For typical files referenced by 1-3 tuples this is negligible. For pathological cases (the same file linked at thousands of paths), we cap the scan at `xet.read.max_capability_candidates` (default 32). Beyond that, deny — operationally this should never happen and indicates abuse.
+A direct logical-context check is one auth decision plus one graveler lookup. The fallback `Scan` plus per-tuple graveler lookup is a few KV ops for typical files referenced by 1-3 tuples. For pathological cases (the same file linked at thousands of paths), `xet.read.capability_scan_batch_size` (default 32) controls scan page size and per-page verification work; it is **not** a correctness cap. Continue scanning until an accessible live tuple is found, the iterator is exhausted, or the request context/deadline is cancelled. If the context is cancelled before exhaustion, return 503/timeout rather than a false 404.
 
-This closes the share-the-hash escalation. It does *not* mitigate the chunk-dedup probe leak (`/v1/chunks/...` reveals chunk existence by design); that's an inherent CAS dedup property and an accepted risk.
+This closes the share-the-hash escalation for reconstruction and xorb bytes. It does *not* mitigate the global dedup probe leak: `/v1/chunks/...` returns raw HF shard bytes for matching chunks, which reveals chunk existence and shard/xorb metadata by design. That disclosure is required for HF-compatible global dedup and is an accepted risk; the proxy grant model in §7.1 ensures those leaked xorb hashes are not sufficient to fetch xorb bytes through Surogate-Hub.
 
 ## 9. Garbage Collection
 
@@ -308,7 +324,7 @@ Mark-sweep, riding on lakeFS's existing GC walker. No eager xorb refcount table.
 | Xorbs | `block.Adapter.GetWalker` over `_xet/xorbs/` | objects not in live xorbs set, older than `min_age` |
 | Shards | KV `Scan` over `xet/shard/*` | keys not in live shards set |
 | Chunk dedup index | KV `Scan` over `xet/chunk/*` | entries whose pointed shard is gone |
-| File refs (auth index) | KV `Scan` over `xet/file_refs/*` | entries whose `(repo, branch, path)` no longer resolves to the indexed `<file_hash>` in graveler |
+| File refs (auth index) | KV `Scan` over `xet/file_refs/*` | entries whose `(repo, ref, path)` no longer resolves to the indexed `<file_hash>` in graveler |
 
 The file-refs sweep is a per-entry path-resolution check, not a "rewrite the set". Concurrency-safe because:
 - A new link writes the graveler entry first, then the `file_refs` key. So at any time GC observes a `file_refs` key, the graveler entry was at some point in the past.
@@ -356,6 +372,7 @@ xet:
     size_bytes: 10737418240               # 10 GB
   read:
     parallel_xorbs: 4
+    capability_scan_batch_size: 32
   verify:
     max_concurrent: 0                     # 0 = runtime.NumCPU()
   gc:
@@ -377,19 +394,21 @@ JWT signing reuses `auth.encrypt.secret_key` — no new secret material.
 - Allow `xet://` scheme in [pkg/block/namespace.go](../../../pkg/block/namespace.go) validator.
 - Existing `linkPhysicalAddress` API accepts XET addresses.
 - File-refs index appended on link (the only write hook needed); pruning of stale tuples is handled by GC (Phase 5), not by eager unlink hooks. The §8.4 read-time path-resolution check makes stale entries safe.
-- **Link ordering invariant.** Inside the link handler, the sequence is: (1) validate `xet://` scheme, (2) write the graveler entry, (3) `Set(xet/file_refs/<file_hash>/<repo>/<branch>/<path>, "")`. This ordering ensures that whenever a `file_refs` key exists, the graveler entry it refers to either currently exists or has at some point existed — required for the §9.1 GC race-freedom argument.
-- Tests covering stage → commit → diff → branch operations on XET objects, including a crash-injection test that fails between steps (2) and (3) and asserts that a re-attempted link converges to the correct state.
+- **Link ordering invariant.** Inside the link handler, the sequence is: (1) validate `xet://` scheme and canonical shard existence, (2) write the graveler entry, (3) `Set(xet/file_refs/<file_hash>/<repo>/<branch>/<path>, "")`. Link-time refs are branch refs because staging writes happen on branches; direct-context reconstruction may later backfill tag/commit refs using the same `<ref>` key slot. This ordering ensures that whenever a `file_refs` key exists, the graveler entry it refers to either currently exists or has at some point existed — required for the §9.1 GC race-freedom argument. If step (3) fails after step (2) succeeds, return a retryable 5xx; retries and the §8.4 direct logical-context backfill converge the index.
+- Tests covering stage → commit → diff → branch operations on XET objects, including a crash-injection test that fails between steps (2) and (3), verifies S3/lakeFS path reads still work, and asserts that either a re-attempted link or a direct-context reconstruction backfills `file_refs`.
 
 ### Phase 3 — Read paths
 - `pkg/xet/reconstruct/` — range mapping, parallel xorb fetch, streaming decompression.
 - S3 gateway dispatch on `xet://` physical address.
 - lakeFS API GET dispatch.
+- Presign fallback grants: reconstruction responses that use server-side proxy URLs include signed xorb grants; proxy reads reject missing, expired, wrong-xorb, and out-of-range grants.
 - Server-side disk LRU cache (default-on, 10 GB).
 - Range-GET correctness tests (parquet-style access patterns).
 
 ### Phase 4 — Smart client
 - `clients/python/surogate-xet/` — Python package wrapping `hf_xet`'s PyO3 bindings + lakeFS staging call.
 - Token-exchange helper (lakectl creds → JWT).
+- Reconstruction helper supplies `repo/ref/path` context when invoking the Surogate reconstruction endpoint so the direct logical-context capability check is used after upload/link.
 - Integration test: upload checkpoint → commit → read via S3 → re-upload similar checkpoint → verify dedup hit-rate on the second upload.
 
 ### Phase 5 — GC
@@ -408,7 +427,7 @@ JWT signing reuses `auth.encrypt.secret_key` — no new secret material.
 | Multi-region CAS replication | Single-bucket assumption |
 | WASM browser uploads | webui change, separate project |
 | `git_xet` (Git-LFS-style workflow) | Different access pattern, separate project |
-| Rate-limiting the chunk-existence probe | Accepted info-leak |
+| Rate-limiting the global dedup metadata probe | Accepted info-leak |
 | HuggingFace Hub API compatibility (so `huggingface_hub.upload_file` "just works") | Requires a Hub-API-shaped service, large scope |
 
 ## 13. Risks
@@ -420,7 +439,9 @@ JWT signing reuses `auth.encrypt.secret_key` — no new secret material.
 | JWT expiry during a multi-hour upload of a 50 GB+ file | Low | Smart client refreshes 30s before expiry via `/xet/v1/token/refresh`. Add a CI test with a low TTL |
 | In-flight upload race with GC | Low | `min_age` guard (24h default); xorbs are write-once-immutable |
 | `block.Adapter` listing required for GC sweep — `mem`/`transient` may not support it | Low | Production adapters (S3/GCS/Azure) all support `GetWalker`. Doc the constraint |
-| Cross-tenant chunk-existence probe (`/v1/chunks/{prefix}/{hash}`) | Accepted | Per global-dedup decision. Future: per-IP / per-token rate-limiting |
+| Cross-tenant dedup probe (`/v1/chunks/{prefix}/{hash}` reveals chunk existence plus HF shard/xorb metadata) | Accepted | Per global-dedup decision. Xorb bytes still require reconstruction-presigned object URLs or a signed proxy grant. Future: per-IP / per-token rate-limiting |
+| Proxy-xorb URL used outside the authorized reconstruction | High | Proxy URLs carry short-lived signed grants bound to user, file hash, xorb hash, byte ranges, and expiry; proxy rejects requests outside the grant |
+| `file_refs` under-count after crash between graveler write and index write | Medium | Link returns retryable 5xx on index-write failure; direct logical-context reconstruction verifies graveler directly and backfills the missing key |
 
 ## 14. File Map
 
