@@ -177,7 +177,15 @@ func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := h.withXorbVerificationSlot(r, func() error {
-			return h.verifyXorb(hash, data)
+			canonical, err := canonicalSerializedXorb(hash, data)
+			if err != nil {
+				return err
+			}
+			if err := h.verifyXorb(hash, canonical); err != nil {
+				return err
+			}
+			data = canonical
+			return nil
 		}); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

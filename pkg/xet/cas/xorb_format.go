@@ -26,6 +26,13 @@ type parsedXorbInfo struct {
 	UnpackedOffsets []uint32
 }
 
+func canonicalSerializedXorb(expectedHash string, data []byte) ([]byte, error) {
+	if _, _, err := parseXorbInfo(data); err == nil {
+		return data, nil
+	}
+	return appendXorbFooter(expectedHash, data)
+}
+
 func validateSerializedXorb(expectedHash string, data []byte) error {
 	info, footerStart, err := parseXorbInfo(data)
 	if err != nil {
@@ -44,6 +51,107 @@ func validateSerializedXorb(expectedHash string, data []byte) error {
 		return fmt.Errorf("xorb hash does not match body")
 	}
 	return nil
+}
+
+func appendXorbFooter(expectedHash string, data []byte) ([]byte, error) {
+	info, err := parseFooterlessXorbInfo(data)
+	if err != nil {
+		return nil, err
+	}
+	computedHash, err := xetstore.ComputeXorbMerkleHash(shardChunksFromParsedXorb(info))
+	if err != nil {
+		return nil, err
+	}
+	if computedHash != expectedHash {
+		return nil, fmt.Errorf("xorb hash does not match body")
+	}
+	info.XorbHash = computedHash
+
+	var footer bytes.Buffer
+	footer.WriteString(xorbInfoIdent)
+	footer.WriteByte(1)
+	if err := writeXorbMDBHash(&footer, info.XorbHash); err != nil {
+		return nil, err
+	}
+
+	hashSectionOffset := footer.Len()
+	footer.WriteString(xorbHashSectionIdent)
+	footer.WriteByte(0)
+	writeXorbU32(&footer, uint32(len(info.ChunkHashes)))
+	for _, chunkHash := range info.ChunkHashes {
+		if err := writeXorbMDBHash(&footer, chunkHash); err != nil {
+			return nil, err
+		}
+	}
+
+	boundarySectionOffset := footer.Len()
+	footer.WriteString(xorbBoundarySectionIdent)
+	footer.WriteByte(1)
+	writeXorbU32(&footer, uint32(len(info.ChunkBoundaries)))
+	for _, boundary := range info.ChunkBoundaries {
+		writeXorbU32(&footer, boundary)
+	}
+	for _, offset := range info.UnpackedOffsets {
+		writeXorbU32(&footer, offset)
+	}
+	writeXorbU32(&footer, uint32(len(info.ChunkHashes)))
+
+	infoLength := footer.Len() + 4 + 4 + 16
+	writeXorbU32(&footer, uint32(infoLength-hashSectionOffset))
+	writeXorbU32(&footer, uint32(infoLength-boundarySectionOffset))
+	footer.Write(make([]byte, 16))
+
+	canonical := make([]byte, 0, len(data)+footer.Len()+4)
+	canonical = append(canonical, data...)
+	canonical = append(canonical, footer.Bytes()...)
+	var length [4]byte
+	binary.LittleEndian.PutUint32(length[:], uint32(footer.Len()))
+	canonical = append(canonical, length[:]...)
+	return canonical, nil
+}
+
+func parseFooterlessXorbInfo(data []byte) (parsedXorbInfo, error) {
+	reader := bytes.NewReader(data)
+	var info parsedXorbInfo
+	var compressedOffset uint32
+	var unpackedOffset uint32
+	for reader.Len() > 0 {
+		header, err := readXorbChunkHeader(reader)
+		if err != nil {
+			return parsedXorbInfo{}, err
+		}
+		serializedChunk := make([]byte, header.compressedLength)
+		if _, err := io.ReadFull(reader, serializedChunk); err != nil {
+			return parsedXorbInfo{}, fmt.Errorf("read xorb chunk data: %w", err)
+		}
+		chunk, err := decompressXorbChunk(header, serializedChunk)
+		if err != nil {
+			return parsedXorbInfo{}, err
+		}
+		compressedOffset += xorbChunkHeaderSize + header.compressedLength
+		unpackedOffset += header.uncompressedLength
+		info.ChunkHashes = append(info.ChunkHashes, xetstore.ComputeDataHash(chunk))
+		info.ChunkBoundaries = append(info.ChunkBoundaries, compressedOffset)
+		info.UnpackedOffsets = append(info.UnpackedOffsets, unpackedOffset)
+	}
+	if len(info.ChunkHashes) == 0 {
+		return parsedXorbInfo{}, fmt.Errorf("xorb contains no chunks")
+	}
+	return info, nil
+}
+
+func shardChunksFromParsedXorb(info parsedXorbInfo) []xetstore.ShardChunkInfo {
+	chunks := make([]xetstore.ShardChunkInfo, 0, len(info.ChunkHashes))
+	var previous uint32
+	for i, chunkHash := range info.ChunkHashes {
+		size := info.UnpackedOffsets[i] - previous
+		previous = info.UnpackedOffsets[i]
+		chunks = append(chunks, xetstore.ShardChunkInfo{
+			Hash:      chunkHash,
+			SizeBytes: uint64(size),
+		})
+	}
+	return chunks
 }
 
 func parseXorbInfo(data []byte) (parsedXorbInfo, int, error) {
@@ -327,12 +435,36 @@ func readXorbMDBHash(reader io.Reader) (string, error) {
 	), nil
 }
 
+func writeXorbMDBHash(writer io.Writer, value string) error {
+	raw, err := hex.DecodeString(value)
+	if err != nil {
+		return err
+	}
+	if len(raw) != 32 {
+		return fmt.Errorf("invalid xorb hash length")
+	}
+	var encoded [32]byte
+	for i := 0; i < 4; i++ {
+		for j := 0; j < 8; j++ {
+			encoded[i*8+j] = raw[i*8+7-j]
+		}
+	}
+	_, err = writer.Write(encoded[:])
+	return err
+}
+
 func readXorbU32(reader io.Reader) (uint32, error) {
 	var raw [4]byte
 	if _, err := io.ReadFull(reader, raw[:]); err != nil {
 		return 0, err
 	}
 	return binary.LittleEndian.Uint32(raw[:]), nil
+}
+
+func writeXorbU32(writer io.Writer, value uint32) {
+	var raw [4]byte
+	binary.LittleEndian.PutUint32(raw[:], value)
+	_, _ = writer.Write(raw[:])
 }
 
 func readXorbU32s(reader io.Reader, count uint32) ([]uint32, error) {

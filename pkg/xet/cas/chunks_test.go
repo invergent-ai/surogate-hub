@@ -218,6 +218,26 @@ func TestPostXorbAcceptsMatchingSerializedHash(t *testing.T) {
 	require.Equal(t, xorbBytes, body)
 }
 
+func TestPostXorbAcceptsNoFooterSerializedHash(t *testing.T) {
+	ctx := context.Background()
+	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
+	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
+	xorbHash, xorbBytes := testSerializedXorb(t, []byte("chunk-data"))
+	noFooter := stripXorbFooter(t, xorbBytes)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/"+xorbHash, bytes.NewReader(noFooter))
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	reader, err := xorbStore.Get(ctx, "default", xorbHash)
+	require.NoError(t, err)
+	body, err := io.ReadAll(reader)
+	require.NoError(t, err)
+	require.Equal(t, xorbBytes, body)
+}
+
 func TestPostXorbAcceptsLZ4SerializedHash(t *testing.T) {
 	ctx := context.Background()
 	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
@@ -812,6 +832,15 @@ func testWriteU64(b *bytes.Buffer, value uint64) {
 
 func testSerializedXorb(t *testing.T, chunk []byte) (string, []byte) {
 	return testSerializedXorbWithScheme(t, chunk, 0)
+}
+
+func stripXorbFooter(t *testing.T, xorbBytes []byte) []byte {
+	t.Helper()
+	require.GreaterOrEqual(t, len(xorbBytes), 4)
+	infoLength := int(binary.LittleEndian.Uint32(xorbBytes[len(xorbBytes)-4:]))
+	footerStart := len(xorbBytes) - 4 - infoLength
+	require.GreaterOrEqual(t, footerStart, 0)
+	return xorbBytes[:footerStart]
 }
 
 func testSerializedXorbWithScheme(t *testing.T, chunk []byte, scheme byte) (string, []byte) {
