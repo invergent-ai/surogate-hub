@@ -7,13 +7,14 @@ README.md
 clients/
 !clients/python/
 cmd/lakectl/lakefs
-cmd/lakefs/lakefs
+cmd/sghub/sghub
 cover.out
 design/
 docs/
 esti/
 examples/
 lakectl
+sghub
 lakefs
 pkg/gateway/testdata/
 target/

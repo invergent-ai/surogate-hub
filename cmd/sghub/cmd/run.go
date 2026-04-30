@@ -91,7 +91,7 @@ var runCmd = &cobra.Command{
 		ctx, stop := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM)
 		defer stop()
 
-		logger.WithField("version", version.Version).Info("lakefs run")
+		logger.WithField("version", version.Version).Info("sghub run")
 
 		kvParams, err := kvparams.NewConfig(&baseCfg.Database)
 		if err != nil {

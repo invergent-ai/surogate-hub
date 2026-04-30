@@ -10,7 +10,7 @@ RUN_RESULT=2
 trap cleanup EXIT
 
 cleanup() {
-  pkill lakefs
+  pkill sghub
   if [ $RUN_RESULT == 0 ]; then
     echo "Tests successful, cleaning up logs files"
     rm $LAKEFS_LOG
@@ -31,7 +31,7 @@ help() {
   echo "Syntax: runner [-h|r]"
   echo "options:"
   echo "h     Print this Help."
-  echo "r     Runs the given process [lakefs | tests | all]."
+  echo "r     Runs the given process [sghub | tests | all]."
   echo
 }
 
@@ -51,8 +51,8 @@ run_tests() {
 }
 
 run_lakefs() {
-  echo "Run LakeFS (logs at $LAKEFS_LOG)"
-  lakefs run -c lakefs.yaml | tee "$LAKEFS_LOG"
+  echo "Run Surogate Hub (logs at $LAKEFS_LOG)"
+  sghub run -c lakefs.yaml | tee "$LAKEFS_LOG"
 }
 
 run_all() {
@@ -77,7 +77,7 @@ while getopts ":hr:" option; do
     shift 2
     if [ "$run" == "test" ]; then
       run_tests "$@"
-    elif [ "$run" == "lakefs" ]; then
+    elif [ "$run" == "sghub" ]; then
       run_lakefs
     elif [ "$run" == "all" ]; then
       run_all "$@"

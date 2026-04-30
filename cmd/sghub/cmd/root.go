@@ -25,7 +25,7 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:     "lakefs",
+	Use:     "sghub",
 	Short:   "Surogate Hub is Git for AI data",
 	Version: version.Version,
 }
@@ -49,8 +49,8 @@ var initOnce sync.Once
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.lakefs.yaml)")
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	rootCmd.PersistentFlags().Bool(config.UseLocalConfiguration, false, "Use lakefs local default configuration")
-	rootCmd.PersistentFlags().Bool(config.QuickstartConfiguration, false, "Use lakefs quickstart configuration")
+	rootCmd.PersistentFlags().Bool(config.UseLocalConfiguration, false, "Use Surogate Hub local default configuration")
+	rootCmd.PersistentFlags().Bool(config.QuickstartConfiguration, false, "Use Surogate Hub quickstart configuration")
 }
 
 // TODO (niro): All this validation logic should be in the config package

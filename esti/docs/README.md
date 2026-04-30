@@ -33,7 +33,7 @@ Under _**esti/scripts**_ you will find the following
 
 To run Surogate Hub for testing simply execute the following command in a shell console:
 ```shell
-   esti/scripts/runner.sh -r lakefs 
+   esti/scripts/runner.sh -r sghub
 ```
 The Surogate Hub server will run in the console and logs will be piped to both stdout and in a temporary file in the form of lakefs_<XXX>.log
 
@@ -105,4 +105,3 @@ To debug the tests and server code we must create run configurations for both Su
 Don't know where to start? Experiencing difficulties? Reach out on the #dev channel on [our Slack](https://lakefs.io/slack), and we will help you get started.
 
 ---
-

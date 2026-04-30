@@ -3,10 +3,10 @@ package esti
 import "testing"
 
 func TestLakefsHelp(t *testing.T) {
-	RunCmdAndVerifySuccessWithFile(t, Lakefs(), false, "lakefs/help", emptyVars)
-	RunCmdAndVerifySuccessWithFile(t, Lakefs()+" --help", false, "lakefs/help", emptyVars)
-	RunCmdAndVerifySuccessWithFile(t, Lakefs(), true, "lakefs/help", emptyVars)
-	RunCmdAndVerifySuccessWithFile(t, Lakefs()+" --help", true, "lakefs/help", emptyVars)
+	RunCmdAndVerifySuccessWithFile(t, Lakefs(), false, "sghub/help", emptyVars)
+	RunCmdAndVerifySuccessWithFile(t, Lakefs()+" --help", false, "sghub/help", emptyVars)
+	RunCmdAndVerifySuccessWithFile(t, Lakefs(), true, "sghub/help", emptyVars)
+	RunCmdAndVerifySuccessWithFile(t, Lakefs()+" --help", true, "sghub/help", emptyVars)
 }
 
 func TestLakefsSuperuser_basic(t *testing.T) {

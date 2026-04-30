@@ -22,7 +22,7 @@ func LakefsWithParamsWithBasicAuth(connectionString string, basicAuth bool) stri
 }
 
 func lakefsLocation() string {
-	return viper.GetString("binaries_dir") + "/lakefs"
+	return viper.GetString("binaries_dir") + "/sghub"
 }
 
 func LakefsWithBasicAuth() string {

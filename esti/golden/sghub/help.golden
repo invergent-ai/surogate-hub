@@ -1,11 +1,12 @@
-Surogate Hub is a data lake management platform
+Surogate Hub is Git for AI data
 
 Usage:
-  lakefs [command]
+  sghub [command]
 
 Available Commands:
   completion  Generate completion script
   flare       collect configuration, environment variables, and logs for debugging and troubleshooting
+  gc          Run garbage collection tasks
   help        Help about any command
   migrate     Manage migrations
   run         Run Surogate Hub
@@ -14,10 +15,10 @@ Available Commands:
 
 Flags:
   -c, --config string    config file (default is $HOME/.lakefs.yaml)
-  -h, --help             help for Surogate Hub
+  -h, --help             help for sghub
       --local-settings   Use Surogate Hub local default configuration
       --quickstart       Use Surogate Hub quickstart configuration
   -t, --toggle           Help message for toggle
-  -v, --version          version for Surogate Hub
+  -v, --version          version for sghub
 
-Use "lakefs [command] --help" for more information about a command.
+Use "sghub [command] --help" for more information about a command.

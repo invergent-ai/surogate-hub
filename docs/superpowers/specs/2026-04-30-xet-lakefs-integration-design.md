@@ -31,7 +31,7 @@ Background reading: see the brief at the top of this design's brainstorming sess
 | 6 | Eager xorb refcount table — *removed* in §6 in favour of mark-sweep GC; only the file-refs auth index is maintained eagerly | Eager refcount everywhere — rejected, unnecessary bookkeeping |
 | 7 | Capability check on reconstruction reads (verify the file_hash is reachable via *some* lakeFS path the user can read) | Trust file_hash as a capability per HF's model — rejected, closes share-the-hash escalation |
 | 8 | Reuse `auth.encrypt.secret_key` for JWT signing | New dedicated secret — rejected, more rotation burden |
-| 9 | Mark-sweep GC reusing the existing lakeFS GC walker, operator-triggered via `cmd/lakefs gc xet` | Eager refcount + lazy cleanup — rejected, complexity not worth the latency win; always-on internal job — rejected, operators want explicit timing |
+| 9 | Mark-sweep GC reusing the existing lakeFS GC walker, operator-triggered via `cmd/sghub gc xet` | Eager refcount + lazy cleanup — rejected, complexity not worth the latency win; always-on internal job — rejected, operators want explicit timing |
 | 10 | MVP smart client = Python wrapper over `hf_xet`'s existing PyO3 bindings (~50 LOC), shipped at `clients/python/surogate-xet/` | Standalone Rust CLI — deferred; cgo from Go — deferred; pure-Go reimplementation — deferred |
 | 11 | Shard registration uses an explicit crash-safe state machine over single-key `SetIf` (§6.5) — not a multi-key transaction. Per-tuple `file_refs` keys (§5.2) avoid read-modify-write contention. | Adding a transaction abstraction to `pkg/kv` — rejected, large surface change for one feature; storing `file_refs` as a single-key set value — rejected, racy |
 
@@ -190,7 +190,7 @@ We sequence the writes as a state machine, ordered so that any partial state obs
 
 **Recovery / re-drive:**
 
-A crashed registration where step 1 completed but step 3 didn't fully run leaves the system safe but with reduced dedup. We do not need a foreground recovery loop; the system self-heals over time as new uploads encounter the same chunks and complete the missing index entries via step 3. (Optional future enhancement: a `cmd/lakefs xet repair` operator command that re-walks all shards and re-runs step 3 for any missing chunk entries. Out of scope for v1.)
+A crashed registration where step 1 completed but step 3 didn't fully run leaves the system safe but with reduced dedup. We do not need a foreground recovery loop; the system self-heals over time as new uploads encounter the same chunks and complete the missing index entries via step 3. (Optional future enhancement: a `cmd/sghub xet repair` operator command that re-walks all shards and re-runs step 3 for any missing chunk entries. Out of scope for v1.)
 
 ## 7. Read Paths
 
@@ -337,7 +337,7 @@ Ignore xorbs younger than `xet.gc.min_age` (default 24h). Since xorbs are write-
 
 ### 9.3 Trigger
 
-`cmd/lakefs gc xet` — operator-triggered CLI subcommand with `--dry-run`. Same pattern as the existing `lakefs gc`. No always-on background goroutine.
+`cmd/sghub gc xet` — operator-triggered CLI subcommand with `--dry-run`. Same pattern as the existing `lakefs gc`. No always-on background goroutine.
 
 ### 9.4 Output
 
@@ -412,7 +412,7 @@ JWT signing reuses `auth.encrypt.secret_key` — no new secret material.
 - Integration test: upload checkpoint → commit → read via S3 → re-upload similar checkpoint → verify dedup hit-rate on the second upload.
 
 ### Phase 5 — GC
-- `cmd/lakefs gc xet` CLI subcommand with `--dry-run`.
+- `cmd/sghub gc xet` CLI subcommand with `--dry-run`.
 - Reuse existing GC walker; expand `xet://` addresses; sweep unreferenced xorbs/shards/index entries.
 - `min_age` guard; stats output.
 
@@ -466,7 +466,7 @@ Last updated: 2026-04-30.
 - [x] Added the first destructive XET GC sweep step for stale per-tuple `file_refs`.
 - [x] Added XET GC sweep of stale shard records and chunk-index entries while preserving live roots.
 - [x] Added XET GC sweep of stale xorbs with an `xet.gc.min_age`-style age guard.
-- [x] Added `lakefs gc xet --dry-run` command wiring that opens configured KV/catalog/block storage and emits the XET GC report as JSON.
+- [x] Added `sghub gc xet --dry-run` command wiring that opens configured KV/catalog/block storage and emits the XET GC report as JSON.
 - [x] Added an ESTI smart-client smoke path that uploads a serialized xorb, registers a binary shard, links a `xet://` object, reads it through lakeFS, and verifies chunk dedup discovery for a second upload path.
 
 **In progress:**
@@ -512,7 +512,7 @@ Last updated: 2026-04-30.
   - [x] Verify normal lakeFS/S3 path reads still work.
   - [x] Verify retry or direct-context reconstruction backfills the missing `file_refs` key.
 - [x] Add XET GC:
-  - [x] Add `cmd/lakefs gc xet --dry-run`.
+  - [x] Add `cmd/sghub gc xet --dry-run`.
   - [x] Mark live XET shards from live `file_refs`.
   - [x] Mark live XET xorbs from live shards.
   - [x] Reuse the lakeFS GC walker to list candidate xorbs.
@@ -568,7 +568,7 @@ pkg/xet/
 ├── store/        # KV layout, shard parse, indexes
 ├── reconstruct/  # range mapping, streaming, cache
 └── gc/           # mark-sweep
-cmd/lakefs/cmd/gc_xet.go
+cmd/sghub/cmd/gc_xet.go
 clients/python/surogate-xet/
 ```
 

@@ -15,20 +15,20 @@ var completionCmd = &cobra.Command{
 Bash:
 
 ` + "```" + `sh
-$ source <(lakefs completion bash)
+$ source <(sghub completion bash)
 ` + "```" + `
 
 To load completions for each session, execute once:
 Linux:
 
 ` + "```" + `sh
-$ lakefs completion bash > /etc/bash_completion.d/lakefs
+$ sghub completion bash > /etc/bash_completion.d/sghub
 ` + "```" + `
 
 MacOS:
 
 ` + "```" + `sh
-$ lakefs completion bash > /usr/local/etc/bash_completion.d/lakefs
+$ sghub completion bash > /usr/local/etc/bash_completion.d/sghub
 ` + "```" + `
 
 Zsh:
@@ -42,7 +42,7 @@ $ echo "autoload -U compinit; compinit" >> ~/.zshrc
 
 To load completions for each session, execute once:
 ` + "```" + `sh
-$ lakefs completion zsh > "${fpath[1]}/_lakefs"
+$ sghub completion zsh > "${fpath[1]}/_sghub"
 ` + "```" + `
 
 You will need to start a new shell for this setup to take effect.
@@ -50,13 +50,13 @@ You will need to start a new shell for this setup to take effect.
 Fish:
 
 ` + "```" + `sh
-$ lakefs completion fish | source
+$ sghub completion fish | source
 ` + "```" + `
 
 To load completions for each session, execute once:
 
 ` + "```" + `sh
-$ lakefs completion fish > ~/.config/fish/completions/lakefs.fish
+$ sghub completion fish > ~/.config/fish/completions/sghub.fish
 ` + "```" + `
 
 `,

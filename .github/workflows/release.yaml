@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-binaries:
-    name: Build lakefs & lakectl (linux/amd64)
+    name: Build sghub & lakectl (linux/amd64)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -56,16 +56,16 @@ jobs:
         run: |
           LDFLAGS="-X github.com/invergent-ai/surogate-hub/pkg/version.Version=${VERSION}"
           mkdir -p dist
-          go build -ldflags "${LDFLAGS}" -o dist/lakefs ./cmd/lakefs
+          go build -ldflags "${LDFLAGS}" -o dist/sghub ./cmd/sghub
           go build -ldflags "${LDFLAGS}" -o dist/lakectl ./cmd/lakectl
 
       - name: Package archive
         id: archive
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          NAME="lakefs_${VERSION}_linux_amd64"
+          NAME="sghub_${VERSION}_linux_amd64"
           mkdir -p out
-          tar -C dist -czf "out/${NAME}.tar.gz" lakefs lakectl
+          tar -C dist -czf "out/${NAME}.tar.gz" sghub lakectl
           echo "asset=out/${NAME}.tar.gz" >> "$GITHUB_OUTPUT"
 
       - name: Upload artifact

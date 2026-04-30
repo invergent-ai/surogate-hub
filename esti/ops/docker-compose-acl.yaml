@@ -27,7 +27,7 @@ services:
       - AZURE_CLIENT_SECRET
       - AZURE_TENANT_ID
       - LAKEFSACTION_VAR=this_is_actions_var
-    entrypoint: ["/app/wait-for", "acl-server:8001", "--", "/app/lakefs", "run"]
+    entrypoint: ["/app/wait-for", "acl-server:8001", "--", "/app/sghub", "run"]
 
   acl-server:
     image: "${REPO:-treeverse}/aclserver:${TAG:-dev}"

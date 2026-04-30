@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/invergent-ai/surogate-hub/cmd/lakefs/cmd"
+	"github.com/invergent-ai/surogate-hub/cmd/sghub/cmd"
 	"github.com/invergent-ai/surogate-hub/pkg/auth"
 	"github.com/invergent-ai/surogate-hub/pkg/config"
 	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
