@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -295,6 +296,35 @@ func TestServeXETChunkDedupRouteRequiresAuth(t *testing.T) {
 	defer resp.Body.Close()
 
 	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestServeXETXorbUploadRoute(t *testing.T) {
+	handler, _ := setupHandler(t)
+	server := setupServer(t, handler)
+	clt := setupClientByEndpoint(t, server.URL, "", "")
+	cred := createDefaultAdminUser(t, clt)
+
+	req, err := http.NewRequest(http.MethodPost, server.URL+"/xet/v1/xorbs/default/xorb-a", strings.NewReader("xorb-bytes"))
+	require.NoError(t, err)
+	req.SetBasicAuth(cred.AccessKeyID, cred.SecretAccessKey)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"was_inserted":true}`, string(body))
+
+	req, err = http.NewRequest(http.MethodPost, server.URL+"/xet/v1/xorbs/default/xorb-a", strings.NewReader("different"))
+	require.NoError(t, err)
+	req.SetBasicAuth(cred.AccessKeyID, cred.SecretAccessKey)
+	resp, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"was_inserted":false}`, string(body))
 }
 
 func TestInvalidRoute(t *testing.T) {

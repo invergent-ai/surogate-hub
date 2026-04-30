@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -95,7 +96,10 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 	r.Mount("/metrics", promhttp.Handler())
 	r.Mount("/_pprof/", httputil.ServePPROF("/_pprof/"))
 	r.Mount("/openapi.json", http.HandlerFunc(swaggerSpecHandler))
-	r.Mount("/xet", xetAuthMiddleware(xetcas.NewHandler(xetstore.NewRegistry(catalog.KVStore))))
+	r.Mount("/xet", xetAuthMiddleware(xetcas.NewHandler(
+		xetstore.NewRegistry(catalog.KVStore),
+		xetcas.WithXorbStore(xetcas.NewXorbStore(blockAdapter, xetStorageNamespace(cfg, blockAdapter))),
+	)))
 	r.Mount(apiutil.BaseURL, http.HandlerFunc(InvalidAPIEndpointHandler))
 	r.Mount("/logout", NewLogoutHandler(sessionStore, logger, cfg.GetBaseConfig().Auth.LogoutRedirectURL))
 
@@ -115,6 +119,15 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 	r.Mount("/", rootHandler)
 
 	return r
+}
+
+func xetStorageNamespace(cfg config.Config, blockAdapter block.Adapter) string {
+	if storage := cfg.StorageConfig().GetStorageByID(config.SingleBlockstoreID); storage != nil {
+		if prefix := storage.GetDefaultNamespacePrefix(); prefix != nil && *prefix != "" {
+			return strings.TrimRight(*prefix, "/") + "/_lakefs_xet"
+		}
+	}
+	return blockAdapter.BlockstoreType() + "://_lakefs_xet"
 }
 
 func swaggerSpecHandler(w http.ResponseWriter, _ *http.Request) {
