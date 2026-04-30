@@ -19,9 +19,11 @@ import (
 func TestXETShardRegistrationDedupProbe(t *testing.T) {
 	fileHash := fmt.Sprintf("file-%d", time.Now().UnixNano())
 	chunkID := fmt.Sprintf("chunk-%d", time.Now().UnixNano())
+	xorbID := fmt.Sprintf("xorb-%d", time.Now().UnixNano())
 	shard := fmt.Sprintf("raw-shard-%d", time.Now().UnixNano())
 
-	registerXETShard(t, fileHash, shard, []string{chunkID})
+	putXETXorb(t, xorbID, "xorb-bytes")
+	registerXETShard(t, fileHash, shard, []string{chunkID}, []string{xorbID})
 
 	chunkReq, err := http.NewRequest(http.MethodGet, xetRootEndpoint()+"/xet/v1/chunks/default/"+chunkID, nil)
 	require.NoError(t, err)
@@ -43,7 +45,7 @@ func TestXETLinkPhysicalAddress(t *testing.T) {
 	defer tearDownTest(repo)
 
 	fileHash := fmt.Sprintf("file-%d", time.Now().UnixNano())
-	registerXETShard(t, fileHash, "raw-shard", nil)
+	registerXETShard(t, fileHash, "raw-shard", nil, nil)
 
 	physicalAddress := "xet://" + fileHash
 	resp, err := client.LinkPhysicalAddressWithResponse(ctx, repo, mainBranch, &apigen.LinkPhysicalAddressParams{
@@ -74,12 +76,32 @@ func TestXETLinkPhysicalAddress(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, missingResp.StatusCode())
 }
 
-func registerXETShard(t *testing.T, fileHash, shard string, chunkIDs []string) {
+func putXETXorb(t *testing.T, xorbID, body string) {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodPost, xetRootEndpoint()+"/xet/v1/xorbs/default/"+xorbID, strings.NewReader(body))
+	require.NoError(t, err)
+	req.SetBasicAuth(viper.GetString("access_key_id"), viper.GetString("secret_access_key"))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result struct {
+		WasInserted bool `json:"was_inserted"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	require.NoError(t, err)
+	require.True(t, result.WasInserted)
+}
+
+func registerXETShard(t *testing.T, fileHash, shard string, chunkIDs, xorbIDs []string) {
 	t.Helper()
 	requestBody, err := json.Marshal(map[string]any{
 		"file_hash": fileHash,
 		"shard":     shard,
 		"chunk_ids": chunkIDs,
+		"xorb_ids":  xorbIDs,
 	})
 	require.NoError(t, err)
 
