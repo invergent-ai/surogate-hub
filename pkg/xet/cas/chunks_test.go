@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/treeverse/lakefs/pkg/block/mem"
 	"github.com/treeverse/lakefs/pkg/kv/kvtest"
 	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
@@ -34,6 +35,33 @@ func TestGetChunkReturnsDedupShardBytes(t *testing.T) {
 	body, err := io.ReadAll(rec.Result().Body)
 	require.NoError(t, err)
 	require.Equal(t, []byte("raw-shard"), body)
+}
+
+func TestPostXorbStoresBytesAndReportsIdempotency(t *testing.T) {
+	ctx := context.Background()
+	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
+	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/xorb-a", bytes.NewReader([]byte("xorb-bytes")))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.JSONEq(t, `{"was_inserted":true}`, rec.Body.String())
+
+	secondReq := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/xorb-a", bytes.NewReader([]byte("different")))
+	secondRec := httptest.NewRecorder()
+	handler.ServeHTTP(secondRec, secondReq)
+
+	require.Equal(t, http.StatusOK, secondRec.Code)
+	require.JSONEq(t, `{"was_inserted":false}`, secondRec.Body.String())
+
+	reader, err := xorbStore.Get(ctx, "default", "xorb-a")
+	require.NoError(t, err)
+	defer reader.Close()
+	body, err := io.ReadAll(reader)
+	require.NoError(t, err)
+	require.Equal(t, []byte("xorb-bytes"), body)
 }
 
 func TestPostShardRegistersChunkDedupIndex(t *testing.T) {

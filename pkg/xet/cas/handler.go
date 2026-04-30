@@ -12,6 +12,15 @@ import (
 
 type Handler struct {
 	registry *xetstore.Registry
+	xorbs    *XorbStore
+}
+
+type HandlerOption func(*Handler)
+
+func WithXorbStore(store *XorbStore) HandlerOption {
+	return func(h *Handler) {
+		h.xorbs = store
+	}
 }
 
 type registerShardRequest struct {
@@ -25,12 +34,35 @@ type registerShardResponse struct {
 	WasInserted bool   `json:"was_inserted"`
 }
 
-func NewHandler(registry *xetstore.Registry) http.Handler {
+type putXorbResponse struct {
+	WasInserted bool `json:"was_inserted"`
+}
+
+func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler {
 	h := &Handler{registry: registry}
+	for _, opt := range opts {
+		opt(h)
+	}
 	r := chi.NewRouter()
 	r.Get("/v1/chunks/{prefix}/{hash}", h.getChunk)
 	r.Post("/v1/shards", h.postShard)
+	r.Post("/v1/xorbs/{prefix}/{hash}", h.postXorb)
 	return r
+}
+
+func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
+	if h.xorbs == nil {
+		http.NotFound(w, r)
+		return
+	}
+	result, err := h.xorbs.Put(r.Context(), chi.URLParam(r, "prefix"), chi.URLParam(r, "hash"), r.ContentLength, r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(putXorbResponse{WasInserted: result.WasInserted})
 }
 
 func (h *Handler) postShard(w http.ResponseWriter, r *http.Request) {
