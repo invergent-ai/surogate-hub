@@ -32,6 +32,11 @@ type FileRef struct {
 	Path     string
 }
 
+type ChunkRef struct {
+	ChunkHash string
+	FileHash  string
+}
+
 func NewRegistry(store kv.Store) *Registry {
 	return &Registry{store: store}
 }
@@ -99,6 +104,63 @@ func (r *Registry) ListFileRefs(ctx context.Context, fileHash string, batchSize 
 
 func (r *Registry) ListAllFileRefs(ctx context.Context, batchSize int) ([]FileRef, error) {
 	return r.listFileRefsByPrefix(ctx, "xet/file_refs/", batchSize)
+}
+
+func (r *Registry) ListShardFileHashes(ctx context.Context, batchSize int) ([]string, error) {
+	prefix := "xet/shard/"
+	iter, err := r.store.Scan(ctx, []byte(Partition), kv.ScanOptions{
+		KeyStart:  []byte(prefix),
+		BatchSize: batchSize,
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer iter.Close()
+
+	var hashes []string
+	for iter.Next() {
+		key := string(iter.Entry().Key)
+		if !strings.HasPrefix(key, prefix) {
+			break
+		}
+		hash := strings.TrimPrefix(key, prefix)
+		if hash != "" {
+			hashes = append(hashes, hash)
+		}
+	}
+	if err := iter.Err(); err != nil && !errors.Is(err, kv.ErrClosedEntries) {
+		return nil, err
+	}
+	return hashes, nil
+}
+
+func (r *Registry) ListChunkRefs(ctx context.Context, batchSize int) ([]ChunkRef, error) {
+	prefix := "xet/chunk/"
+	iter, err := r.store.Scan(ctx, []byte(Partition), kv.ScanOptions{
+		KeyStart:  []byte(prefix),
+		BatchSize: batchSize,
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer iter.Close()
+
+	var refs []ChunkRef
+	for iter.Next() {
+		entry := iter.Entry()
+		key := string(entry.Key)
+		if !strings.HasPrefix(key, prefix) {
+			break
+		}
+		chunkHash := strings.TrimPrefix(key, prefix)
+		if chunkHash != "" {
+			refs = append(refs, ChunkRef{ChunkHash: chunkHash, FileHash: string(entry.Value)})
+		}
+	}
+	if err := iter.Err(); err != nil && !errors.Is(err, kv.ErrClosedEntries) {
+		return nil, err
+	}
+	return refs, nil
 }
 
 func (r *Registry) listFileRefsByPrefix(ctx context.Context, prefix string, batchSize int) ([]FileRef, error) {

@@ -460,6 +460,7 @@ Last updated: 2026-04-30.
 - [x] Added best-effort `file_refs` backfill after successful direct-context reconstruction capability checks.
 - [x] Added crash-injection coverage for link ordering: fail after graveler write, prove object reads still work, and prove direct reconstruction backfills `file_refs`.
 - [x] Added initial XET GC dry-run planner that scans per-tuple `file_refs` and reports stale entries without deleting them.
+- [x] Extended XET GC dry-run planning to mark live file hashes from live `file_refs`, then report unreferenced shards and chunk-index entries.
 
 **In progress:**
 
@@ -505,8 +506,10 @@ Last updated: 2026-04-30.
   - [x] Verify retry or direct-context reconstruction backfills the missing `file_refs` key.
 - [ ] Add XET GC:
   - [ ] Add `cmd/lakefs gc xet --dry-run`.
-  - [ ] Reuse the lakeFS GC walker to mark live XET shards and xorbs.
+  - [x] Mark live XET shards from live `file_refs`.
+  - [ ] Reuse the lakeFS GC walker to mark live XET xorbs.
   - [x] Dry-run stale per-tuple `file_refs` detection.
+  - [x] Dry-run stale shard and chunk-index detection.
   - [ ] Sweep stale shards, chunk-index entries, xorbs older than `xet.gc.min_age`, and stale per-tuple `file_refs`.
 - [ ] Add smart-client smoke:
   - [ ] Add a curl or `hf_xet` smoke test that uploads xorbs, registers a shard, links the `xet://` object, reads it back, and verifies a second similar upload gets dedup hits.
