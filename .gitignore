@@ -82,7 +82,3 @@ terraform.rc
 debug/
 target/
 
-# Python Wrapper
-/clients/python-wrapper/_site/
-
-

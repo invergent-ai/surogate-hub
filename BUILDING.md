@@ -11,4 +11,3 @@ To build the project from source, follow these steps:
 To bump the version of the project:
 
 1. Update the `VERSION` variable in `Makefile`
-2. Update `clients/python-wrapper/setup.py` with the new version

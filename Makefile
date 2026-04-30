@@ -132,10 +132,6 @@ package-python-sdk: sdk-python
 	$(DOCKER) run --user $(UID_GID) --rm -v $(shell pwd):/mnt -e HOME=/tmp/ -w /mnt/clients/python $(PYTHON_IMAGE) /bin/bash -c \
 		"python -m pip install build --user && python -m build --sdist --wheel --outdir dist/"
 
-package-python-wrapper:
-	$(DOCKER) run --user $(UID_GID) --rm -v $(shell pwd):/mnt -e HOME=/tmp/ -w /mnt/clients/python-wrapper $(PYTHON_IMAGE) /bin/bash -c \
-		"python -m pip install build --user && python -m build --sdist --wheel --outdir dist/"
-
 package: package-python
 
 .PHONY: gen-api
@@ -251,18 +247,12 @@ validate-python-sdk:
 validate-client-java:
 	git diff --quiet -- clients/java || (echo "Modification verification failed! java client"; false)
 
-validate-python-wrapper:
-	git diff --quiet -- clients/python-wrapper || (echo 'Modification verification failed! python wrapper client'; false)
-
 # Run all validation/linting steps
 checks-validator: lint validate-fmt validate-proto \
 	validate-client-python validate-client-java validate-reference \
 	validate-mockgen \
 	validate-permissions-gen \
 	validate-wrapper validate-wrapgen-testcode
-
-python-wrapper-lint:
-	$(DOCKER) run --user $(UID_GID) --rm -v $(shell pwd):/mnt -e HOME=/tmp/ -w /mnt/clients/python-wrapper $(PYTHON_IMAGE) /bin/bash -c "./pylint.sh"
 
 $(UI_DIR)/node_modules:
 	cd $(UI_DIR) && $(NPM) install
