@@ -474,6 +474,11 @@ type BaseConfig struct {
 		PrepareMaxFileSize int64         `mapstructure:"prepare_max_file_size"`
 		PrepareInterval    time.Duration `mapstructure:"prepare_interval"`
 	} `mapstructure:"ugc"`
+	XET struct {
+		Verify struct {
+			MaxConcurrent int `mapstructure:"max_concurrent"`
+		} `mapstructure:"verify"`
+	} `mapstructure:"xet"`
 	Graveler struct {
 		EnsureReadableRootNamespace bool `mapstructure:"ensure_readable_root_namespace"`
 		BatchDBIOTransactionMarkers bool `mapstructure:"batch_dbio_transaction_markers"`

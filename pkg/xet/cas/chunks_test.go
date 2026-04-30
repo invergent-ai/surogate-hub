@@ -10,7 +10,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/pierrec/lz4/v4"
 	"github.com/stretchr/testify/require"
@@ -130,6 +133,52 @@ func TestPostXorbAcceptsBG4LZ4SerializedHash(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.JSONEq(t, `{"was_inserted":true}`, rec.Body.String())
+}
+
+func TestPostXorbVerificationHonorsMaxConcurrency(t *testing.T) {
+	ctx := context.Background()
+	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
+	var current int32
+	var maxSeen int32
+	verify := func(expectedHash string, data []byte) error {
+		n := atomic.AddInt32(&current, 1)
+		for {
+			old := atomic.LoadInt32(&maxSeen)
+			if n <= old || atomic.CompareAndSwapInt32(&maxSeen, old, n) {
+				break
+			}
+		}
+		time.Sleep(20 * time.Millisecond)
+		atomic.AddInt32(&current, -1)
+		return validateSerializedXorb(expectedHash, data)
+	}
+	handler := NewHandler(
+		xetstore.NewRegistry(kvtest.GetStore(ctx, t)),
+		WithXorbStore(xorbStore),
+		WithVerifyMaxConcurrent(1),
+		withXorbVerifier(verify),
+	)
+
+	xorbHash, xorbBytes := testSerializedXorb(t, []byte("chunk-data"))
+	var wg sync.WaitGroup
+	codes := make(chan int, 3)
+	for i := 0; i < 3; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/"+xorbHash, bytes.NewReader(xorbBytes))
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+			codes <- rec.Code
+		}()
+	}
+	wg.Wait()
+	close(codes)
+	for code := range codes {
+		require.Equal(t, http.StatusOK, code)
+	}
+
+	require.Equal(t, int32(1), maxSeen)
 }
 
 func TestPostShardRegistersChunkDedupIndex(t *testing.T) {

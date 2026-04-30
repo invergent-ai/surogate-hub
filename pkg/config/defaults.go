@@ -7,15 +7,15 @@ import (
 )
 
 const (
-	DefaultListenAddress             = "0.0.0.0:8000"
-	DefaultLoggingLevel              = "INFO"
-	DefaultLoggingAuditLogLevel      = "DEBUG"
-	BlockstoreTypeKey                = "blockstore.type"
-	DefaultQuickstartUsername        = "quickstart"
-	DefaultQuickstartKeyID           = "AKIAIOSFOLQUICKSTART"                     //nolint:gosec
-	DefaultQuickstartSecretKey       = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" // nolint:gosec
-	DefaultAuthSecret                = "THIS_MUST_BE_CHANGED_IN_PRODUCTION"   // #nosec
-	DefaultSigningSecretKey          = "OVERRIDE_THIS_SIGNING_SECRET_DEFAULT" // #nosec
+	DefaultListenAddress        = "0.0.0.0:8000"
+	DefaultLoggingLevel         = "INFO"
+	DefaultLoggingAuditLogLevel = "DEBUG"
+	BlockstoreTypeKey           = "blockstore.type"
+	DefaultQuickstartUsername   = "quickstart"
+	DefaultQuickstartKeyID      = "AKIAIOSFOLQUICKSTART"                     //nolint:gosec
+	DefaultQuickstartSecretKey  = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" // nolint:gosec
+	DefaultAuthSecret           = "THIS_MUST_BE_CHANGED_IN_PRODUCTION"       // #nosec
+	DefaultSigningSecretKey     = "OVERRIDE_THIS_SIGNING_SECRET_DEFAULT"     // #nosec
 )
 
 //nolint:mnd
@@ -171,6 +171,8 @@ func setBaseDefaults(cfgType string) {
 
 	viper.SetDefault("ugc.prepare_interval", time.Minute)
 	viper.SetDefault("ugc.prepare_max_file_size", 20*1024*1024)
+
+	viper.SetDefault("xet.verify.max_concurrent", 0)
 
 	viper.SetDefault("usage_report.flush_interval", 5*time.Minute)
 }

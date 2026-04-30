@@ -99,6 +99,7 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 	r.Mount("/xet", xetAuthMiddleware(xetcas.NewHandler(
 		xetstore.NewRegistry(catalog.KVStore),
 		xetcas.WithXorbStore(xetcas.NewXorbStore(blockAdapter, xetStorageNamespace(cfg, blockAdapter))),
+		xetcas.WithVerifyMaxConcurrent(cfg.GetBaseConfig().XET.Verify.MaxConcurrent),
 	)))
 	r.Mount(apiutil.BaseURL, http.HandlerFunc(InvalidAPIEndpointHandler))
 	r.Mount("/logout", NewLogoutHandler(sessionStore, logger, cfg.GetBaseConfig().Auth.LogoutRedirectURL))

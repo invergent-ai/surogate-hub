@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"runtime"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -17,8 +18,10 @@ import (
 )
 
 type Handler struct {
-	registry *xetstore.Registry
-	xorbs    *XorbStore
+	registry     *xetstore.Registry
+	xorbs        *XorbStore
+	verifyTokens chan struct{}
+	verifyXorb   func(expectedHash string, data []byte) error
 }
 
 type HandlerOption func(*Handler)
@@ -26,6 +29,18 @@ type HandlerOption func(*Handler)
 func WithXorbStore(store *XorbStore) HandlerOption {
 	return func(h *Handler) {
 		h.xorbs = store
+	}
+}
+
+func WithVerifyMaxConcurrent(maxConcurrent int) HandlerOption {
+	return func(h *Handler) {
+		h.verifyTokens = make(chan struct{}, normalizeVerifyMaxConcurrent(maxConcurrent))
+	}
+}
+
+func withXorbVerifier(verify func(expectedHash string, data []byte) error) HandlerOption {
+	return func(h *Handler) {
+		h.verifyXorb = verify
 	}
 }
 
@@ -50,7 +65,11 @@ type uploadShardResponse struct {
 }
 
 func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler {
-	h := &Handler{registry: registry}
+	h := &Handler{
+		registry:     registry,
+		verifyTokens: make(chan struct{}, normalizeVerifyMaxConcurrent(0)),
+		verifyXorb:   validateSerializedXorb,
+	}
 	for _, opt := range opts {
 		opt(h)
 	}
@@ -75,7 +94,9 @@ func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if err := validateSerializedXorb(hash, data); err != nil {
+		if err := h.withXorbVerificationSlot(r, func() error {
+			return h.verifyXorb(hash, data)
+		}); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -200,6 +221,23 @@ func (h *Handler) validateXorbs(r *http.Request, xorbIDs []string) error {
 		}
 	}
 	return nil
+}
+
+func (h *Handler) withXorbVerificationSlot(r *http.Request, verify func() error) error {
+	select {
+	case h.verifyTokens <- struct{}{}:
+		defer func() { <-h.verifyTokens }()
+		return verify()
+	case <-r.Context().Done():
+		return r.Context().Err()
+	}
+}
+
+func normalizeVerifyMaxConcurrent(maxConcurrent int) int {
+	if maxConcurrent > 0 {
+		return maxConcurrent
+	}
+	return runtime.NumCPU()
 }
 
 func computedShimFileHash(shard string) string {
