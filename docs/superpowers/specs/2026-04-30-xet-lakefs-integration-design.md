@@ -437,24 +437,26 @@ Last updated: 2026-04-30.
 - [x] Added an initial Go parser for HF/XET streaming shard bytes that extracts file hashes, file sizes, xorb hashes, and chunk hashes from the binary file/xorb sections.
 - [x] Added `application/octet-stream` shard registration that validates referenced xorbs, registers extracted file hashes, and stores the raw binary shard bytes for dedup probes.
 - [x] Decode binary shard summary metadata into `xet/shard_meta/<file_hash>` during registration.
+- [x] Added real XET file MerkleHash recomputation from parsed chunk sequences and reject binary shards whose embedded file hash does not match.
 
 **In progress:**
 
-- [ ] Replace the current JSON shard-registration shim with real HF/XET binary shard parsing:
+- [x] Replace the current JSON shard-registration shim with real HF/XET binary shard parsing:
   - [x] Extract referenced file hashes, xorb hashes, chunk hashes, and file sizes from the HF binary shard.
   - [x] Extract decoded summary fields for `xet/shard_meta/<file_hash>`.
-  - [ ] Compute the real XET file MerkleHash and verify it matches the asserted `file_hash`.
+  - [x] Compute the real XET file MerkleHash and verify it matches the asserted `file_hash`.
   - [x] Store raw binary shard bytes verbatim in `xet/shard/<file_hash>`.
   - [x] Update dedup probe tests to assert returned bytes are the original binary shard.
   - [x] Run focused parser and CAS handler tests.
-  - [ ] Commit as `feat(xet): parse binary shards`.
-
-**Remaining TODOs:**
-
+  - [x] Commit as focused binary-shard parser/registration/metadata/hash-verification slices.
 - [ ] Verify xorb upload content:
   - [ ] Parse/decompress xorb payloads enough to recompute and validate the uploaded xorb hash.
   - [ ] Add `xet.verify.max_concurrent` CPU-bound verification control.
   - [ ] Keep idempotent duplicate-upload behavior unchanged.
+  - [ ] Add focused CAS tests for mismatched xorb body hash and duplicate upload behavior.
+
+**Remaining TODOs:**
+
 - [ ] Implement reconstruction reads:
   - [ ] Add `pkg/xet/reconstruct` range mapping over shard terms.
   - [ ] Add manifest generation for `GET /xet/v2/reconstructions/{file_hash}`.

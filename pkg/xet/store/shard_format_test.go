@@ -10,10 +10,14 @@ import (
 )
 
 func TestParseShardInfoExtractsFilesXorbsAndChunks(t *testing.T) {
-	fileHash := "00112233445566778899aabbccddeeff0123456789abcdeffedcba9876543210"
 	xorbHash := "111122223333444455556666777788889999aaaabbbbccccddddeeeeffff0000"
 	chunkA := "aaaaaaaaaaaaaaaa000000000000000000000000000000000000000000000000"
 	chunkB := "bbbbbbbbbbbbbbbb000000000000000000000000000000000000000000000000"
+	fileHash, err := ComputeFileMerkleHash([]ShardChunkInfo{
+		{Hash: chunkA, SizeBytes: 10},
+		{Hash: chunkB, SizeBytes: 20},
+	})
+	require.NoError(t, err)
 
 	info, err := ParseShardInfo(testBinaryShard(t, fileHash, xorbHash, chunkA, chunkB))
 	require.NoError(t, err)
@@ -21,9 +25,26 @@ func TestParseShardInfoExtractsFilesXorbsAndChunks(t *testing.T) {
 	require.Equal(t, []ShardFileInfo{{
 		FileHash:  fileHash,
 		SizeBytes: 30,
+		Segments: []ShardFileSegment{{
+			XorbHash:        xorbHash,
+			SizeBytes:       30,
+			ChunkIndexStart: 0,
+			ChunkIndexEnd:   2,
+		}},
 	}}, info.Files)
 	require.Equal(t, []string{xorbHash}, info.XorbHashes)
 	require.Equal(t, []string{chunkA, chunkB}, info.ChunkHashes)
+}
+
+func TestParseShardInfoRejectsMismatchedFileHash(t *testing.T) {
+	fileHash := "00112233445566778899aabbccddeeff0123456789abcdeffedcba9876543210"
+	xorbHash := "111122223333444455556666777788889999aaaabbbbccccddddeeeeffff0000"
+	chunkA := "aaaaaaaaaaaaaaaa000000000000000000000000000000000000000000000000"
+	chunkB := "bbbbbbbbbbbbbbbb000000000000000000000000000000000000000000000000"
+
+	_, err := ParseShardInfo(testBinaryShard(t, fileHash, xorbHash, chunkA, chunkB))
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "file hash mismatch")
 }
 
 func testBinaryShard(t *testing.T, fileHash, xorbHash, chunkA, chunkB string) []byte {

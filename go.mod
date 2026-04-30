@@ -54,6 +54,7 @@ require (
 	google.golang.org/protobuf v1.36.8
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v3 v3.0.1
+	lukechampine.com/blake3 v1.3.0
 )
 
 require golang.org/x/sync v0.16.0

@@ -3,8 +3,12 @@ package store
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"strconv"
+
+	"lukechampine.com/blake3"
 )
 
 const (
@@ -22,6 +26,11 @@ var mdbShardHeaderTag = [32]byte{
 	105, 103, 69, 106, 123, 129, 87, 131, 165, 189, 217, 92, 205, 209, 74, 169,
 }
 
+var internalNodeHashKey = [32]byte{
+	1, 126, 197, 199, 165, 71, 41, 150, 253, 148, 102, 102, 180, 138, 2, 230,
+	93, 221, 83, 111, 55, 199, 109, 210, 248, 99, 82, 230, 74, 83, 113, 63,
+}
+
 type ShardInfo struct {
 	Files       []ShardFileInfo
 	XorbHashes  []string
@@ -30,8 +39,26 @@ type ShardInfo struct {
 }
 
 type ShardFileInfo struct {
-	FileHash  string
+	FileHash  string             `json:"file_hash"`
+	SizeBytes uint64             `json:"size_bytes"`
+	Segments  []ShardFileSegment `json:"segments,omitempty"`
+}
+
+type ShardFileSegment struct {
+	XorbHash        string `json:"xorb_hash"`
+	SizeBytes       uint64 `json:"size_bytes"`
+	ChunkIndexStart uint32 `json:"chunk_index_start"`
+	ChunkIndexEnd   uint32 `json:"chunk_index_end"`
+}
+
+type ShardChunkInfo struct {
+	Hash      string
 	SizeBytes uint64
+}
+
+type shardXorbInfo struct {
+	Hash   string
+	Chunks []ShardChunkInfo
 }
 
 type ShardSummary struct {
@@ -55,6 +82,9 @@ func ParseShardInfo(data []byte) (ShardInfo, error) {
 	if err != nil {
 		return ShardInfo{}, err
 	}
+	if err := verifyShardFileHashes(files, xorbHashes); err != nil {
+		return ShardInfo{}, err
+	}
 	summary, err := readShardFooter(reader)
 	if err != nil {
 		return ShardInfo{}, err
@@ -69,7 +99,7 @@ func ParseShardInfo(data []byte) (ShardInfo, error) {
 
 	return ShardInfo{
 		Files:       files,
-		XorbHashes:  xorbHashes,
+		XorbHashes:  shardXorbHashes(xorbHashes),
 		ChunkHashes: chunkHashes,
 		Summary:     summary,
 	}, nil
@@ -123,8 +153,10 @@ func readShardFiles(reader io.Reader) ([]ShardFileInfo, error) {
 		}
 
 		var sizeBytes uint64
+		segments := make([]ShardFileSegment, 0, numEntries)
 		for i := uint32(0); i < numEntries; i++ {
-			if err := skipHash(reader); err != nil {
+			xorbHash, _, err := readMDBHash(reader)
+			if err != nil {
 				return nil, fmt.Errorf("read shard file xorb hash: %w", err)
 			}
 			if err := skipU32s(reader, 1); err != nil {
@@ -135,9 +167,20 @@ func readShardFiles(reader io.Reader) ([]ShardFileInfo, error) {
 				return nil, fmt.Errorf("read shard file segment size: %w", err)
 			}
 			sizeBytes += uint64(unpackedSegmentBytes)
-			if err := skipU32s(reader, 2); err != nil {
-				return nil, fmt.Errorf("read shard file chunk range: %w", err)
+			chunkIndexStart, err := readU32(reader)
+			if err != nil {
+				return nil, fmt.Errorf("read shard file chunk range start: %w", err)
 			}
+			chunkIndexEnd, err := readU32(reader)
+			if err != nil {
+				return nil, fmt.Errorf("read shard file chunk range end: %w", err)
+			}
+			segments = append(segments, ShardFileSegment{
+				XorbHash:        xorbHash,
+				SizeBytes:       uint64(unpackedSegmentBytes),
+				ChunkIndexStart: chunkIndexStart,
+				ChunkIndexEnd:   chunkIndexEnd,
+			})
 		}
 		if flags&mdbFileFlagWithVerification != 0 {
 			if err := skipBytes(reader, uint64(numEntries)*mdbShardEntrySize); err != nil {
@@ -152,13 +195,14 @@ func readShardFiles(reader io.Reader) ([]ShardFileInfo, error) {
 		files = append(files, ShardFileInfo{
 			FileHash:  fileHash,
 			SizeBytes: sizeBytes,
+			Segments:  segments,
 		})
 	}
 	return files, nil
 }
 
-func readShardXorbs(reader io.Reader) ([]string, []string, error) {
-	var xorbHashes []string
+func readShardXorbs(reader io.Reader) ([]shardXorbInfo, []string, error) {
+	var xorbs []shardXorbInfo
 	var chunkHashes []string
 	for {
 		xorbHash, isBookend, err := readMDBHash(reader)
@@ -178,19 +222,165 @@ func readShardXorbs(reader io.Reader) ([]string, []string, error) {
 		if isBookend {
 			break
 		}
-		xorbHashes = append(xorbHashes, xorbHash)
+		chunks := make([]ShardChunkInfo, 0, numEntries)
 		for i := uint32(0); i < numEntries; i++ {
 			chunkHash, _, err := readMDBHash(reader)
 			if err != nil {
 				return nil, nil, fmt.Errorf("read shard chunk hash: %w", err)
 			}
 			chunkHashes = append(chunkHashes, chunkHash)
-			if err := skipU32s(reader, 4); err != nil {
-				return nil, nil, fmt.Errorf("read shard chunk metadata: %w", err)
+			if err := skipU32s(reader, 1); err != nil {
+				return nil, nil, fmt.Errorf("read shard chunk byte range start: %w", err)
 			}
+			unpackedSegmentBytes, err := readU32(reader)
+			if err != nil {
+				return nil, nil, fmt.Errorf("read shard chunk segment size: %w", err)
+			}
+			if err := skipU32s(reader, 2); err != nil {
+				return nil, nil, fmt.Errorf("read shard chunk flags: %w", err)
+			}
+			chunks = append(chunks, ShardChunkInfo{
+				Hash:      chunkHash,
+				SizeBytes: uint64(unpackedSegmentBytes),
+			})
+		}
+		xorbs = append(xorbs, shardXorbInfo{Hash: xorbHash, Chunks: chunks})
+	}
+	return xorbs, chunkHashes, nil
+}
+
+func verifyShardFileHashes(files []ShardFileInfo, xorbs []shardXorbInfo) error {
+	xorbByHash := make(map[string]shardXorbInfo, len(xorbs))
+	for _, xorb := range xorbs {
+		xorbByHash[xorb.Hash] = xorb
+	}
+	for _, file := range files {
+		var chunks []ShardChunkInfo
+		for _, segment := range file.Segments {
+			xorb, ok := xorbByHash[segment.XorbHash]
+			if !ok {
+				return fmt.Errorf("file %s references missing xorb %s", file.FileHash, segment.XorbHash)
+			}
+			if segment.ChunkIndexEnd < segment.ChunkIndexStart || int(segment.ChunkIndexEnd) > len(xorb.Chunks) {
+				return fmt.Errorf("file %s references invalid chunk range %d-%d in xorb %s", file.FileHash, segment.ChunkIndexStart, segment.ChunkIndexEnd, segment.XorbHash)
+			}
+			chunks = append(chunks, xorb.Chunks[segment.ChunkIndexStart:segment.ChunkIndexEnd]...)
+		}
+		computed, err := ComputeFileMerkleHash(chunks)
+		if err != nil {
+			return err
+		}
+		if computed != file.FileHash {
+			return fmt.Errorf("file hash mismatch: shard has %s, computed %s", file.FileHash, computed)
 		}
 	}
-	return xorbHashes, chunkHashes, nil
+	return nil
+}
+
+func shardXorbHashes(xorbs []shardXorbInfo) []string {
+	hashes := make([]string, 0, len(xorbs))
+	for _, xorb := range xorbs {
+		hashes = append(hashes, xorb.Hash)
+	}
+	return hashes
+}
+
+func ComputeFileMerkleHash(chunks []ShardChunkInfo) (string, error) {
+	if len(chunks) == 0 {
+		return "0000000000000000000000000000000000000000000000000000000000000000", nil
+	}
+	hashes := append([]ShardChunkInfo(nil), chunks...)
+	for len(hashes) > 1 {
+		writeIndex := 0
+		readIndex := 0
+		for readIndex != len(hashes) {
+			nextCut := readIndex + nextMergeCut(hashes[readIndex:])
+			merged, err := mergedHashOfSequence(hashes[readIndex:nextCut])
+			if err != nil {
+				return "", err
+			}
+			hashes[writeIndex] = merged
+			writeIndex++
+			readIndex = nextCut
+		}
+		hashes = hashes[:writeIndex]
+	}
+	rawHash, err := mdbHexToRaw(hashes[0].Hash)
+	if err != nil {
+		return "", err
+	}
+	return keyedHashHex(make([]byte, 32), rawHash), nil
+}
+
+func nextMergeCut(hashes []ShardChunkInfo) int {
+	if len(hashes) <= 2 {
+		return len(hashes)
+	}
+	end := min(9, len(hashes))
+	for i := 2; i < end; i++ {
+		if hashModulo(hashes[i].Hash, 4) == 0 {
+			return i + 1
+		}
+	}
+	return end
+}
+
+func mergedHashOfSequence(chunks []ShardChunkInfo) (ShardChunkInfo, error) {
+	var buf bytes.Buffer
+	var totalLen uint64
+	for _, chunk := range chunks {
+		if _, err := mdbHexToRaw(chunk.Hash); err != nil {
+			return ShardChunkInfo{}, err
+		}
+		fmt.Fprintf(&buf, "%s : %d\n", chunk.Hash, chunk.SizeBytes)
+		totalLen += chunk.SizeBytes
+	}
+	return ShardChunkInfo{
+		Hash:      keyedHashHex(internalNodeHashKey[:], buf.Bytes()),
+		SizeBytes: totalLen,
+	}, nil
+}
+
+func hashModulo(hash string, divisor uint64) uint64 {
+	if len(hash) < 16 {
+		return 0
+	}
+	value, err := strconv.ParseUint(hash[48:64], 16, 64)
+	if err != nil {
+		return 0
+	}
+	return value % divisor
+}
+
+func keyedHashHex(key, data []byte) string {
+	hasher := blake3.New(32, key)
+	_, _ = hasher.Write(data)
+	return mdbHexFromRaw(hasher.Sum(nil))
+}
+
+func mdbHexToRaw(hash string) ([]byte, error) {
+	if len(hash) != 64 {
+		return nil, fmt.Errorf("invalid merkle hash %q", hash)
+	}
+	raw := make([]byte, 32)
+	for i := 0; i < 4; i++ {
+		value, err := strconv.ParseUint(hash[i*16:(i+1)*16], 16, 64)
+		if err != nil {
+			return nil, err
+		}
+		binary.LittleEndian.PutUint64(raw[i*8:(i+1)*8], value)
+	}
+	return raw, nil
+}
+
+func mdbHexFromRaw(raw []byte) string {
+	var dst bytes.Buffer
+	for i := 0; i < 4; i++ {
+		for j := 7; j >= 0; j-- {
+			dst.WriteString(hex.EncodeToString(raw[i*8+j : i*8+j+1]))
+		}
+	}
+	return dst.String()
 }
 
 func readShardFooter(reader io.Reader) (ShardSummary, error) {

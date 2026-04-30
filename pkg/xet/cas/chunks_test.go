@@ -167,10 +167,14 @@ func TestPostBinaryShardRegistersFileAndChunks(t *testing.T) {
 	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
 	handler := NewHandler(registry, WithXorbStore(xorbStore))
 
-	fileHash := "00112233445566778899aabbccddeeff0123456789abcdeffedcba9876543210"
 	xorbHash := "111122223333444455556666777788889999aaaabbbbccccddddeeeeffff0000"
 	chunkHash := "aaaaaaaaaaaaaaaa000000000000000000000000000000000000000000000000"
-	_, err := xorbStore.Put(ctx, "default", xorbHash, int64(len("xorb-bytes")), bytes.NewReader([]byte("xorb-bytes")))
+	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: 12,
+	}})
+	require.NoError(t, err)
+	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len("xorb-bytes")), bytes.NewReader([]byte("xorb-bytes")))
 	require.NoError(t, err)
 	shard := testXETBinaryShard(t, fileHash, xorbHash, chunkHash)
 
