@@ -481,6 +481,35 @@ func TestGetReconstructionFallsBackToGrantedProxyURL(t *testing.T) {
 	require.Equal(t, xorbBytes[byteRange.Start:byteRange.End+1], proxyRec.Body.Bytes())
 }
 
+func TestReconstructFileRangeReadsXorbBytes(t *testing.T) {
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
+	chunk := []byte("hello world!")
+	xorbHash, xorbBytes := testSerializedXorb(t, chunk)
+	chunkHash := xetstore.ComputeDataHash(chunk)
+	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: uint64(len(chunk)),
+	}})
+	require.NoError(t, err)
+	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
+	require.NoError(t, err)
+	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: fileHash,
+		Shard:    testXETBinaryShard(t, fileHash, xorbHash, chunkHash),
+	})
+	require.NoError(t, err)
+
+	reader, err := ReconstructFileRange(ctx, registry, xorbStore, fileHash, reconstruct.ByteRange{Start: 3, End: 9})
+	require.NoError(t, err)
+	defer func() { _ = reader.Close() }()
+	got, err := io.ReadAll(reader)
+	require.NoError(t, err)
+
+	require.Equal(t, []byte("lo wor"), got)
+}
+
 func testShimFileHash(shard string) string {
 	sum := sha256.Sum256([]byte(shard))
 	return hex.EncodeToString(sum[:])

@@ -156,8 +156,23 @@ func parseXorbInfo(data []byte) (parsedXorbInfo, int, error) {
 }
 
 func validateXorbChunks(data []byte, info parsedXorbInfo) ([]xetstore.ShardChunkInfo, error) {
+	decodedChunks, err := decodeXorbChunks(data, info)
+	if err != nil {
+		return nil, err
+	}
+	chunks := make([]xetstore.ShardChunkInfo, 0, len(decodedChunks))
+	for _, chunk := range decodedChunks {
+		chunks = append(chunks, xetstore.ShardChunkInfo{
+			Hash:      xetstore.ComputeDataHash(chunk),
+			SizeBytes: uint64(len(chunk)),
+		})
+	}
+	return chunks, nil
+}
+
+func decodeXorbChunks(data []byte, info parsedXorbInfo) ([][]byte, error) {
 	reader := bytes.NewReader(data)
-	chunks := make([]xetstore.ShardChunkInfo, 0, len(info.ChunkHashes))
+	chunks := make([][]byte, 0, len(info.ChunkHashes))
 	var compressedOffset uint32
 	var unpackedOffset uint32
 	for i, expectedHash := range info.ChunkHashes {
@@ -183,10 +198,7 @@ func validateXorbChunks(data []byte, info parsedXorbInfo) ([]xetstore.ShardChunk
 		if computedHash != expectedHash {
 			return nil, fmt.Errorf("xorb chunk hash mismatch")
 		}
-		chunks = append(chunks, xetstore.ShardChunkInfo{
-			Hash:      computedHash,
-			SizeBytes: uint64(header.uncompressedLength),
-		})
+		chunks = append(chunks, chunk)
 	}
 	if reader.Len() != 0 {
 		return nil, fmt.Errorf("xorb content bytes after chunks")
