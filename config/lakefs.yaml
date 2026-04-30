@@ -32,3 +32,10 @@ cors:
     allowed_origins:
     - https://*.densemax.local
     - https://localhost:4200
+xet:
+  verify:
+    max_concurrent: 0
+  read:
+    capability_scan_batch_size: 32
+  gc:
+    min_age: 24h
