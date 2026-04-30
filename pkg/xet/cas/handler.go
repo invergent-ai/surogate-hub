@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/treeverse/lakefs/pkg/kv"
@@ -42,6 +44,10 @@ type putXorbResponse struct {
 	WasInserted bool `json:"was_inserted"`
 }
 
+type uploadShardResponse struct {
+	Result int `json:"result"`
+}
+
 func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler {
 	h := &Handler{registry: registry}
 	for _, opt := range opts {
@@ -70,6 +76,11 @@ func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) postShard(w http.ResponseWriter, r *http.Request) {
+	if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+		h.postBinaryShard(w, r)
+		return
+	}
+
 	var req registerShardRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -104,6 +115,49 @@ func (h *Handler) postShard(w http.ResponseWriter, r *http.Request) {
 		FileHash:    req.FileHash,
 		WasInserted: result.WasInserted,
 	})
+}
+
+func (h *Handler) postBinaryShard(w http.ResponseWriter, r *http.Request) {
+	shard, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	info, err := xetstore.ParseShardInfo(shard)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(info.Files) == 0 {
+		http.Error(w, "shard contains no file entries", http.StatusBadRequest)
+		return
+	}
+	if err := h.validateXorbs(r, info.XorbHashes); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	wasInserted := false
+	for _, file := range info.Files {
+		result, err := h.registry.RegisterShard(r.Context(), xetstore.RegisterShardParams{
+			FileHash: file.FileHash,
+			Shard:    shard,
+			ChunkIDs: info.ChunkHashes,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		wasInserted = wasInserted || result.WasInserted
+	}
+
+	responseResult := 0
+	if wasInserted {
+		responseResult = 1
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(uploadShardResponse{Result: responseResult})
 }
 
 func (h *Handler) validateXorbs(r *http.Request, xorbIDs []string) error {

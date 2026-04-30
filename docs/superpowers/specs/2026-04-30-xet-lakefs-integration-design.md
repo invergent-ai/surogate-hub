@@ -435,6 +435,7 @@ Last updated: 2026-04-30.
 - [x] Added current JSON-shim shard registration validation for declared `xorb_ids` and ESTI coverage for xorb-backed shard registration.
 - [x] Added current JSON-shim `file_hash` verification before shard registration, with focused handler and ESTI coverage.
 - [x] Added an initial Go parser for HF/XET streaming shard bytes that extracts file hashes, file sizes, xorb hashes, and chunk hashes from the binary file/xorb sections.
+- [x] Added `application/octet-stream` shard registration that validates referenced xorbs, registers extracted file hashes, and stores the raw binary shard bytes for dedup probes.
 
 **In progress:**
 
@@ -442,9 +443,9 @@ Last updated: 2026-04-30.
   - [x] Extract referenced file hashes, xorb hashes, chunk hashes, and file sizes from the HF binary shard.
   - [ ] Extract decoded summary fields for `xet/shard_meta/<file_hash>`.
   - [ ] Compute the real XET file MerkleHash and verify it matches the asserted `file_hash`.
-  - [ ] Store raw binary shard bytes verbatim in `xet/shard/<file_hash>`.
-  - [ ] Update dedup probe tests to assert returned bytes are the original binary shard.
-  - [ ] Run focused parser and CAS handler tests.
+  - [x] Store raw binary shard bytes verbatim in `xet/shard/<file_hash>`.
+  - [x] Update dedup probe tests to assert returned bytes are the original binary shard.
+  - [x] Run focused parser and CAS handler tests.
   - [ ] Commit as `feat(xet): parse binary shards`.
 
 **Remaining TODOs:**
