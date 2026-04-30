@@ -493,6 +493,92 @@ func TestGetReconstructionReturnsV2Manifest(t *testing.T) {
 	}`, rec.Body.String())
 }
 
+func TestGetReconstructionRequiresDirectCapabilityWhenConfigured(t *testing.T) {
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	chunkHash := xetstore.ComputeDataHash([]byte("hello world!"))
+	xorbHash, err := xetstore.ComputeXorbMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: 12,
+	}})
+	require.NoError(t, err)
+	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: 12,
+	}})
+	require.NoError(t, err)
+	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: fileHash,
+		Shard:    testXETBinaryShard(t, fileHash, xorbHash, chunkHash),
+	})
+	require.NoError(t, err)
+	called := false
+	handler := NewHandler(
+		registry,
+		WithTokenSigningKey([]byte("test-token-key")),
+		WithTokenAuthRequired(),
+		WithReconstructionCapabilityChecker(func(ctx context.Context, fileHash string, logical ReconstructionLogicalContext) error {
+			called = true
+			require.Equal(t, "repo-a", logical.Repo)
+			require.Equal(t, "main", logical.Ref)
+			require.Equal(t, "models/checkpoint.bin", logical.Path)
+			return nil
+		}),
+		withReconstructionRangeResolverFactory(func(ctx context.Context, fileHash string, terms []reconstruct.Term) (reconstruct.RangeResolver, error) {
+			return func(xorbHash string, chunks reconstruct.IndexRange) (reconstruct.ResolvedRange, error) {
+				return reconstruct.ResolvedRange{
+					URL:   "https://cas.example/" + xorbHash,
+					Bytes: reconstruct.HTTPRange{Start: 0, End: 63},
+				}, nil
+			}, nil
+		}),
+	)
+
+	req := httptest.NewRequest(http.MethodGet, "/v2/reconstructions/"+fileHash+"?repo=repo-a&ref=main&path=models/checkpoint.bin", nil)
+	req.Header.Set("Authorization", "Bearer "+testXETToken(t, "user-a", "read", time.Now().Add(time.Hour)))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.True(t, called)
+}
+
+func TestGetReconstructionRejectsMissingDirectCapabilityContext(t *testing.T) {
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	chunkHash := xetstore.ComputeDataHash([]byte("hello world!"))
+	xorbHash, err := xetstore.ComputeXorbMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: 12,
+	}})
+	require.NoError(t, err)
+	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: 12,
+	}})
+	require.NoError(t, err)
+	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: fileHash,
+		Shard:    testXETBinaryShard(t, fileHash, xorbHash, chunkHash),
+	})
+	require.NoError(t, err)
+	handler := NewHandler(
+		registry,
+		WithTokenSigningKey([]byte("test-token-key")),
+		WithTokenAuthRequired(),
+		WithReconstructionCapabilityChecker(func(ctx context.Context, fileHash string, logical ReconstructionLogicalContext) error {
+			return nil
+		}),
+	)
+
+	req := httptest.NewRequest(http.MethodGet, "/v2/reconstructions/"+fileHash, nil)
+	req.Header.Set("Authorization", "Bearer "+testXETToken(t, "user-a", "read", time.Now().Add(time.Hour)))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusNotFound, rec.Code)
+}
+
 func TestGetReconstructionHonorsRangeHeader(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))

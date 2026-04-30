@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -22,8 +23,10 @@ import (
 	"github.com/treeverse/lakefs/pkg/catalog"
 	"github.com/treeverse/lakefs/pkg/cloud"
 	"github.com/treeverse/lakefs/pkg/config"
+	"github.com/treeverse/lakefs/pkg/graveler"
 	"github.com/treeverse/lakefs/pkg/httputil"
 	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/treeverse/lakefs/pkg/permissions"
 	"github.com/treeverse/lakefs/pkg/stats"
 	"github.com/treeverse/lakefs/pkg/upload"
 	xetcas "github.com/treeverse/lakefs/pkg/xet/cas"
@@ -107,6 +110,7 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 		xetcas.WithProxyGrantKey([]byte(cfg.GetBaseConfig().Auth.Encrypt.SecretKey.SecureValue())),
 		xetcas.WithTokenSigningKey([]byte(cfg.GetBaseConfig().Auth.Encrypt.SecretKey.SecureValue())),
 		xetcas.WithTokenAuthRequired(),
+		xetcas.WithReconstructionCapabilityChecker(xetReconstructionCapabilityChecker(catalog, authService)),
 	)))
 	r.Mount(apiutil.BaseURL, http.HandlerFunc(InvalidAPIEndpointHandler))
 	r.Mount("/logout", NewLogoutHandler(sessionStore, logger, cfg.GetBaseConfig().Auth.LogoutRedirectURL))
@@ -136,6 +140,41 @@ func xetStorageNamespace(cfg config.Config, blockAdapter block.Adapter) string {
 		}
 	}
 	return blockAdapter.BlockstoreType() + "://_lakefs_xet"
+}
+
+func xetReconstructionCapabilityChecker(cat *catalog.Catalog, authService auth.Service) xetcas.ReconstructionCapabilityChecker {
+	return func(ctx context.Context, fileHash string, logical xetcas.ReconstructionLogicalContext) error {
+		user, err := auth.GetUser(ctx)
+		if err != nil {
+			return xetcas.ErrReconstructionCapabilityNotFound
+		}
+		resp, err := authService.Authorize(ctx, &auth.AuthorizationRequest{
+			Username: user.Username,
+			RequiredPermissions: permissions.Node{
+				Permission: permissions.Permission{
+					Action:   permissions.ReadObjectAction,
+					Resource: permissions.ObjectArn(logical.Repo, logical.Path),
+				},
+			},
+		})
+		if err != nil {
+			return err
+		}
+		if resp.Error != nil || !resp.Allowed {
+			return xetcas.ErrReconstructionCapabilityNotFound
+		}
+		entry, err := cat.GetEntry(ctx, logical.Repo, logical.Ref, logical.Path, catalog.GetEntryParams{})
+		if errors.Is(err, graveler.ErrNotFound) {
+			return xetcas.ErrReconstructionCapabilityNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if entry.PhysicalAddress != "xet://"+fileHash {
+			return xetcas.ErrReconstructionCapabilityNotFound
+		}
+		return nil
+	}
 }
 
 func swaggerSpecHandler(w http.ResponseWriter, _ *http.Request) {

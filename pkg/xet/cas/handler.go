@@ -21,6 +21,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt"
 	"github.com/treeverse/lakefs/pkg/auth"
+	"github.com/treeverse/lakefs/pkg/auth/model"
 	"github.com/treeverse/lakefs/pkg/block"
 	"github.com/treeverse/lakefs/pkg/kv"
 	"github.com/treeverse/lakefs/pkg/xet/reconstruct"
@@ -33,6 +34,7 @@ type Handler struct {
 	verifyTokens                       chan struct{}
 	verifyXorb                         func(expectedHash string, data []byte) error
 	reconstructionRangeResolverFactory reconstructionRangeResolverFactory
+	reconstructionCapabilityChecker    ReconstructionCapabilityChecker
 	proxyGrantKey                      []byte
 	tokenSigningKey                    []byte
 	tokenTTL                           time.Duration
@@ -42,6 +44,16 @@ type Handler struct {
 type HandlerOption func(*Handler)
 
 type reconstructionRangeResolverFactory func(ctx context.Context, fileHash string, terms []reconstruct.Term) (reconstruct.RangeResolver, error)
+
+type ReconstructionLogicalContext struct {
+	Repo string
+	Ref  string
+	Path string
+}
+
+type ReconstructionCapabilityChecker func(ctx context.Context, fileHash string, logical ReconstructionLogicalContext) error
+
+var ErrReconstructionCapabilityNotFound = errors.New("xet reconstruction capability not found")
 
 func WithXorbStore(store *XorbStore) HandlerOption {
 	return func(h *Handler) {
@@ -76,6 +88,12 @@ func WithTokenTTL(ttl time.Duration) HandlerOption {
 func WithTokenAuthRequired() HandlerOption {
 	return func(h *Handler) {
 		h.tokenAuthRequired = true
+	}
+}
+
+func WithReconstructionCapabilityChecker(checker ReconstructionCapabilityChecker) HandlerOption {
+	return func(h *Handler) {
+		h.reconstructionCapabilityChecker = checker
 	}
 }
 
@@ -234,7 +252,9 @@ func (h *Handler) requireXETScope(scope string) func(http.Handler) http.Handler 
 				http.Error(w, "insufficient token scope", http.StatusForbidden)
 				return
 			}
-			next.ServeHTTP(w, r)
+			subject, _ := claims["sub"].(string)
+			ctx := auth.WithUser(r.Context(), &model.User{Username: subject})
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
@@ -357,6 +377,25 @@ func (h *Handler) getXorbProxy(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) getReconstruction(w http.ResponseWriter, r *http.Request) {
 	fileHash := chi.URLParam(r, "file_hash")
+	if h.reconstructionCapabilityChecker != nil {
+		logical := ReconstructionLogicalContext{
+			Repo: r.URL.Query().Get("repo"),
+			Ref:  r.URL.Query().Get("ref"),
+			Path: r.URL.Query().Get("path"),
+		}
+		if logical.Repo == "" || logical.Ref == "" || logical.Path == "" {
+			http.NotFound(w, r)
+			return
+		}
+		if err := h.reconstructionCapabilityChecker(r.Context(), fileHash, logical); err != nil {
+			if errors.Is(err, ErrReconstructionCapabilityNotFound) {
+				http.NotFound(w, r)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
 	shard, err := h.registry.GetShardByFileHash(r.Context(), fileHash)
 	if errors.Is(err, kv.ErrNotFound) {
 		http.NotFound(w, r)

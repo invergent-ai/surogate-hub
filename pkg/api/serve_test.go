@@ -1,12 +1,14 @@
 package api_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -42,6 +44,7 @@ import (
 	"github.com/treeverse/lakefs/pkg/testutil"
 	"github.com/treeverse/lakefs/pkg/upload"
 	"github.com/treeverse/lakefs/pkg/version"
+	xetcas "github.com/treeverse/lakefs/pkg/xet/cas"
 	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
@@ -329,6 +332,72 @@ func TestServeXETXorbUploadRoute(t *testing.T) {
 	body, err = io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	require.JSONEq(t, `{"was_inserted":false}`, string(body))
+}
+
+func TestServeXETReconstructionRequiresLiveLogicalContext(t *testing.T) {
+	handler, deps := setupHandler(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	const path = "models/checkpoint.bin"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+
+	chunk := []byte("hello world!")
+	xorbHash, xorbBytes := testAPISerializedXorb(t, chunk)
+	chunkHash := xetstore.ComputeDataHash(chunk)
+	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: uint64(len(chunk)),
+	}})
+	require.NoError(t, err)
+	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_lakefs_xet")
+	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
+	require.NoError(t, err)
+	_, err = xetstore.NewRegistry(deps.catalog.KVStore).RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: fileHash,
+		Shard:    testAPIXETBinaryShard(t, fileHash, xorbHash, chunkHash, uint32(len(chunk))),
+	})
+	require.NoError(t, err)
+	err = deps.catalog.CreateEntry(ctx, repo, branch, catalog.DBEntry{
+		Path:            path,
+		PhysicalAddress: "xet://" + fileHash,
+		AddressType:     catalog.AddressTypeFull,
+		CreationDate:    time.Now(),
+		Size:            int64(len(chunk)),
+		Checksum:        "checksum-a",
+	})
+	require.NoError(t, err)
+
+	server := setupServer(t, handler)
+	clt := setupClientByEndpoint(t, server.URL, "", "")
+	cred := createDefaultAdminUser(t, clt)
+	token := issueXETTokenForTest(t, server.URL, cred)
+	req, err := http.NewRequest(
+		http.MethodGet,
+		server.URL+"/xet/v2/reconstructions/"+fileHash+"?repo="+url.QueryEscape(repo)+"&ref=main&path="+url.QueryEscape("models/other.bin"),
+		nil,
+	)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	req, err = http.NewRequest(
+		http.MethodGet,
+		server.URL+"/xet/v2/reconstructions/"+fileHash+"?repo="+url.QueryEscape(repo)+"&ref=main&path="+url.QueryEscape(path),
+		nil,
+	)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err = http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
 func issueXETTokenForTest(t testing.TB, serverURL string, cred *authmodel.BaseCredential) string {

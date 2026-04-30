@@ -455,6 +455,7 @@ Last updated: 2026-04-30.
 - [x] Added `POST /xet/v1/token` that issues short-lived HS256 XET JWTs for the authenticated user.
 - [x] Added `GET /xet/v1/token/refresh` that validates a still-live XET bearer JWT and returns a fresh scoped JWT for the same subject.
 - [x] Added opt-in CAS route scope enforcement and wired the API server so lakeFS credentials only mint XET JWTs; CAS read/write routes require scoped XET bearer tokens.
+- [x] Added direct reconstruction capability checks for `(repo, ref, path)`: read authorization plus current catalog resolution to `xet://<file_hash>`.
 
 **In progress:**
 
@@ -490,7 +491,7 @@ Last updated: 2026-04-30.
   - [x] Issue short-lived JWTs signed with `auth.encrypt.secret_key`.
   - [x] Enforce read/write scopes per XET route.
 - [ ] Implement reconstruction capability checks:
-  - [ ] Direct `(repo, ref, path)` authorization and graveler verification path.
+  - [x] Direct `(repo, ref, path)` authorization and graveler verification path.
   - [ ] `file_refs` `Scan` fallback with `xet.read.capability_scan_batch_size`.
   - [ ] Best-effort direct-context backfill for missing `file_refs`.
   - [ ] Return 404, not 403, when no accessible live tuple exists.
