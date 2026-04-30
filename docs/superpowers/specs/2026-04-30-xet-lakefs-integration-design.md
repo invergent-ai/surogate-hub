@@ -463,7 +463,7 @@ Last updated: 2026-04-30.
   - [x] Update dedup probe tests to assert returned bytes are the original binary shard.
   - [x] Run focused parser and CAS handler tests.
   - [x] Commit as focused binary-shard parser/registration/metadata/hash-verification slices.
-- [ ] Verify xorb upload content:
+- [x] Verify xorb upload content:
   - [x] Parse V1 xorb footer metadata and no-compression chunk payloads enough to recompute and validate the uploaded xorb hash.
   - [x] Add LZ4 decompression support for compressed xorb chunks.
   - [x] Add BG4-LZ4 decompression support for byte-grouped compressed xorb chunks.
@@ -473,7 +473,7 @@ Last updated: 2026-04-30.
 
 **Remaining TODOs:**
 
-- [ ] Implement reconstruction reads:
+- [x] Implement reconstruction reads:
   - [x] Add `pkg/xet/reconstruct` range mapping over shard terms.
   - [x] Add manifest generation for `GET /xet/v2/reconstructions/{file_hash}`.
   - [x] Add block-adapter presigned URL support for xorb range manifests.
