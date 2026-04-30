@@ -448,6 +448,7 @@ Last updated: 2026-04-30.
 - [x] Added the initial `GET /xet/v2/reconstructions/{file_hash}` route that loads canonical shards and returns V2 manifests for full-file reconstructions.
 - [x] Added `Range: bytes=start-end` handling for reconstruction manifests, including mid-chunk offset reporting.
 - [x] Added server-side proxy fallback grants for adapters that cannot presign, plus `/xet/v1/xorbs/{prefix}/{hash}?grant=...` range serving.
+- [x] Bound proxy fallback grants to the authorized file hash as well as xorb hash, expiry, and byte ranges.
 
 **In progress:**
 

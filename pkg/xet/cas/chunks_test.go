@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -11,6 +12,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -337,7 +340,7 @@ func TestGetReconstructionReturnsV2Manifest(t *testing.T) {
 		Shard:    testXETBinaryShard(t, fileHash, xorbHash, chunkHash),
 	})
 	require.NoError(t, err)
-	handler := NewHandler(registry, withReconstructionRangeResolverFactory(func(ctx context.Context, terms []reconstruct.Term) (reconstruct.RangeResolver, error) {
+	handler := NewHandler(registry, withReconstructionRangeResolverFactory(func(ctx context.Context, fileHash string, terms []reconstruct.Term) (reconstruct.RangeResolver, error) {
 		return func(xorbHash string, chunks reconstruct.IndexRange) (reconstruct.ResolvedRange, error) {
 			return reconstruct.ResolvedRange{
 				URL:   "https://cas.example/" + xorbHash,
@@ -389,7 +392,7 @@ func TestGetReconstructionHonorsRangeHeader(t *testing.T) {
 		Shard:    testXETBinaryShard(t, fileHash, xorbHash, chunkHash),
 	})
 	require.NoError(t, err)
-	handler := NewHandler(registry, withReconstructionRangeResolverFactory(func(ctx context.Context, terms []reconstruct.Term) (reconstruct.RangeResolver, error) {
+	handler := NewHandler(registry, withReconstructionRangeResolverFactory(func(ctx context.Context, fileHash string, terms []reconstruct.Term) (reconstruct.RangeResolver, error) {
 		return func(xorbHash string, chunks reconstruct.IndexRange) (reconstruct.ResolvedRange, error) {
 			return reconstruct.ResolvedRange{
 				URL:   "https://cas.example/" + xorbHash,
@@ -459,6 +462,14 @@ func TestGetReconstructionFallsBackToGrantedProxyURL(t *testing.T) {
 	fetch := manifest.Xorbs[xorbHash][0]
 	require.Len(t, fetch.Ranges, 1)
 	require.Contains(t, fetch.URL, "/v1/xorbs/default/"+xorbHash+"?grant=")
+	parsedURL, err := url.Parse(fetch.URL)
+	require.NoError(t, err)
+	grantToken := parsedURL.Query().Get("grant")
+	grantPayload, err := base64.RawURLEncoding.DecodeString(strings.Split(grantToken, ".")[0])
+	require.NoError(t, err)
+	var grant proxyGrant
+	require.NoError(t, json.Unmarshal(grantPayload, &grant))
+	require.Equal(t, fileHash, grant.FileHash)
 
 	proxyReq := httptest.NewRequest(http.MethodGet, fetch.URL, nil)
 	byteRange := fetch.Ranges[0].Bytes

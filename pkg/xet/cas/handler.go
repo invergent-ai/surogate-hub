@@ -36,7 +36,7 @@ type Handler struct {
 
 type HandlerOption func(*Handler)
 
-type reconstructionRangeResolverFactory func(ctx context.Context, terms []reconstruct.Term) (reconstruct.RangeResolver, error)
+type reconstructionRangeResolverFactory func(ctx context.Context, fileHash string, terms []reconstruct.Term) (reconstruct.RangeResolver, error)
 
 func WithXorbStore(store *XorbStore) HandlerOption {
 	return func(h *Handler) {
@@ -89,6 +89,7 @@ type uploadShardResponse struct {
 }
 
 type proxyGrant struct {
+	FileHash string                  `json:"file_hash"`
 	XorbHash string                  `json:"xorb_hash"`
 	Ranges   []reconstruct.HTTPRange `json:"ranges"`
 	Expires  int64                   `json:"exp"`
@@ -217,7 +218,7 @@ func (h *Handler) getReconstruction(w http.ResponseWriter, r *http.Request) {
 	if resolverFactory == nil {
 		resolverFactory = h.presignedReconstructionRangeResolverFactory
 	}
-	resolver, err := resolverFactory(r.Context(), terms)
+	resolver, err := resolverFactory(r.Context(), fileHash, terms)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -360,7 +361,7 @@ func normalizeVerifyMaxConcurrent(maxConcurrent int) int {
 	return runtime.NumCPU()
 }
 
-func (h *Handler) presignedReconstructionRangeResolverFactory(ctx context.Context, _ []reconstruct.Term) (reconstruct.RangeResolver, error) {
+func (h *Handler) presignedReconstructionRangeResolverFactory(ctx context.Context, fileHash string, _ []reconstruct.Term) (reconstruct.RangeResolver, error) {
 	if h.xorbs == nil {
 		return nil, fmt.Errorf("xorb store is not configured")
 	}
@@ -389,7 +390,7 @@ func (h *Handler) presignedReconstructionRangeResolverFactory(ctx context.Contex
 		}
 		url, _, err := h.xorbs.adapter.GetPreSignedURL(ctx, xetstore.XorbObjectPointer(h.xorbs.storageNamespace, "default", xorbHash), block.PreSignModeRead)
 		if errors.Is(err, block.ErrOperationNotSupported) {
-			url, err = h.proxyXorbURL("default", xorbHash, []reconstruct.HTTPRange{byteRange})
+			url, err = h.proxyXorbURL(fileHash, "default", xorbHash, []reconstruct.HTTPRange{byteRange})
 			if err != nil {
 				return reconstruct.ResolvedRange{}, err
 			}
@@ -400,8 +401,9 @@ func (h *Handler) presignedReconstructionRangeResolverFactory(ctx context.Contex
 	}, nil
 }
 
-func (h *Handler) proxyXorbURL(prefix, xorbHash string, ranges []reconstruct.HTTPRange) (string, error) {
+func (h *Handler) proxyXorbURL(fileHash, prefix, xorbHash string, ranges []reconstruct.HTTPRange) (string, error) {
 	grant, err := h.signProxyGrant(proxyGrant{
+		FileHash: fileHash,
 		XorbHash: xorbHash,
 		Ranges:   ranges,
 		Expires:  time.Now().Add(15 * time.Minute).Unix(),
