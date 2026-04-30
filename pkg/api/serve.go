@@ -73,8 +73,12 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 		{"cookie_auth": []string{}},
 		{"oidc_auth": []string{}},
 	}
-	xetAuthMiddleware := func(next http.Handler) http.Handler {
+	xetTokenIssuerAuthMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPost || !strings.HasSuffix(r.URL.Path, "/v1/token") {
+				next.ServeHTTP(w, r)
+				return
+			}
 			user, err := checkSecurityRequirements(r, xetSecurityRequirements, logger, middlewareAuthenticator, authService, sessionStore, &oidcConfig, &cookieAuthConfig)
 			if err != nil {
 				writeError(w, r, http.StatusUnauthorized, err)
@@ -96,12 +100,13 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 	r.Mount("/metrics", promhttp.Handler())
 	r.Mount("/_pprof/", httputil.ServePPROF("/_pprof/"))
 	r.Mount("/openapi.json", http.HandlerFunc(swaggerSpecHandler))
-	r.Mount("/xet", xetAuthMiddleware(xetcas.NewHandler(
+	r.Mount("/xet", xetTokenIssuerAuthMiddleware(xetcas.NewHandler(
 		xetstore.NewRegistry(catalog.KVStore),
 		xetcas.WithXorbStore(xetcas.NewXorbStore(blockAdapter, xetStorageNamespace(cfg, blockAdapter))),
 		xetcas.WithVerifyMaxConcurrent(cfg.GetBaseConfig().XET.Verify.MaxConcurrent),
 		xetcas.WithProxyGrantKey([]byte(cfg.GetBaseConfig().Auth.Encrypt.SecretKey.SecureValue())),
 		xetcas.WithTokenSigningKey([]byte(cfg.GetBaseConfig().Auth.Encrypt.SecretKey.SecureValue())),
+		xetcas.WithTokenAuthRequired(),
 	)))
 	r.Mount(apiutil.BaseURL, http.HandlerFunc(InvalidAPIEndpointHandler))
 	r.Mount("/logout", NewLogoutHandler(sessionStore, logger, cfg.GetBaseConfig().Auth.LogoutRedirectURL))

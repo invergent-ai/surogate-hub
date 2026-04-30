@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -140,6 +141,7 @@ func setupHandler(t testing.TB) (http.Handler, *dependencies) {
 	}
 	viper.Set("database.type", mem.DriverName)
 	viper.Set("committed.local_cache.dir", t.TempDir())
+	viper.Set("auth.encrypt.secret_key", "some secret")
 
 	collector := &memCollector{}
 	cfg := &config.BaseConfig{}
@@ -265,9 +267,10 @@ func TestServeXETChunkDedupRoute(t *testing.T) {
 	server := setupServer(t, handler)
 	clt := setupClientByEndpoint(t, server.URL, "", "")
 	cred := createDefaultAdminUser(t, clt)
+	token := issueXETTokenForTest(t, server.URL, cred)
 	req, err := http.NewRequest(http.MethodGet, server.URL+"/xet/v1/chunks/default/chunk-a", nil)
 	require.NoError(t, err)
-	req.SetBasicAuth(cred.AccessKeyID, cred.SecretAccessKey)
+	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -303,10 +306,11 @@ func TestServeXETXorbUploadRoute(t *testing.T) {
 	server := setupServer(t, handler)
 	clt := setupClientByEndpoint(t, server.URL, "", "")
 	cred := createDefaultAdminUser(t, clt)
+	token := issueXETTokenForTest(t, server.URL, cred)
 
 	req, err := http.NewRequest(http.MethodPost, server.URL+"/xet/v1/xorbs/default/xorb-a", strings.NewReader("xorb-bytes"))
 	require.NoError(t, err)
-	req.SetBasicAuth(cred.AccessKeyID, cred.SecretAccessKey)
+	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -317,7 +321,7 @@ func TestServeXETXorbUploadRoute(t *testing.T) {
 
 	req, err = http.NewRequest(http.MethodPost, server.URL+"/xet/v1/xorbs/default/xorb-a", strings.NewReader("different"))
 	require.NoError(t, err)
-	req.SetBasicAuth(cred.AccessKeyID, cred.SecretAccessKey)
+	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err = http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -325,6 +329,23 @@ func TestServeXETXorbUploadRoute(t *testing.T) {
 	body, err = io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	require.JSONEq(t, `{"was_inserted":false}`, string(body))
+}
+
+func issueXETTokenForTest(t testing.TB, serverURL string, cred *authmodel.BaseCredential) string {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodPost, serverURL+"/xet/v1/token", nil)
+	require.NoError(t, err)
+	req.SetBasicAuth(cred.AccessKeyID, cred.SecretAccessKey)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	var body struct {
+		AccessToken string `json:"access_token"`
+	}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	require.NotEmpty(t, body.AccessToken)
+	return body.AccessToken
 }
 
 func TestInvalidRoute(t *testing.T) {

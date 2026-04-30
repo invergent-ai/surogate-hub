@@ -92,6 +92,47 @@ func TestRefreshTokenIssuesNewScopedJWT(t *testing.T) {
 	require.Equal(t, "read write", claims["scope"])
 }
 
+func TestScopedAuthRejectsMissingToken(t *testing.T) {
+	ctx := context.Background()
+	kvStore := kvtest.GetStore(ctx, t)
+	registry := xetstore.NewRegistry(kvStore)
+	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: "file-a",
+		Shard:    []byte("raw-shard"),
+		ChunkIDs: []string{"chunk-a"},
+	})
+	require.NoError(t, err)
+	handler := NewHandler(
+		registry,
+		WithTokenSigningKey([]byte("test-token-key")),
+		WithTokenAuthRequired(),
+	)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/chunks/default/chunk-a", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestScopedAuthRejectsInsufficientScope(t *testing.T) {
+	ctx := context.Background()
+	handler := NewHandler(
+		xetstore.NewRegistry(kvtest.GetStore(ctx, t)),
+		WithXorbStore(NewXorbStore(mem.New(ctx), "mem://xet-cas")),
+		WithTokenSigningKey([]byte("test-token-key")),
+		WithTokenAuthRequired(),
+	)
+	token := testXETToken(t, "user-a", "read", time.Now().Add(time.Hour))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/xorb-a", strings.NewReader("xorb-bytes"))
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusForbidden, rec.Code)
+}
+
 func TestGetChunkReturnsDedupShardBytes(t *testing.T) {
 	ctx := context.Background()
 	kvStore := kvtest.GetStore(ctx, t)
@@ -249,6 +290,20 @@ func TestPostXorbVerificationHonorsMaxConcurrency(t *testing.T) {
 	}
 
 	require.Equal(t, int32(1), maxSeen)
+}
+
+func testXETToken(t *testing.T, subject string, scope string, expires time.Time) string {
+	t.Helper()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":   subject,
+		"aud":   "xet",
+		"scope": scope,
+		"iat":   time.Now().Unix(),
+		"exp":   expires.Unix(),
+	})
+	signed, err := token.SignedString([]byte("test-token-key"))
+	require.NoError(t, err)
+	return signed
 }
 
 func TestPostShardRegistersChunkDedupIndex(t *testing.T) {

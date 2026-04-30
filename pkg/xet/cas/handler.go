@@ -36,6 +36,7 @@ type Handler struct {
 	proxyGrantKey                      []byte
 	tokenSigningKey                    []byte
 	tokenTTL                           time.Duration
+	tokenAuthRequired                  bool
 }
 
 type HandlerOption func(*Handler)
@@ -69,6 +70,12 @@ func WithTokenSigningKey(key []byte) HandlerOption {
 func WithTokenTTL(ttl time.Duration) HandlerOption {
 	return func(h *Handler) {
 		h.tokenTTL = ttl
+	}
+}
+
+func WithTokenAuthRequired() HandlerOption {
+	return func(h *Handler) {
+		h.tokenAuthRequired = true
 	}
 }
 
@@ -127,13 +134,13 @@ func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler
 		opt(h)
 	}
 	r := chi.NewRouter()
-	r.Get("/v1/chunks/{prefix}/{hash}", h.getChunk)
+	r.With(h.requireXETScope("read")).Get("/v1/chunks/{prefix}/{hash}", h.getChunk)
 	r.Get("/v1/token/refresh", h.getTokenRefresh)
 	r.Get("/v1/xorbs/{prefix}/{hash}", h.getXorbProxy)
-	r.Get("/v2/reconstructions/{file_hash}", h.getReconstruction)
+	r.With(h.requireXETScope("read")).Get("/v2/reconstructions/{file_hash}", h.getReconstruction)
 	r.Post("/v1/token", h.postToken)
-	r.Post("/v1/shards", h.postShard)
-	r.Post("/v1/xorbs/{prefix}/{hash}", h.postXorb)
+	r.With(h.requireXETScope("write")).Post("/v1/shards", h.postShard)
+	r.With(h.requireXETScope("write")).Post("/v1/xorbs/{prefix}/{hash}", h.postXorb)
 	return r
 }
 
@@ -207,6 +214,31 @@ func (h *Handler) getTokenRefresh(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(response)
 }
 
+func (h *Handler) requireXETScope(scope string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		if !h.tokenAuthRequired {
+			return next
+		}
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			tokenString, ok := bearerToken(r.Header.Get("Authorization"))
+			if !ok {
+				http.Error(w, "missing bearer token", http.StatusUnauthorized)
+				return
+			}
+			claims, err := h.verifyXETTokenClaims(tokenString)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
+			if !hasXETScope(claims, scope) {
+				http.Error(w, "insufficient token scope", http.StatusForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 func (h *Handler) issueXETToken(subject string, now time.Time) (tokenResponse, error) {
 	if len(h.tokenSigningKey) == 0 {
 		return tokenResponse{}, errors.New("token signing key is not configured")
@@ -230,30 +262,52 @@ func (h *Handler) issueXETToken(subject string, now time.Time) (tokenResponse, e
 }
 
 func (h *Handler) verifyXETToken(tokenString string) (string, error) {
-	if len(h.tokenSigningKey) == 0 {
-		return "", errors.New("token signing key is not configured")
-	}
-	claims := jwt.MapClaims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method %s", token.Header["alg"])
-		}
-		return h.tokenSigningKey, nil
-	})
+	claims, err := h.verifyXETTokenClaims(tokenString)
 	if err != nil {
 		return "", err
-	}
-	if !token.Valid {
-		return "", errors.New("invalid token")
-	}
-	if audience, _ := claims["aud"].(string); audience != "xet" {
-		return "", errors.New("invalid token audience")
 	}
 	subject, _ := claims["sub"].(string)
 	if subject == "" {
 		return "", errors.New("invalid token subject")
 	}
 	return subject, nil
+}
+
+func (h *Handler) verifyXETTokenClaims(tokenString string) (jwt.MapClaims, error) {
+	if len(h.tokenSigningKey) == 0 {
+		return nil, errors.New("token signing key is not configured")
+	}
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if token.Method != jwt.SigningMethodHS256 {
+			return nil, fmt.Errorf("unexpected signing method %s", token.Header["alg"])
+		}
+		return h.tokenSigningKey, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+	if audience, _ := claims["aud"].(string); audience != "xet" {
+		return nil, errors.New("invalid token audience")
+	}
+	subject, _ := claims["sub"].(string)
+	if subject == "" {
+		return nil, errors.New("invalid token subject")
+	}
+	return claims, nil
+}
+
+func hasXETScope(claims jwt.MapClaims, required string) bool {
+	scope, _ := claims["scope"].(string)
+	for _, tokenScope := range strings.Fields(scope) {
+		if tokenScope == required {
+			return true
+		}
+	}
+	return false
 }
 
 func bearerToken(header string) (string, bool) {

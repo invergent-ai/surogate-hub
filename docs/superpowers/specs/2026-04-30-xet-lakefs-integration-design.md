@@ -454,6 +454,7 @@ Last updated: 2026-04-30.
 - [x] Added S3 gateway `GetObject` dispatch for `xet://` physical addresses with ranged reconstruction.
 - [x] Added `POST /xet/v1/token` that issues short-lived HS256 XET JWTs for the authenticated user.
 - [x] Added `GET /xet/v1/token/refresh` that validates a still-live XET bearer JWT and returns a fresh scoped JWT for the same subject.
+- [x] Added opt-in CAS route scope enforcement and wired the API server so lakeFS credentials only mint XET JWTs; CAS read/write routes require scoped XET bearer tokens.
 
 **In progress:**
 
@@ -483,11 +484,11 @@ Last updated: 2026-04-30.
   - [x] Add lakeFS API GET dispatch for `xet://` physical addresses.
   - [x] Add S3 gateway GET dispatch for `xet://` physical addresses.
   - [x] Add range-read correctness tests.
-- [ ] Implement XET token auth:
+- [x] Implement XET token auth:
   - [x] Add `POST /xet/v1/token`.
   - [x] Add `GET /xet/v1/token/refresh`.
   - [x] Issue short-lived JWTs signed with `auth.encrypt.secret_key`.
-  - [ ] Enforce read/write scopes per XET route.
+  - [x] Enforce read/write scopes per XET route.
 - [ ] Implement reconstruction capability checks:
   - [ ] Direct `(repo, ref, path)` authorization and graveler verification path.
   - [ ] `file_refs` `Scan` fallback with `xet.read.capability_scan_batch_size`.
