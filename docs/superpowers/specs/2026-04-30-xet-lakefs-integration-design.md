@@ -457,6 +457,7 @@ Last updated: 2026-04-30.
 - [x] Added opt-in CAS route scope enforcement and wired the API server so lakeFS credentials only mint XET JWTs; CAS read/write routes require scoped XET bearer tokens.
 - [x] Added direct reconstruction capability checks for `(repo, ref, path)`: read authorization plus current catalog resolution to `xet://<file_hash>`.
 - [x] Added `file_refs` scan fallback for reconstruction capability checks, governed by `xet.read.capability_scan_batch_size`, with inaccessible or stale tuples returning 404.
+- [x] Added best-effort `file_refs` backfill after successful direct-context reconstruction capability checks.
 
 **In progress:**
 
@@ -491,10 +492,10 @@ Last updated: 2026-04-30.
   - [x] Add `GET /xet/v1/token/refresh`.
   - [x] Issue short-lived JWTs signed with `auth.encrypt.secret_key`.
   - [x] Enforce read/write scopes per XET route.
-- [ ] Implement reconstruction capability checks:
+- [x] Implement reconstruction capability checks:
   - [x] Direct `(repo, ref, path)` authorization and graveler verification path.
   - [x] `file_refs` `Scan` fallback with `xet.read.capability_scan_batch_size`.
-  - [ ] Best-effort direct-context backfill for missing `file_refs`.
+  - [x] Best-effort direct-context backfill for missing `file_refs`.
   - [x] Return 404, not 403, when no accessible live tuple exists.
 - [ ] Add crash-injection coverage for link ordering:
   - [ ] Fail after graveler write and before `file_refs` write.

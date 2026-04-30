@@ -398,6 +398,14 @@ func TestServeXETReconstructionRequiresLiveLogicalContext(t *testing.T) {
 	defer resp.Body.Close()
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+	refs, err := xetstore.NewRegistry(deps.catalog.KVStore).ListFileRefs(ctx, fileHash, 32)
+	require.NoError(t, err)
+	require.Contains(t, refs, xetstore.FileRef{
+		FileHash: fileHash,
+		Repo:     repo,
+		Ref:      branch,
+		Path:     path,
+	})
 }
 
 func TestServeXETReconstructionUsesFileRefFallback(t *testing.T) {

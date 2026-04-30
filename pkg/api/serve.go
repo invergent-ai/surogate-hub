@@ -151,7 +151,16 @@ func xetStorageNamespace(cfg config.Config, blockAdapter block.Adapter) string {
 func xetReconstructionCapabilityChecker(cat *catalog.Catalog, authService auth.Service, registry *xetstore.Registry, scanBatchSize int) xetcas.ReconstructionCapabilityChecker {
 	return func(ctx context.Context, fileHash string, logical xetcas.ReconstructionLogicalContext) error {
 		if logical.Repo != "" && logical.Ref != "" && logical.Path != "" {
-			return checkXETReconstructionCandidate(ctx, cat, authService, fileHash, logical)
+			if err := checkXETReconstructionCandidate(ctx, cat, authService, fileHash, logical); err != nil {
+				return err
+			}
+			_ = registry.PutFileRef(ctx, xetstore.FileRef{
+				FileHash: fileHash,
+				Repo:     logical.Repo,
+				Ref:      logical.Ref,
+				Path:     logical.Path,
+			})
+			return nil
 		}
 		refs, err := registry.ListFileRefs(ctx, fileHash, scanBatchSize)
 		if err != nil {
