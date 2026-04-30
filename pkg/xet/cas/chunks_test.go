@@ -59,6 +59,39 @@ func TestPostTokenIssuesScopedJWT(t *testing.T) {
 	require.Equal(t, "read write", claims["scope"])
 }
 
+func TestRefreshTokenIssuesNewScopedJWT(t *testing.T) {
+	ctx := auth.WithUser(context.Background(), &model.User{Username: "user-a"})
+	handler := NewHandler(
+		xetstore.NewRegistry(kvtest.GetStore(ctx, t)),
+		WithTokenSigningKey([]byte("test-token-key")),
+		WithTokenTTL(time.Hour),
+	)
+	req := httptest.NewRequest(http.MethodPost, "/v1/token", nil).WithContext(ctx)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+	var issued tokenResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &issued))
+
+	refreshReq := httptest.NewRequest(http.MethodGet, "/v1/token/refresh", nil)
+	refreshReq.Header.Set("Authorization", "Bearer "+issued.AccessToken)
+	refreshRec := httptest.NewRecorder()
+	handler.ServeHTTP(refreshRec, refreshReq)
+
+	require.Equal(t, http.StatusOK, refreshRec.Code)
+	var refreshed tokenResponse
+	require.NoError(t, json.Unmarshal(refreshRec.Body.Bytes(), &refreshed))
+	require.NotEmpty(t, refreshed.AccessToken)
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(refreshed.AccessToken, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte("test-token-key"), nil
+	})
+	require.NoError(t, err)
+	require.True(t, token.Valid)
+	require.Equal(t, "user-a", claims["sub"])
+	require.Equal(t, "read write", claims["scope"])
+}
+
 func TestGetChunkReturnsDedupShardBytes(t *testing.T) {
 	ctx := context.Background()
 	kvStore := kvtest.GetStore(ctx, t)

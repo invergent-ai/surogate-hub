@@ -128,6 +128,7 @@ func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler
 	}
 	r := chi.NewRouter()
 	r.Get("/v1/chunks/{prefix}/{hash}", h.getChunk)
+	r.Get("/v1/token/refresh", h.getTokenRefresh)
 	r.Get("/v1/xorbs/{prefix}/{hash}", h.getXorbProxy)
 	r.Get("/v2/reconstructions/{file_hash}", h.getReconstruction)
 	r.Post("/v1/token", h.postToken)
@@ -175,14 +176,44 @@ func (h *Handler) postToken(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	if len(h.tokenSigningKey) == 0 {
-		http.Error(w, "token signing key is not configured", http.StatusInternalServerError)
+	response, err := h.issueXETToken(user.Username, time.Now())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	now := time.Now()
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(response)
+}
+
+func (h *Handler) getTokenRefresh(w http.ResponseWriter, r *http.Request) {
+	tokenString, ok := bearerToken(r.Header.Get("Authorization"))
+	if !ok {
+		http.Error(w, "missing bearer token", http.StatusUnauthorized)
+		return
+	}
+	subject, err := h.verifyXETToken(tokenString)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	response, err := h.issueXETToken(subject, time.Now())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(response)
+}
+
+func (h *Handler) issueXETToken(subject string, now time.Time) (tokenResponse, error) {
+	if len(h.tokenSigningKey) == 0 {
+		return tokenResponse{}, errors.New("token signing key is not configured")
+	}
 	expires := now.Add(h.tokenTTL)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub":   user.Username,
+		"sub":   subject,
 		"aud":   "xet",
 		"scope": "read write",
 		"iat":   now.Unix(),
@@ -190,15 +221,47 @@ func (h *Handler) postToken(w http.ResponseWriter, r *http.Request) {
 	})
 	signed, err := token.SignedString(h.tokenSigningKey)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return tokenResponse{}, err
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(tokenResponse{
+	return tokenResponse{
 		AccessToken: signed,
 		ExpiresAt:   expires.Unix(),
+	}, nil
+}
+
+func (h *Handler) verifyXETToken(tokenString string) (string, error) {
+	if len(h.tokenSigningKey) == 0 {
+		return "", errors.New("token signing key is not configured")
+	}
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method %s", token.Header["alg"])
+		}
+		return h.tokenSigningKey, nil
 	})
+	if err != nil {
+		return "", err
+	}
+	if !token.Valid {
+		return "", errors.New("invalid token")
+	}
+	if audience, _ := claims["aud"].(string); audience != "xet" {
+		return "", errors.New("invalid token audience")
+	}
+	subject, _ := claims["sub"].(string)
+	if subject == "" {
+		return "", errors.New("invalid token subject")
+	}
+	return subject, nil
+}
+
+func bearerToken(header string) (string, bool) {
+	parts := strings.Fields(header)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || parts[1] == "" {
+		return "", false
+	}
+	return parts[1], true
 }
 
 func (h *Handler) getXorbProxy(w http.ResponseWriter, r *http.Request) {
