@@ -54,6 +54,21 @@ func TestParseShardInfoRejectsMismatchedFileHash(t *testing.T) {
 	require.Contains(t, err.Error(), "file hash mismatch")
 }
 
+func TestParseShardInfoAcceptsFooterlessHFShard(t *testing.T) {
+	raw, err := hex.DecodeString("48465265706f4d6574614461746100556967456a7b815783a5bdd95ccdd14aa902000000000000000000000000000000f48967c6e58211baf99bfe05d3c0cd5b5d0b1c778ceff407ad8180a90f3debe5000000c00100000000000000000000008ff201a43c17cc7e887f4e5353d7526245381eaf3586a4211745ce927ece4e49000000000480010000000000010000007462ee32ff53d2416a470825aa6c9a916428d3786356a7d1f056176ff22eaf2500000000000000000000000000000000aed885ef055c83e5123e720d9352487f4e97cf9cba7db9e9b9ded40d2f410d4000000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000008ff201a43c17cc7e887f4e5353d7526245381eaf3586a4211745ce927ece4e49000000000100000004800100000000008ff201a43c17cc7e887f4e5353d7526245381eaf3586a4211745ce927ece4e4900000000048001000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000")
+	require.NoError(t, err)
+
+	info, err := ParseShardInfo(raw)
+
+	require.NoError(t, err)
+	require.Len(t, info.Files, 1)
+	require.Len(t, info.Xorbs, 1)
+	require.Len(t, info.ChunkHashes, 1)
+	require.Equal(t, uint64(98308), info.Summary.SizeBytes)
+	require.Equal(t, 1, info.Summary.NumXorbs)
+	require.Equal(t, 1, info.Summary.NumChunks)
+}
+
 func testBinaryShard(t *testing.T, fileHash, xorbHash, chunkA, chunkB string) []byte {
 	t.Helper()
 	var b bytes.Buffer

@@ -76,7 +76,8 @@ type ShardSummary struct {
 
 func ParseShardInfo(data []byte) (ShardInfo, error) {
 	reader := bytes.NewReader(data)
-	if err := readShardHeader(reader); err != nil {
+	footerSize, err := readShardHeader(reader)
+	if err != nil {
 		return ShardInfo{}, err
 	}
 
@@ -91,9 +92,12 @@ func ParseShardInfo(data []byte) (ShardInfo, error) {
 	if err := verifyShardFileHashes(files, xorbHashes); err != nil {
 		return ShardInfo{}, err
 	}
-	summary, err := readShardFooter(reader)
-	if err != nil {
-		return ShardInfo{}, err
+	var summary ShardSummary
+	if footerSize > 0 {
+		summary, err = readShardFooter(reader)
+		if err != nil {
+			return ShardInfo{}, err
+		}
 	}
 	summary.NumXorbs = len(xorbHashes)
 	summary.NumChunks = len(chunkHashes)
@@ -112,29 +116,29 @@ func ParseShardInfo(data []byte) (ShardInfo, error) {
 	}, nil
 }
 
-func readShardHeader(reader io.Reader) error {
+func readShardHeader(reader io.Reader) (uint64, error) {
 	var tag [32]byte
 	if _, err := io.ReadFull(reader, tag[:]); err != nil {
-		return fmt.Errorf("read shard header tag: %w", err)
+		return 0, fmt.Errorf("read shard header tag: %w", err)
 	}
 	if tag != mdbShardHeaderTag {
-		return fmt.Errorf("invalid shard header tag")
+		return 0, fmt.Errorf("invalid shard header tag")
 	}
 	version, err := readU64(reader)
 	if err != nil {
-		return fmt.Errorf("read shard header version: %w", err)
+		return 0, fmt.Errorf("read shard header version: %w", err)
 	}
 	if version != mdbShardHeaderVersion {
-		return fmt.Errorf("unsupported shard header version %d", version)
+		return 0, fmt.Errorf("unsupported shard header version %d", version)
 	}
 	footerSize, err := readU64(reader)
 	if err != nil {
-		return fmt.Errorf("read shard footer size: %w", err)
+		return 0, fmt.Errorf("read shard footer size: %w", err)
 	}
-	if footerSize != mdbShardFooterSize {
-		return fmt.Errorf("unsupported shard footer size %d", footerSize)
+	if footerSize != 0 && footerSize != mdbShardFooterSize {
+		return 0, fmt.Errorf("unsupported shard footer size %d", footerSize)
 	}
-	return nil
+	return footerSize, nil
 }
 
 func readShardFiles(reader io.Reader) ([]ShardFileInfo, error) {
