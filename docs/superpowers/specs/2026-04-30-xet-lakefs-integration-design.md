@@ -447,6 +447,7 @@ Last updated: 2026-04-30.
 - [x] Added shared xorb object addressing and a block-adapter presigned range resolver for reconstruction manifests.
 - [x] Added the initial `GET /xet/v2/reconstructions/{file_hash}` route that loads canonical shards and returns V2 manifests for full-file reconstructions.
 - [x] Added `Range: bytes=start-end` handling for reconstruction manifests, including mid-chunk offset reporting.
+- [x] Added server-side proxy fallback grants for adapters that cannot presign, plus `/xet/v1/xorbs/{prefix}/{hash}?grant=...` range serving.
 
 **In progress:**
 
@@ -472,7 +473,7 @@ Last updated: 2026-04-30.
   - [x] Add `pkg/xet/reconstruct` range mapping over shard terms.
   - [x] Add manifest generation for `GET /xet/v2/reconstructions/{file_hash}`.
   - [x] Add block-adapter presigned URL support for xorb range manifests.
-  - [ ] Add server-side proxy fallback grants for adapters that cannot presign.
+  - [x] Add server-side proxy fallback grants for adapters that cannot presign.
   - [ ] Add S3 gateway and lakeFS API GET dispatch for `xet://` physical addresses.
   - [ ] Add range-read correctness tests.
 - [ ] Implement XET token auth:

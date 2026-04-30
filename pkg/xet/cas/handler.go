@@ -3,16 +3,20 @@ package cas
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/treeverse/lakefs/pkg/block"
@@ -27,6 +31,7 @@ type Handler struct {
 	verifyTokens                       chan struct{}
 	verifyXorb                         func(expectedHash string, data []byte) error
 	reconstructionRangeResolverFactory reconstructionRangeResolverFactory
+	proxyGrantKey                      []byte
 }
 
 type HandlerOption func(*Handler)
@@ -42,6 +47,12 @@ func WithXorbStore(store *XorbStore) HandlerOption {
 func WithVerifyMaxConcurrent(maxConcurrent int) HandlerOption {
 	return func(h *Handler) {
 		h.verifyTokens = make(chan struct{}, normalizeVerifyMaxConcurrent(maxConcurrent))
+	}
+}
+
+func WithProxyGrantKey(key []byte) HandlerOption {
+	return func(h *Handler) {
+		h.proxyGrantKey = append([]byte(nil), key...)
 	}
 }
 
@@ -77,6 +88,12 @@ type uploadShardResponse struct {
 	Result int `json:"result"`
 }
 
+type proxyGrant struct {
+	XorbHash string                  `json:"xorb_hash"`
+	Ranges   []reconstruct.HTTPRange `json:"ranges"`
+	Expires  int64                   `json:"exp"`
+}
+
 func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler {
 	h := &Handler{
 		registry:     registry,
@@ -88,6 +105,7 @@ func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler
 	}
 	r := chi.NewRouter()
 	r.Get("/v1/chunks/{prefix}/{hash}", h.getChunk)
+	r.Get("/v1/xorbs/{prefix}/{hash}", h.getXorbProxy)
 	r.Get("/v2/reconstructions/{file_hash}", h.getReconstruction)
 	r.Post("/v1/shards", h.postShard)
 	r.Post("/v1/xorbs/{prefix}/{hash}", h.postXorb)
@@ -125,6 +143,43 @@ func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(putXorbResponse{WasInserted: result.WasInserted})
+}
+
+func (h *Handler) getXorbProxy(w http.ResponseWriter, r *http.Request) {
+	if h.xorbs == nil {
+		http.NotFound(w, r)
+		return
+	}
+	hash := chi.URLParam(r, "hash")
+	grant, err := h.verifyProxyGrant(r.URL.Query().Get("grant"), hash, time.Now())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	byteRange, err := xorbProxyRange(r.Header.Get("Range"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusRequestedRangeNotSatisfiable)
+		return
+	}
+	if !rangeGranted(byteRange, grant.Ranges) {
+		http.Error(w, "range is not granted", http.StatusForbidden)
+		return
+	}
+	reader, err := h.xorbs.adapter.GetRange(
+		r.Context(),
+		xetstore.XorbObjectPointer(h.xorbs.storageNamespace, chi.URLParam(r, "prefix"), hash),
+		int64(byteRange.Start),
+		int64(byteRange.End),
+	)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer func() { _ = reader.Close() }()
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.Copy(w, reader)
 }
 
 func (h *Handler) getReconstruction(w http.ResponseWriter, r *http.Request) {
@@ -333,11 +388,28 @@ func (h *Handler) presignedReconstructionRangeResolverFactory(ctx context.Contex
 			return reconstruct.ResolvedRange{}, err
 		}
 		url, _, err := h.xorbs.adapter.GetPreSignedURL(ctx, xetstore.XorbObjectPointer(h.xorbs.storageNamespace, "default", xorbHash), block.PreSignModeRead)
-		if err != nil {
+		if errors.Is(err, block.ErrOperationNotSupported) {
+			url, err = h.proxyXorbURL("default", xorbHash, []reconstruct.HTTPRange{byteRange})
+			if err != nil {
+				return reconstruct.ResolvedRange{}, err
+			}
+		} else if err != nil {
 			return reconstruct.ResolvedRange{}, err
 		}
 		return reconstruct.ResolvedRange{URL: url, Bytes: byteRange}, nil
 	}, nil
+}
+
+func (h *Handler) proxyXorbURL(prefix, xorbHash string, ranges []reconstruct.HTTPRange) (string, error) {
+	grant, err := h.signProxyGrant(proxyGrant{
+		XorbHash: xorbHash,
+		Ranges:   ranges,
+		Expires:  time.Now().Add(15 * time.Minute).Unix(),
+	})
+	if err != nil {
+		return "", err
+	}
+	return "/v1/xorbs/" + url.PathEscape(prefix) + "/" + url.PathEscape(xorbHash) + "?grant=" + url.QueryEscape(grant), nil
 }
 
 func xorbByteRange(info parsedXorbInfo, chunks reconstruct.IndexRange) (reconstruct.HTTPRange, error) {
@@ -392,6 +464,91 @@ func reconstructionByteRange(header string, fileSize uint64) (reconstruct.ByteRa
 		end = fileSize
 	}
 	return reconstruct.ByteRange{Start: start, End: end}, nil
+}
+
+func xorbProxyRange(header string) (reconstruct.HTTPRange, error) {
+	if header == "" {
+		return reconstruct.HTTPRange{}, fmt.Errorf("range header is required")
+	}
+	spec, ok := strings.CutPrefix(header, "bytes=")
+	if !ok {
+		return reconstruct.HTTPRange{}, fmt.Errorf("invalid range header")
+	}
+	startSpec, endSpec, ok := strings.Cut(spec, "-")
+	if !ok || startSpec == "" || endSpec == "" {
+		return reconstruct.HTTPRange{}, fmt.Errorf("invalid range header")
+	}
+	start, err := strconv.ParseUint(startSpec, 10, 64)
+	if err != nil {
+		return reconstruct.HTTPRange{}, fmt.Errorf("invalid range start")
+	}
+	end, err := strconv.ParseUint(endSpec, 10, 64)
+	if err != nil {
+		return reconstruct.HTTPRange{}, fmt.Errorf("invalid range end")
+	}
+	if start > end {
+		return reconstruct.HTTPRange{}, fmt.Errorf("invalid range")
+	}
+	return reconstruct.HTTPRange{Start: start, End: end}, nil
+}
+
+func (h *Handler) signProxyGrant(grant proxyGrant) (string, error) {
+	if len(h.proxyGrantKey) == 0 {
+		return "", fmt.Errorf("proxy grant key is not configured")
+	}
+	payload, err := json.Marshal(grant)
+	if err != nil {
+		return "", err
+	}
+	payloadPart := base64.RawURLEncoding.EncodeToString(payload)
+	mac := hmac.New(sha256.New, h.proxyGrantKey)
+	_, _ = mac.Write([]byte(payloadPart))
+	signaturePart := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+	return payloadPart + "." + signaturePart, nil
+}
+
+func (h *Handler) verifyProxyGrant(encoded, xorbHash string, now time.Time) (proxyGrant, error) {
+	if len(h.proxyGrantKey) == 0 {
+		return proxyGrant{}, fmt.Errorf("proxy grant key is not configured")
+	}
+	payloadPart, signaturePart, ok := strings.Cut(encoded, ".")
+	if !ok || payloadPart == "" || signaturePart == "" {
+		return proxyGrant{}, fmt.Errorf("invalid grant")
+	}
+	mac := hmac.New(sha256.New, h.proxyGrantKey)
+	_, _ = mac.Write([]byte(payloadPart))
+	expectedSignature := mac.Sum(nil)
+	actualSignature, err := base64.RawURLEncoding.DecodeString(signaturePart)
+	if err != nil {
+		return proxyGrant{}, fmt.Errorf("invalid grant signature")
+	}
+	if !hmac.Equal(actualSignature, expectedSignature) {
+		return proxyGrant{}, fmt.Errorf("invalid grant signature")
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(payloadPart)
+	if err != nil {
+		return proxyGrant{}, fmt.Errorf("invalid grant payload")
+	}
+	var grant proxyGrant
+	if err := json.Unmarshal(payload, &grant); err != nil {
+		return proxyGrant{}, fmt.Errorf("invalid grant payload")
+	}
+	if grant.XorbHash != xorbHash {
+		return proxyGrant{}, fmt.Errorf("grant xorb mismatch")
+	}
+	if now.Unix() > grant.Expires {
+		return proxyGrant{}, fmt.Errorf("grant expired")
+	}
+	return grant, nil
+}
+
+func rangeGranted(requested reconstruct.HTTPRange, grants []reconstruct.HTTPRange) bool {
+	for _, grant := range grants {
+		if requested.Start >= grant.Start && requested.End <= grant.End {
+			return true
+		}
+	}
+	return false
 }
 
 func computedShimFileHash(shard string) string {

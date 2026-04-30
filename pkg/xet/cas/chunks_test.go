@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -420,6 +421,53 @@ func TestGetReconstructionHonorsRangeHeader(t *testing.T) {
 			}]
 		}
 	}`, rec.Body.String())
+}
+
+func TestGetReconstructionFallsBackToGrantedProxyURL(t *testing.T) {
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
+	chunk := []byte("hello world!")
+	xorbHash, xorbBytes := testSerializedXorb(t, chunk)
+	chunkHash := xetstore.ComputeDataHash(chunk)
+	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: uint64(len(chunk)),
+	}})
+	require.NoError(t, err)
+	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
+	require.NoError(t, err)
+	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: fileHash,
+		Shard:    testXETBinaryShard(t, fileHash, xorbHash, chunkHash),
+	})
+	require.NoError(t, err)
+	handler := NewHandler(
+		registry,
+		WithXorbStore(xorbStore),
+		WithProxyGrantKey([]byte("test-proxy-grant-key")),
+	)
+
+	req := httptest.NewRequest(http.MethodGet, "/v2/reconstructions/"+fileHash, nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var manifest reconstruct.Manifest
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &manifest))
+	require.Len(t, manifest.Xorbs[xorbHash], 1)
+	fetch := manifest.Xorbs[xorbHash][0]
+	require.Len(t, fetch.Ranges, 1)
+	require.Contains(t, fetch.URL, "/v1/xorbs/default/"+xorbHash+"?grant=")
+
+	proxyReq := httptest.NewRequest(http.MethodGet, fetch.URL, nil)
+	byteRange := fetch.Ranges[0].Bytes
+	proxyReq.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", byteRange.Start, byteRange.End))
+	proxyRec := httptest.NewRecorder()
+	handler.ServeHTTP(proxyRec, proxyReq)
+
+	require.Equal(t, http.StatusOK, proxyRec.Code)
+	require.Equal(t, xorbBytes[byteRange.Start:byteRange.End+1], proxyRec.Body.Bytes())
 }
 
 func testShimFileHash(shard string) string {
