@@ -2,6 +2,8 @@ package esti
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,10 +19,10 @@ import (
 )
 
 func TestXETShardRegistrationDedupProbe(t *testing.T) {
-	fileHash := fmt.Sprintf("file-%d", time.Now().UnixNano())
 	chunkID := fmt.Sprintf("chunk-%d", time.Now().UnixNano())
 	xorbID := fmt.Sprintf("xorb-%d", time.Now().UnixNano())
 	shard := fmt.Sprintf("raw-shard-%d", time.Now().UnixNano())
+	fileHash := xetShimFileHash(shard)
 
 	putXETXorb(t, xorbID, "xorb-bytes")
 	registerXETShard(t, fileHash, shard, []string{chunkID}, []string{xorbID})
@@ -44,8 +46,9 @@ func TestXETLinkPhysicalAddress(t *testing.T) {
 	ctx, _, repo := setupTest(t)
 	defer tearDownTest(repo)
 
-	fileHash := fmt.Sprintf("file-%d", time.Now().UnixNano())
-	registerXETShard(t, fileHash, "raw-shard", nil, nil)
+	shard := fmt.Sprintf("raw-shard-%d", time.Now().UnixNano())
+	fileHash := xetShimFileHash(shard)
+	registerXETShard(t, fileHash, shard, nil, nil)
 
 	physicalAddress := "xet://" + fileHash
 	resp, err := client.LinkPhysicalAddressWithResponse(ctx, repo, mainBranch, &apigen.LinkPhysicalAddressParams{
@@ -127,4 +130,9 @@ func registerXETShard(t *testing.T, fileHash, shard string, chunkIDs, xorbIDs []
 
 func xetRootEndpoint() string {
 	return strings.TrimSuffix(endpointURL, apiutil.BaseURL)
+}
+
+func xetShimFileHash(shard string) string {
+	sum := sha256.Sum256([]byte(shard))
+	return hex.EncodeToString(sum[:])
 }

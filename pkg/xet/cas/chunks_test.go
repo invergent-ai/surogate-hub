@@ -3,6 +3,9 @@ package cas
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -69,19 +72,20 @@ func TestPostShardRegistersChunkDedupIndex(t *testing.T) {
 	kvStore := kvtest.GetStore(ctx, t)
 	registry := xetstore.NewRegistry(kvStore)
 	handler := NewHandler(registry)
+	fileHash := testShimFileHash("raw-shard")
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewBufferString(`{
-		"file_hash": "file-a",
+	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewBufferString(fmt.Sprintf(`{
+		"file_hash": %q,
 		"shard": "raw-shard",
 		"chunk_ids": ["chunk-a"]
-	}`))
+	}`, fileHash)))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code)
-	require.JSONEq(t, `{"file_hash":"file-a","was_inserted":true}`, rec.Body.String())
+	require.JSONEq(t, fmt.Sprintf(`{"file_hash":%q,"was_inserted":true}`, fileHash), rec.Body.String())
 
 	getReq := httptest.NewRequest(http.MethodGet, "/v1/chunks/default/chunk-a", nil)
 	getRec := httptest.NewRecorder()
@@ -93,17 +97,36 @@ func TestPostShardRegistersChunkDedupIndex(t *testing.T) {
 	require.Equal(t, []byte("raw-shard"), body)
 }
 
+func TestPostShardRejectsMismatchedComputedFileHash(t *testing.T) {
+	ctx := context.Background()
+	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewBufferString(`{
+		"file_hash": "wrong-hash",
+		"shard": "raw-shard",
+		"chunk_ids": ["chunk-a"]
+	}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Contains(t, rec.Body.String(), "file_hash does not match shard")
+}
+
 func TestPostShardRejectsMissingReferencedXorb(t *testing.T) {
 	ctx := context.Background()
 	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
 	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
+	fileHash := testShimFileHash("raw-shard")
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewBufferString(`{
-		"file_hash": "file-a",
+	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewBufferString(fmt.Sprintf(`{
+		"file_hash": %q,
 		"shard": "raw-shard",
 		"chunk_ids": ["chunk-a"],
 		"xorb_ids": ["missing-xorb"]
-	}`))
+	}`, fileHash)))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 
@@ -119,18 +142,24 @@ func TestPostShardAcceptsExistingReferencedXorb(t *testing.T) {
 	_, err := xorbStore.Put(ctx, "default", "xorb-a", int64(len("xorb-bytes")), bytes.NewReader([]byte("xorb-bytes")))
 	require.NoError(t, err)
 	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
+	fileHash := testShimFileHash("raw-shard")
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewBufferString(`{
-		"file_hash": "file-a",
+	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewBufferString(fmt.Sprintf(`{
+		"file_hash": %q,
 		"shard": "raw-shard",
 		"chunk_ids": ["chunk-a"],
 		"xorb_ids": ["xorb-a"]
-	}`))
+	}`, fileHash)))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code)
-	require.JSONEq(t, `{"file_hash":"file-a","was_inserted":true}`, rec.Body.String())
+	require.JSONEq(t, fmt.Sprintf(`{"file_hash":%q,"was_inserted":true}`, fileHash), rec.Body.String())
+}
+
+func testShimFileHash(shard string) string {
+	sum := sha256.Sum256([]byte(shard))
+	return hex.EncodeToString(sum[:])
 }

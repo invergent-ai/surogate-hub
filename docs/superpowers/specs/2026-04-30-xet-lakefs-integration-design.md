@@ -433,24 +433,20 @@ Last updated: 2026-04-30.
 - [x] Added a block-adapter-backed xorb CAS store and idempotent `POST /xet/v1/xorbs/{prefix}/{hash}` route.
 - [x] Wired the xorb store into the API server under an instance-wide XET storage namespace.
 - [x] Added current JSON-shim shard registration validation for declared `xorb_ids` and ESTI coverage for xorb-backed shard registration.
+- [x] Added current JSON-shim `file_hash` verification before shard registration, with focused handler and ESTI coverage.
 
 **In progress:**
-
-- [ ] Verify current JSON-shim `file_hash` values server-side before accepting shard registration:
-  - [ ] Add a failing handler test that posts a shard whose asserted `file_hash` does not match the server-computed shim hash and expects `400`.
-  - [ ] Compute the shim hash from the submitted shard bytes and reject mismatches before xorb validation and registry writes.
-  - [ ] Update existing handler and ESTI tests to use the computed shim hash.
-  - [ ] Run `go test ./pkg/xet/cas -run 'TestPostShard' -count=1`.
-  - [ ] Run focused XET suites: `go test ./pkg/xet/cas ./pkg/xet/store -count=1`, `go test ./pkg/api -run 'TestServeXET|TestController_LinkXETPhysicalAddress' -count=1`, and `go test ./esti -run 'TestXET' -count=1`.
-  - [ ] Commit as `feat(xet): verify shard file hash`.
-
-**Remaining TODOs:**
 
 - [ ] Replace the current JSON shard-registration shim with real HF/XET binary shard parsing:
   - [ ] Extract referenced xorb hashes, chunk hashes, file size, and summary fields from the HF binary shard.
   - [ ] Compute the real XET file MerkleHash and verify it matches the asserted `file_hash`.
   - [ ] Store raw binary shard bytes verbatim in `xet/shard/<file_hash>`.
   - [ ] Update dedup probe tests to assert returned bytes are the original binary shard.
+  - [ ] Run focused parser and CAS handler tests.
+  - [ ] Commit as `feat(xet): parse binary shards`.
+
+**Remaining TODOs:**
+
 - [ ] Verify xorb upload content:
   - [ ] Parse/decompress xorb payloads enough to recompute and validate the uploaded xorb hash.
   - [ ] Add `xet.verify.max_concurrent` CPU-bound verification control.

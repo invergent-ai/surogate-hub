@@ -1,6 +1,8 @@
 package cas
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -77,6 +79,10 @@ func (h *Handler) postShard(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "file_hash and shard are required", http.StatusBadRequest)
 		return
 	}
+	if req.FileHash != computedShimFileHash(req.Shard) {
+		http.Error(w, "file_hash does not match shard", http.StatusBadRequest)
+		return
+	}
 	if err := h.validateXorbs(r, req.XorbIDs); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -117,6 +123,11 @@ func (h *Handler) validateXorbs(r *http.Request, xorbIDs []string) error {
 		}
 	}
 	return nil
+}
+
+func computedShimFileHash(shard string) string {
+	sum := sha256.Sum256([]byte(shard))
+	return hex.EncodeToString(sum[:])
 }
 
 func (h *Handler) getChunk(w http.ResponseWriter, r *http.Request) {
