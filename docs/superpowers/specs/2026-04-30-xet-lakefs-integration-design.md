@@ -1,7 +1,7 @@
 # XET Integration into Surogate-Hub — Design Spec
 
 **Date:** 2026-04-30
-**Status:** Approved (brainstorming complete; awaiting implementation plan)
+**Status:** Approved; implementation in progress
 **Owner:** flavius@statemesh.net
 
 ## 1. Goal
@@ -415,6 +415,76 @@ JWT signing reuses `auth.encrypt.secret_key` — no new secret material.
 - `cmd/lakefs gc xet` CLI subcommand with `--dry-run`.
 - Reuse existing GC walker; expand `xet://` addresses; sweep unreferenced xorbs/shards/index entries.
 - `min_age` guard; stats output.
+
+### 11.1 Implementation Progress and TODOs
+
+Last updated: 2026-04-30.
+
+**Working rule:** baby steps, focused tests first, commit after each green slice.
+
+**Completed and committed:**
+
+- [x] Tightened the design spec around crash-safe shard registration, per-tuple `file_refs`, capability-check scanning, GC file-ref sweeping, and the explicit no-`pkg/kv`-transactions decision.
+- [x] Added `pkg/xet/store.Registry` with canonical shard registration, `SetIf` commit point, best-effort shard meta, chunk-index publication, chunk dedup lookup, and `file_refs` helpers.
+- [x] Added minimal `pkg/xet/cas` routes for shard registration and chunk dedup probes.
+- [x] Mounted `/xet/*` on the API server behind explicit lakeFS authentication.
+- [x] Added `xet://<file_hash>` validation to the link-physical-address path and record `file_refs` only after the graveler entry is written.
+- [x] Added focused unit and ESTI coverage for shard registration, dedup probe, authenticated route mount, XET physical-address linking, and missing-shard rejection.
+- [x] Added a block-adapter-backed xorb CAS store and idempotent `POST /xet/v1/xorbs/{prefix}/{hash}` route.
+- [x] Wired the xorb store into the API server under an instance-wide XET storage namespace.
+- [x] Added current JSON-shim shard registration validation for declared `xorb_ids` and ESTI coverage for xorb-backed shard registration.
+
+**In progress:**
+
+- [ ] Verify current JSON-shim `file_hash` values server-side before accepting shard registration:
+  - [ ] Add a failing handler test that posts a shard whose asserted `file_hash` does not match the server-computed shim hash and expects `400`.
+  - [ ] Compute the shim hash from the submitted shard bytes and reject mismatches before xorb validation and registry writes.
+  - [ ] Update existing handler and ESTI tests to use the computed shim hash.
+  - [ ] Run `go test ./pkg/xet/cas -run 'TestPostShard' -count=1`.
+  - [ ] Run focused XET suites: `go test ./pkg/xet/cas ./pkg/xet/store -count=1`, `go test ./pkg/api -run 'TestServeXET|TestController_LinkXETPhysicalAddress' -count=1`, and `go test ./esti -run 'TestXET' -count=1`.
+  - [ ] Commit as `feat(xet): verify shard file hash`.
+
+**Remaining TODOs:**
+
+- [ ] Replace the current JSON shard-registration shim with real HF/XET binary shard parsing:
+  - [ ] Extract referenced xorb hashes, chunk hashes, file size, and summary fields from the HF binary shard.
+  - [ ] Compute the real XET file MerkleHash and verify it matches the asserted `file_hash`.
+  - [ ] Store raw binary shard bytes verbatim in `xet/shard/<file_hash>`.
+  - [ ] Update dedup probe tests to assert returned bytes are the original binary shard.
+- [ ] Verify xorb upload content:
+  - [ ] Parse/decompress xorb payloads enough to recompute and validate the uploaded xorb hash.
+  - [ ] Add `xet.verify.max_concurrent` CPU-bound verification control.
+  - [ ] Keep idempotent duplicate-upload behavior unchanged.
+- [ ] Implement reconstruction reads:
+  - [ ] Add `pkg/xet/reconstruct` range mapping over shard terms.
+  - [ ] Add manifest generation for `GET /xet/v2/reconstructions/{file_hash}`.
+  - [ ] Add block-adapter presigned URL support and server-side proxy fallback grants.
+  - [ ] Add S3 gateway and lakeFS API GET dispatch for `xet://` physical addresses.
+  - [ ] Add range-read correctness tests.
+- [ ] Implement XET token auth:
+  - [ ] Add `POST /xet/v1/token` and `GET /xet/v1/token/refresh`.
+  - [ ] Issue short-lived JWTs signed with `auth.encrypt.secret_key`.
+  - [ ] Enforce read/write scopes per XET route.
+- [ ] Implement reconstruction capability checks:
+  - [ ] Direct `(repo, ref, path)` authorization and graveler verification path.
+  - [ ] `file_refs` `Scan` fallback with `xet.read.capability_scan_batch_size`.
+  - [ ] Best-effort direct-context backfill for missing `file_refs`.
+  - [ ] Return 404, not 403, when no accessible live tuple exists.
+- [ ] Add crash-injection coverage for link ordering:
+  - [ ] Fail after graveler write and before `file_refs` write.
+  - [ ] Verify normal lakeFS/S3 path reads still work.
+  - [ ] Verify retry or direct-context reconstruction backfills the missing `file_refs` key.
+- [ ] Add XET GC:
+  - [ ] Add `cmd/lakefs gc xet --dry-run`.
+  - [ ] Reuse the lakeFS GC walker to mark live XET shards and xorbs.
+  - [ ] Sweep stale shards, chunk-index entries, xorbs older than `xet.gc.min_age`, and stale per-tuple `file_refs`.
+- [ ] Add smart-client smoke:
+  - [ ] Add a curl or `hf_xet` smoke test that uploads xorbs, registers a shard, links the `xet://` object, reads it back, and verifies a second similar upload gets dedup hits.
+
+**Known test-suite status:**
+
+- Focused XET unit/API/ESTI tests passed at the last green checkpoint.
+- The full local ESTI suite was run and failed on pre-existing local-suite issues unrelated to the focused XET path: stale runner flag usage, read-only repository setup, local import configuration, `lakectl` golden output drift, help-branding drift, and a multipart upload panic.
 
 ## 12. Out of Scope (v1)
 
