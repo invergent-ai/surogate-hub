@@ -262,7 +262,12 @@ func TestServeXETChunkDedupRoute(t *testing.T) {
 	require.NoError(t, err)
 
 	server := setupServer(t, handler)
-	resp, err := http.Get(server.URL + "/xet/v1/chunks/default/chunk-a")
+	clt := setupClientByEndpoint(t, server.URL, "", "")
+	cred := createDefaultAdminUser(t, clt)
+	req, err := http.NewRequest(http.MethodGet, server.URL+"/xet/v1/chunks/default/chunk-a", nil)
+	require.NoError(t, err)
+	req.SetBasicAuth(cred.AccessKeyID, cred.SecretAccessKey)
+	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -271,6 +276,25 @@ func TestServeXETChunkDedupRoute(t *testing.T) {
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	require.Equal(t, []byte("raw-shard"), body)
+}
+
+func TestServeXETChunkDedupRouteRequiresAuth(t *testing.T) {
+	handler, deps := setupHandler(t)
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(deps.catalog.KVStore)
+	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: "file-a",
+		Shard:    []byte("raw-shard"),
+		ChunkIDs: []string{"chunk-a"},
+	})
+	require.NoError(t, err)
+
+	server := setupServer(t, handler)
+	resp, err := http.Get(server.URL + "/xet/v1/chunks/default/chunk-a")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 }
 
 func TestInvalidRoute(t *testing.T) {

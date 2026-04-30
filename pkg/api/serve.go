@@ -66,12 +66,36 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 	)
 	controller := NewController(cfg, catalog, middlewareAuthenticator, authService, authenticationService, blockAdapter, metadataManager, migrator, collector, cloudMetadataProvider, actions, auditChecker, logger, sessionStore, pathProvider, usageReporter)
 	apigen.HandlerFromMuxWithBaseURL(controller, apiRouter, apiutil.BaseURL)
+	xetSecurityRequirements := openapi3.SecurityRequirements{
+		{"jwt_token": []string{}},
+		{"basic_auth": []string{}},
+		{"cookie_auth": []string{}},
+		{"oidc_auth": []string{}},
+	}
+	xetAuthMiddleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, err := checkSecurityRequirements(r, xetSecurityRequirements, logger, middlewareAuthenticator, authService, sessionStore, &oidcConfig, &cookieAuthConfig)
+			if err != nil {
+				writeError(w, r, http.StatusUnauthorized, err)
+				return
+			}
+			if user == nil {
+				writeError(w, r, http.StatusUnauthorized, ErrAuthenticatingRequest)
+				return
+			}
+			if user != nil {
+				ctx := logging.AddFields(r.Context(), logging.Fields{logging.UserFieldKey: user.Username})
+				r = r.WithContext(auth.WithUser(ctx, user))
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 
 	r.Mount("/_health", httputil.ServeHealth())
 	r.Mount("/metrics", promhttp.Handler())
 	r.Mount("/_pprof/", httputil.ServePPROF("/_pprof/"))
 	r.Mount("/openapi.json", http.HandlerFunc(swaggerSpecHandler))
-	r.Mount("/xet", xetcas.NewHandler(xetstore.NewRegistry(catalog.KVStore)))
+	r.Mount("/xet", xetAuthMiddleware(xetcas.NewHandler(xetstore.NewRegistry(catalog.KVStore))))
 	r.Mount(apiutil.BaseURL, http.HandlerFunc(InvalidAPIEndpointHandler))
 	r.Mount("/logout", NewLogoutHandler(sessionStore, logger, cfg.GetBaseConfig().Auth.LogoutRedirectURL))
 
