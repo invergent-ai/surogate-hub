@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/config"
+	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 type XorbStore struct {
@@ -48,10 +48,5 @@ func (s *XorbStore) Exists(ctx context.Context, prefix, hash string) (bool, erro
 }
 
 func (s *XorbStore) objectPointer(prefix, hash string) block.ObjectPointer {
-	return block.ObjectPointer{
-		StorageID:        config.SingleBlockstoreID,
-		StorageNamespace: s.storageNamespace,
-		Identifier:       "xet/xorbs/" + prefix + "/" + hash,
-		IdentifierType:   block.IdentifierTypeRelative,
-	}
+	return xetstore.XorbObjectPointer(s.storageNamespace, prefix, hash)
 }

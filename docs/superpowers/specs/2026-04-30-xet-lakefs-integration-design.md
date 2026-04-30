@@ -444,6 +444,7 @@ Last updated: 2026-04-30.
 - [x] Added `xet.verify.max_concurrent` configuration and a semaphore-backed upload verification limiter while preserving idempotent duplicate-upload behavior.
 - [x] Added `pkg/xet/reconstruct` range mapping over parsed shard terms and exported per-xorb chunk metadata from parsed shards.
 - [x] Added internal V2 reconstruction manifest generation from mapped shard terms with resolver-supplied xorb byte ranges and URLs.
+- [x] Added shared xorb object addressing and a block-adapter presigned range resolver for reconstruction manifests.
 
 **In progress:**
 
@@ -468,7 +469,8 @@ Last updated: 2026-04-30.
 - [ ] Implement reconstruction reads:
   - [x] Add `pkg/xet/reconstruct` range mapping over shard terms.
   - [x] Add manifest generation for `GET /xet/v2/reconstructions/{file_hash}`.
-  - [ ] Add block-adapter presigned URL support and server-side proxy fallback grants.
+  - [x] Add block-adapter presigned URL support for xorb range manifests.
+  - [ ] Add server-side proxy fallback grants for adapters that cannot presign.
   - [ ] Add S3 gateway and lakeFS API GET dispatch for `xet://` physical addresses.
   - [ ] Add range-read correctness tests.
 - [ ] Implement XET token auth:
