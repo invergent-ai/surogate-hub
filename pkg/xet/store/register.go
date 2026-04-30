@@ -65,7 +65,11 @@ func (r *Registry) GetDedupShardByChunk(ctx context.Context, chunkID string) ([]
 	if err != nil {
 		return nil, err
 	}
-	shard, err := r.store.Get(ctx, []byte(Partition), shardKey(string(chunk.Value)))
+	return r.GetShardByFileHash(ctx, string(chunk.Value))
+}
+
+func (r *Registry) GetShardByFileHash(ctx context.Context, fileHash string) ([]byte, error) {
+	shard, err := r.store.Get(ctx, []byte(Partition), shardKey(fileHash))
 	if err != nil {
 		return nil, err
 	}

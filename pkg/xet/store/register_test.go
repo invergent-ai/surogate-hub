@@ -46,6 +46,21 @@ func TestGetDedupShardByChunkReturnsShardBytes(t *testing.T) {
 	require.Equal(t, []byte("raw-shard"), shard)
 }
 
+func TestGetShardByFileHashReturnsCanonicalShardBytes(t *testing.T) {
+	ctx := context.Background()
+	kvStore := kvtest.GetStore(ctx, t)
+	registry := NewRegistry(kvStore)
+	_, err := registry.RegisterShard(ctx, RegisterShardParams{
+		FileHash: "file-a",
+		Shard:    []byte("raw-shard"),
+	})
+	require.NoError(t, err)
+
+	shard, err := registry.GetShardByFileHash(ctx, "file-a")
+	require.NoError(t, err)
+	require.Equal(t, []byte("raw-shard"), shard)
+}
+
 func TestGetDedupShardByChunkReturnsNotFoundWhenIndexedShardIsMissing(t *testing.T) {
 	ctx := context.Background()
 	kvStore := kvtest.GetStore(ctx, t)
