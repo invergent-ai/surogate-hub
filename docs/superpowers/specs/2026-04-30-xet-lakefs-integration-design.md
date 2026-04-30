@@ -466,6 +466,7 @@ Last updated: 2026-04-30.
 - [x] Added the first destructive XET GC sweep step for stale per-tuple `file_refs`.
 - [x] Added XET GC sweep of stale shard records and chunk-index entries while preserving live roots.
 - [x] Added XET GC sweep of stale xorbs with an `xet.gc.min_age`-style age guard.
+- [x] Added `lakefs gc xet --dry-run` command wiring that opens configured KV/catalog/block storage and emits the XET GC report as JSON.
 
 **In progress:**
 
@@ -509,8 +510,8 @@ Last updated: 2026-04-30.
   - [x] Fail after graveler write and before `file_refs` write.
   - [x] Verify normal lakeFS/S3 path reads still work.
   - [x] Verify retry or direct-context reconstruction backfills the missing `file_refs` key.
-- [ ] Add XET GC:
-  - [ ] Add `cmd/lakefs gc xet --dry-run`.
+- [x] Add XET GC:
+  - [x] Add `cmd/lakefs gc xet --dry-run`.
   - [x] Mark live XET shards from live `file_refs`.
   - [x] Mark live XET xorbs from live shards.
   - [x] Reuse the lakeFS GC walker to list candidate xorbs.

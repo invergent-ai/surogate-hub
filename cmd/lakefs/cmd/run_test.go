@@ -20,3 +20,13 @@ func TestNewAuthService_ReturnsACLService(t *testing.T) {
 		t.Fatal("expected auth service to be created")
 	}
 }
+
+func TestXETGCCommandRegistered(t *testing.T) {
+	command, _, err := cmd.GetRoot().Find([]string{"gc", "xet", "--dry-run"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if command == nil || command.Use != "xet" {
+		t.Fatalf("expected gc xet command, got %#v", command)
+	}
+}

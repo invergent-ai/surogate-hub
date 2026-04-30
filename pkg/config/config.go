@@ -481,6 +481,9 @@ type BaseConfig struct {
 		Read struct {
 			CapabilityScanBatchSize int `mapstructure:"capability_scan_batch_size"`
 		} `mapstructure:"read"`
+		GC struct {
+			MinAge time.Duration `mapstructure:"min_age"`
+		} `mapstructure:"gc"`
 	} `mapstructure:"xet"`
 	Graveler struct {
 		EnsureReadableRootNamespace bool `mapstructure:"ensure_readable_root_namespace"`

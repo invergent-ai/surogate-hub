@@ -174,6 +174,7 @@ func setBaseDefaults(cfgType string) {
 
 	viper.SetDefault("xet.verify.max_concurrent", 0)
 	viper.SetDefault("xet.read.capability_scan_batch_size", 32)
+	viper.SetDefault("xet.gc.min_age", 24*time.Hour)
 
 	viper.SetDefault("usage_report.flush_interval", 5*time.Minute)
 }
