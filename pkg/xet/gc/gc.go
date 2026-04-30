@@ -103,3 +103,16 @@ func DryRun(ctx context.Context, params Params) (Report, error) {
 	}
 	return report, nil
 }
+
+func Sweep(ctx context.Context, params Params) (Report, error) {
+	report, err := DryRun(ctx, params)
+	if err != nil {
+		return Report{}, err
+	}
+	for _, ref := range report.StaleFileRefs {
+		if err := params.Registry.DeleteFileRef(ctx, ref); err != nil {
+			return Report{}, err
+		}
+	}
+	return report, nil
+}

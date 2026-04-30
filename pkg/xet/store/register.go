@@ -97,6 +97,10 @@ func (r *Registry) PutFileRef(ctx context.Context, ref FileRef) error {
 	return r.store.Set(ctx, []byte(Partition), fileRefKey(ref), []byte{})
 }
 
+func (r *Registry) DeleteFileRef(ctx context.Context, ref FileRef) error {
+	return r.store.Delete(ctx, []byte(Partition), fileRefKey(ref))
+}
+
 func (r *Registry) ListFileRefs(ctx context.Context, fileHash string, batchSize int) ([]FileRef, error) {
 	prefix := fileRefPrefix(fileHash)
 	return r.listFileRefsByPrefix(ctx, prefix, batchSize)

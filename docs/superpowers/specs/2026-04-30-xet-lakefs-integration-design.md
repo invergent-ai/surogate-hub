@@ -463,6 +463,7 @@ Last updated: 2026-04-30.
 - [x] Extended XET GC dry-run planning to mark live file hashes from live `file_refs`, then report unreferenced shards and chunk-index entries.
 - [x] Extended XET GC dry-run planning to parse live shards, mark referenced xorbs, and report unreferenced xorbs from a block-walker-backed xorb listing.
 - [x] Added a block-walker-backed xorb lister for `xet/xorbs/<prefix>/<hash>` candidate enumeration.
+- [x] Added the first destructive XET GC sweep step for stale per-tuple `file_refs`.
 
 **In progress:**
 
@@ -514,7 +515,8 @@ Last updated: 2026-04-30.
   - [x] Dry-run stale per-tuple `file_refs` detection.
   - [x] Dry-run stale shard and chunk-index detection.
   - [x] Dry-run stale xorb detection.
-  - [ ] Sweep stale shards, chunk-index entries, xorbs older than `xet.gc.min_age`, and stale per-tuple `file_refs`.
+  - [x] Sweep stale per-tuple `file_refs`.
+  - [ ] Sweep stale shards, chunk-index entries, and xorbs older than `xet.gc.min_age`.
 - [ ] Add smart-client smoke:
   - [ ] Add a curl or `hf_xet` smoke test that uploads xorbs, registers a shard, links the `xet://` object, reads it back, and verifies a second similar upload gets dedup hits.
 
