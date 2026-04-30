@@ -12,6 +12,11 @@ import (
 func TestDryRunReportsStaleFileRefs(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: "file-a",
+		Shard:    []byte("live-shard"),
+	})
+	require.NoError(t, err)
 	require.NoError(t, registry.PutFileRef(ctx, xetstore.FileRef{
 		FileHash: "file-a",
 		Repo:     "repo-a",
@@ -29,6 +34,9 @@ func TestDryRunReportsStaleFileRefs(t *testing.T) {
 		Registry: registry,
 		FileRefLive: func(ctx context.Context, ref xetstore.FileRef) (bool, error) {
 			return ref.Path == "live.bin", nil
+		},
+		ParseShard: func(data []byte) (xetstore.ShardInfo, error) {
+			return xetstore.ShardInfo{}, nil
 		},
 	})
 
@@ -74,6 +82,9 @@ func TestDryRunReportsUnreferencedShardsAndChunkRefs(t *testing.T) {
 		FileRefLive: func(ctx context.Context, ref xetstore.FileRef) (bool, error) {
 			return true, nil
 		},
+		ParseShard: func(data []byte) (xetstore.ShardInfo, error) {
+			return xetstore.ShardInfo{}, nil
+		},
 	})
 
 	require.NoError(t, err)
@@ -82,4 +93,40 @@ func TestDryRunReportsUnreferencedShardsAndChunkRefs(t *testing.T) {
 		ChunkHash: "chunk-stale",
 		FileHash:  "file-stale",
 	}}, report.StaleChunkRefs)
+}
+
+func TestDryRunReportsUnreferencedXorbs(t *testing.T) {
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: "file-live",
+		Shard:    []byte("live-shard"),
+	})
+	require.NoError(t, err)
+	require.NoError(t, registry.PutFileRef(ctx, xetstore.FileRef{
+		FileHash: "file-live",
+		Repo:     "repo-a",
+		Ref:      "main",
+		Path:     "live.bin",
+	}))
+
+	report, err := DryRun(ctx, Params{
+		Registry: registry,
+		FileRefLive: func(ctx context.Context, ref xetstore.FileRef) (bool, error) {
+			return true, nil
+		},
+		ParseShard: func(data []byte) (xetstore.ShardInfo, error) {
+			require.Equal(t, []byte("live-shard"), data)
+			return xetstore.ShardInfo{XorbHashes: []string{"xorb-live"}}, nil
+		},
+		ListXorbs: func(ctx context.Context) ([]XorbRef, error) {
+			return []XorbRef{
+				{Prefix: "default", Hash: "xorb-live"},
+				{Prefix: "default", Hash: "xorb-stale"},
+			}, nil
+		},
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, []XorbRef{{Prefix: "default", Hash: "xorb-stale"}}, report.StaleXorbs)
 }
