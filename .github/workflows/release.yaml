@@ -22,11 +22,6 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Resolve version
         id: version
         run: |
@@ -35,12 +30,12 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
-      - name: Generate code (API, protos, UI)
+      - name: Generate code (API, protos)
         env:
           VERSION: ${{ steps.version.outputs.version }}
           PACKAGE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          make gen-ui gen-api gen-code
+          make gen-api gen-code
 
       - name: Install build deps
         run: |
@@ -156,11 +151,6 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Resolve version
         id: version
         run: |
@@ -169,12 +159,12 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
-      - name: Generate code (API, protos, UI)
+      - name: Generate code (API, protos)
         env:
           VERSION: ${{ steps.version.outputs.version }}
           PACKAGE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          make gen-ui gen-api gen-code
+          make gen-api gen-code
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

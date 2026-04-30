@@ -20,5 +20,3 @@ pkg/gateway/testdata/
 target/
 test/
 venv/
-webui/node_modules/
-webui/src/

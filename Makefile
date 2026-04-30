@@ -2,7 +2,6 @@ VERSION=1.0.0
 GOCMD=$(or $(shell which go), $(error "Missing dependency - no go in PATH"))
 DOCKER=$(or $(shell which docker), $(error "Missing dependency - no docker in PATH"))
 GOBINPATH=$(shell $(GOCMD) env GOPATH)/bin
-NPM=$(or $(shell which npm), $(error "Missing dependency - no npm in PATH"))
 
 UID_GID := $(shell id -u):$(shell id -g)
 
@@ -36,9 +35,6 @@ GOTEST_PARALLELISM=4
 SGHUB_BINARY_NAME=sghub
 HUBCTL_BINARY_NAME=hubctl
 
-UI_DIR=webui
-UI_BUILD_DIR=$(UI_DIR)/dist
-
 DOCKER_IMAGE=lakefs
 DOCKER_TAG=$(VERSION)
 
@@ -62,22 +58,15 @@ clean:
 	@rm -rf \
 		$(HUBCTL_BINARY_NAME) \
 		$(SGHUB_BINARY_NAME) \
-		$(UI_BUILD_DIR) \
-		$(UI_DIR)/node_modules \
 		pkg/api/apigen/lakefs.gen.go \
 		pkg/auth/*.gen.go
 
-check-licenses: check-licenses-go-mod check-licenses-npm
+check-licenses: check-licenses-go-mod
 
 check-licenses-go-mod:
 	$(GOCMD) install github.com/google/go-licenses@latest
 	$(GOBINPATH)/go-licenses check ./cmd/$(SGHUB_BINARY_NAME)
 	$(GOBINPATH)/go-licenses check ./cmd/$(HUBCTL_BINARY_NAME)
-
-check-licenses-npm:
-	$(GOCMD) install github.com/senseyeio/diligent/cmd/diligent@latest
-	# The -i arg is a workaround to ignore NPM scoped packages until https://github.com/senseyeio/diligent/issues/77 is fixed
-	$(GOBINPATH)/diligent check -w permissive -i ^@[^/]+?/[^/]+ $(UI_DIR)
 
 tools: ## Install tools
 	$(GOCMD) install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
@@ -162,7 +151,6 @@ build: gen build-go
 
 lint: ## Lint code
 	$(GOCMD) run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run $(GOLANGCI_LINT_FLAGS)
-	npx eslint@8.57.0 $(UI_DIR)/src --ext .js,.jsx,.ts,.tsx
 
 test: test-go  ## Run tests for the project
 
@@ -254,12 +242,6 @@ checks-validator: lint validate-fmt validate-proto \
 	validate-permissions-gen \
 	validate-wrapper validate-wrapgen-testcode
 
-$(UI_DIR)/node_modules:
-	cd $(UI_DIR) && $(NPM) install
-
-gen-ui: $(UI_DIR)/node_modules  ## Build UI web app
-	cd $(UI_DIR) && $(NPM) run build
-
 gen-proto: ## Build Protocol Buffers (proto) files using Buf CLI
 	go run github.com/bufbuild/buf/cmd/buf@$(BUF_CLI_VERSION) generate
 
@@ -267,7 +249,7 @@ help:  ## Show Help menu
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 # helpers
-gen: gen-ui gen-api gen-code clients
+gen: gen-api gen-code clients
 
 validate-clients-untracked-files:
 	scripts/verify_clients_untracked_files.sh

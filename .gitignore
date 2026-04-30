@@ -42,9 +42,6 @@
 /dist
 /delta/
 
-# client excludes
-/webui/node_modules
-
 # server excludes
 /pkg/api/gen
 .DS_Store

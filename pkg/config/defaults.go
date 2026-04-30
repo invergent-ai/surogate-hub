@@ -118,8 +118,6 @@ func setBaseDefaults(cfgType string) {
 	viper.SetDefault("security.check_latest_version", true)
 	viper.SetDefault("security.check_latest_version_cache", time.Hour)
 
-	viper.SetDefault("ui.enabled", true)
-
 	viper.SetDefault("database.local.path", "~/lakefs/metadata")
 	viper.SetDefault("database.local.prefetch_size", 256)
 	viper.SetDefault("database.local.sync_writes", true)

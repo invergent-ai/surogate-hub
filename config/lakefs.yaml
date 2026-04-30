@@ -16,8 +16,6 @@ blockstore:
 committed:
   local_cache:
     dir: ./config/cache
-ui:
-  enabled: true
 tls:
   enabled: false
   cert_file: ./config/certificate.crt

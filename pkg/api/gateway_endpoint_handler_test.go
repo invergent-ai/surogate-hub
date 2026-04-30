@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"encoding/xml"
 	"net/http"
 	"net/http/httptest"
@@ -18,25 +17,8 @@ func testHTTPGetPage(t *testing.T, handler http.Handler, url string) *httptest.R
 	return rr
 }
 
-func TestNewUIHandler_SPA(t *testing.T) {
-	handler := NewUIHandler(nil, nil)
-
-	rrMain := testHTTPGetPage(t, handler, "/")
-	if rrMain.Code != http.StatusOK {
-		t.Fatalf("Request main page, StatusCode=%d, expected=%d", rrMain.Code, http.StatusOK)
-	}
-	rrNoPlace := testHTTPGetPage(t, handler, "/no-place")
-	if rrMain.Code != http.StatusOK {
-		t.Fatalf("Request no-place page, StatusCode=%d, expected=%d", rrMain.Code, http.StatusOK)
-	}
-	// main page and non-existing one should have the same content
-	if !bytes.Equal(rrMain.Body.Bytes(), rrNoPlace.Body.Bytes()) {
-		t.Fatal("Main page and non-existing content should match")
-	}
-}
-
-func TestNewUIHandler_GatewayError(t *testing.T) {
-	handler := NewUIHandler([]string{"s3.lakefs.dev"}, nil)
+func TestNewS3GatewayEndpointErrorHandler_GatewayError(t *testing.T) {
+	handler := NewS3GatewayEndpointErrorHandler([]string{"s3.lakefs.dev"})
 	rr := httptest.NewRecorder()
 	req, err := http.NewRequest(http.MethodGet, "/", nil)
 	if err != nil {

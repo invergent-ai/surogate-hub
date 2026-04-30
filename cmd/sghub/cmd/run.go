@@ -239,7 +239,6 @@ var runCmd = &cobra.Command{
 			auditChecker,
 			logger.WithField("service", "api_gateway"),
 			baseCfg.Gateways.S3.DomainNames,
-			baseCfg.UISnippets(),
 			upload.DefaultPathProvider,
 			usageReporter,
 		)

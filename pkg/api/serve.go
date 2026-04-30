@@ -15,7 +15,6 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
 	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
-	"github.com/invergent-ai/surogate-hub/pkg/api/params"
 	"github.com/invergent-ai/surogate-hub/pkg/auth"
 	"github.com/invergent-ai/surogate-hub/pkg/authentication"
 	"github.com/invergent-ai/surogate-hub/pkg/block"
@@ -39,7 +38,7 @@ const (
 	extensionValidationExcludeBody = "x-validation-exclude-body"
 )
 
-func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator auth.Authenticator, authService auth.Service, authenticationService authentication.Service, blockAdapter block.Adapter, metadataManager auth.MetadataManager, migrator Migrator, collector stats.Collector, cloudMetadataProvider cloud.MetadataProvider, actions actionsHandler, auditChecker AuditChecker, logger logging.Logger, gatewayDomains []string, snippets []params.CodeSnippet, pathProvider upload.PathProvider, usageReporter stats.UsageReporterOperations) http.Handler {
+func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator auth.Authenticator, authService auth.Service, authenticationService authentication.Service, blockAdapter block.Adapter, metadataManager auth.MetadataManager, migrator Migrator, collector stats.Collector, cloudMetadataProvider cloud.MetadataProvider, actions actionsHandler, auditChecker AuditChecker, logger logging.Logger, gatewayDomains []string, pathProvider upload.PathProvider, usageReporter stats.UsageReporterOperations) http.Handler {
 	logger.Info("initialize OpenAPI server")
 	swagger, err := apigen.GetSwagger()
 
@@ -121,20 +120,7 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 	r.Mount(apiutil.BaseURL, http.HandlerFunc(InvalidAPIEndpointHandler))
 	r.Mount("/logout", NewLogoutHandler(sessionStore, logger, cfg.GetBaseConfig().Auth.LogoutRedirectURL))
 
-	// Configuration flag to control if the embedded UI is served
-	// or not and assign the correct handler for each case.
-	var rootHandler http.Handler
-	if cfg.GetBaseConfig().UI.Enabled {
-		// Handler which serves the embedded UI
-		// as well as handles erroneous S3 gateway requests
-		// and returns a compatible response
-		rootHandler = NewUIHandler(gatewayDomains, snippets)
-	} else {
-		// Handler which only handles erroneous S3 gateway requests
-		// and returns a compatible response
-		rootHandler = NewS3GatewayEndpointErrorHandler(gatewayDomains)
-	}
-	r.Mount("/", rootHandler)
+	r.Mount("/", NewS3GatewayEndpointErrorHandler(gatewayDomains))
 
 	return r
 }

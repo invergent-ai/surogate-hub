@@ -540,8 +540,8 @@ Last updated: 2026-04-30.
 | Migrating existing non-XET objects to XET | Distinct project — one-shot historical dedup tool |
 | Xorb pinning / TTL policies | No user demand yet |
 | Multi-region CAS replication | Single-bucket assumption |
-| WASM browser uploads | webui change, separate project |
-| `git_xet` (Git-LFS-style workflow) | Different access pattern, separate project |
+| WASM browser uploads | Browser client change, separate project |
+| `git_xet` (Git-LakeFSLFS-style workflow) | Different access pattern, separate project |
 | Rate-limiting the global dedup metadata probe | Accepted info-leak |
 | HuggingFace Hub API compatibility (so `huggingface_hub.upload_file` "just works") | Requires a Hub-API-shaped service, large scope |
 
