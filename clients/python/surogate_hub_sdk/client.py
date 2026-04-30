@@ -19,6 +19,7 @@ from surogate_hub_sdk.api import refs_api
 from surogate_hub_sdk.api import repositories_api
 from surogate_hub_sdk.api import staging_api
 from surogate_hub_sdk.api import tags_api
+from surogate_hub_sdk.xet_objects_api import XetObjectsApi
 
 
 class _WrappedApiClient(ApiClient):
@@ -75,7 +76,7 @@ class LakeFSClient:
         self.import_api = import_api.ImportApi(self._api)
         self.internal_api = internal_api.InternalApi(self._api)
         self.metadata_api = metadata_api.MetadataApi(self._api)
-        self.objects_api = objects_api.ObjectsApi(self._api)
+        self.objects_api = XetObjectsApi(self._api)
         self.pulls_api = pulls_api.PullsApi(self._api)
         self.refs_api = refs_api.RefsApi(self._api)
         self.repositories_api = repositories_api.RepositoriesApi(self._api)

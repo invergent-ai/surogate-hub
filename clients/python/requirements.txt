@@ -5,3 +5,4 @@ pydantic >= 2.0.0
 aenum >= 3.1.11
 fsspec >= 2024.0.0
 duckdb == 1.5.2
+hf_xet == 1.4.3

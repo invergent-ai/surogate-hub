@@ -30,5 +30,8 @@ git_push.sh
 surogate_hub_sdk/fs/**
 surogate_hub_sdk/parquet/**
 surogate_hub_sdk/stats/**
+surogate_hub_sdk/xet.py
+surogate_hub_sdk/xet_objects_api.py
 test/test_parquet.py
 test/test_stats.py
+test/test_xet_*.py

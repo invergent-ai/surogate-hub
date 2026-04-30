@@ -94,7 +94,7 @@ sdk-python: api/swagger.yml  ## Generate SDK for Python client - openapi generat
 	# NOTE: do NOT use `-depth` + `-name surogate_hub_sdk -prune` here — GNU find's `-delete` auto-enables
 	# `-depth`, which disables `-prune`, so descendants get deleted anyway. We guard with `-path` instead.
 	rm -rf clients/python/build; cd clients/python && \
-		find . -type f ! \( -path './surogate_hub_sdk/*' -or -name Gemfile -or -name Gemfile.lock -or -name _config.yml -or -name .openapi-generator-ignore -or -name pyproject.mustache -or -name setup.mustache -or -name client.mustache -or -name requirements.mustache -or -name pydantic.sh -or -name python-codegen-config.yaml -or -name test_stats.py -or -name test_parquet.py \) -delete
+		find . -type f ! \( -path './surogate_hub_sdk/*' -or -name Gemfile -or -name Gemfile.lock -or -name _config.yml -or -name .openapi-generator-ignore -or -name pyproject.mustache -or -name setup.mustache -or -name client.mustache -or -name requirements.mustache -or -name pydantic.sh -or -name python-codegen-config.yaml -or -name 'test_xet_*.py' -or -name test_stats.py -or -name test_parquet.py \) -delete
 	$(PY_OPENAPI_GENERATOR) generate \
 		-i /mnt/$< \
 		-g python \

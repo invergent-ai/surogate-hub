@@ -68,7 +68,7 @@ class FakeStagingApi:
     def __init__(self):
         self.calls = []
 
-    def link_physical_address(self, repository, branch, path, staging_metadata, if_none_match=None):
+    def link_physical_address(self, repository, branch, path, staging_metadata, if_none_match=None, **kwargs):
         self.calls.append(
             {
                 "repository": repository,
@@ -76,6 +76,7 @@ class FakeStagingApi:
                 "path": path,
                 "staging_metadata": staging_metadata,
                 "if_none_match": if_none_match,
+                "kwargs": kwargs,
             }
         )
         return SimpleNamespace(path=path)
