@@ -434,11 +434,13 @@ Last updated: 2026-04-30.
 - [x] Wired the xorb store into the API server under an instance-wide XET storage namespace.
 - [x] Added current JSON-shim shard registration validation for declared `xorb_ids` and ESTI coverage for xorb-backed shard registration.
 - [x] Added current JSON-shim `file_hash` verification before shard registration, with focused handler and ESTI coverage.
+- [x] Added an initial Go parser for HF/XET streaming shard bytes that extracts file hashes, file sizes, xorb hashes, and chunk hashes from the binary file/xorb sections.
 
 **In progress:**
 
 - [ ] Replace the current JSON shard-registration shim with real HF/XET binary shard parsing:
-  - [ ] Extract referenced xorb hashes, chunk hashes, file size, and summary fields from the HF binary shard.
+  - [x] Extract referenced file hashes, xorb hashes, chunk hashes, and file sizes from the HF binary shard.
+  - [ ] Extract decoded summary fields for `xet/shard_meta/<file_hash>`.
   - [ ] Compute the real XET file MerkleHash and verify it matches the asserted `file_hash`.
   - [ ] Store raw binary shard bytes verbatim in `xet/shard/<file_hash>`.
   - [ ] Update dedup probe tests to assert returned bytes are the original binary shard.
