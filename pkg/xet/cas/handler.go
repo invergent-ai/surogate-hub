@@ -2,6 +2,7 @@ package cas
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -13,18 +14,23 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/treeverse/lakefs/pkg/block"
 	"github.com/treeverse/lakefs/pkg/kv"
+	"github.com/treeverse/lakefs/pkg/xet/reconstruct"
 	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 type Handler struct {
-	registry     *xetstore.Registry
-	xorbs        *XorbStore
-	verifyTokens chan struct{}
-	verifyXorb   func(expectedHash string, data []byte) error
+	registry                           *xetstore.Registry
+	xorbs                              *XorbStore
+	verifyTokens                       chan struct{}
+	verifyXorb                         func(expectedHash string, data []byte) error
+	reconstructionRangeResolverFactory reconstructionRangeResolverFactory
 }
 
 type HandlerOption func(*Handler)
+
+type reconstructionRangeResolverFactory func(ctx context.Context, terms []reconstruct.Term) (reconstruct.RangeResolver, error)
 
 func WithXorbStore(store *XorbStore) HandlerOption {
 	return func(h *Handler) {
@@ -41,6 +47,12 @@ func WithVerifyMaxConcurrent(maxConcurrent int) HandlerOption {
 func withXorbVerifier(verify func(expectedHash string, data []byte) error) HandlerOption {
 	return func(h *Handler) {
 		h.verifyXorb = verify
+	}
+}
+
+func withReconstructionRangeResolverFactory(factory reconstructionRangeResolverFactory) HandlerOption {
+	return func(h *Handler) {
+		h.reconstructionRangeResolverFactory = factory
 	}
 }
 
@@ -75,6 +87,7 @@ func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler
 	}
 	r := chi.NewRouter()
 	r.Get("/v1/chunks/{prefix}/{hash}", h.getChunk)
+	r.Get("/v2/reconstructions/{file_hash}", h.getReconstruction)
 	r.Post("/v1/shards", h.postShard)
 	r.Post("/v1/xorbs/{prefix}/{hash}", h.postXorb)
 	return r
@@ -111,6 +124,52 @@ func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(putXorbResponse{WasInserted: result.WasInserted})
+}
+
+func (h *Handler) getReconstruction(w http.ResponseWriter, r *http.Request) {
+	fileHash := chi.URLParam(r, "file_hash")
+	shard, err := h.registry.GetShardByFileHash(r.Context(), fileHash)
+	if errors.Is(err, kv.ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	info, err := xetstore.ParseShardInfo(shard)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	file, ok := shardFileByHash(info, fileHash)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	terms, err := reconstruct.MapRange(info, fileHash, reconstruct.ByteRange{Start: 0, End: file.SizeBytes})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	resolverFactory := h.reconstructionRangeResolverFactory
+	if resolverFactory == nil {
+		resolverFactory = h.presignedReconstructionRangeResolverFactory
+	}
+	resolver, err := resolverFactory(r.Context(), terms)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	manifest, err := reconstruct.BuildManifest(terms, resolver)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(manifest)
 }
 
 func (h *Handler) postShard(w http.ResponseWriter, r *http.Request) {
@@ -238,6 +297,65 @@ func normalizeVerifyMaxConcurrent(maxConcurrent int) int {
 		return maxConcurrent
 	}
 	return runtime.NumCPU()
+}
+
+func (h *Handler) presignedReconstructionRangeResolverFactory(ctx context.Context, _ []reconstruct.Term) (reconstruct.RangeResolver, error) {
+	if h.xorbs == nil {
+		return nil, fmt.Errorf("xorb store is not configured")
+	}
+	parsed := make(map[string]parsedXorbInfo)
+	return func(xorbHash string, chunks reconstruct.IndexRange) (reconstruct.ResolvedRange, error) {
+		info, ok := parsed[xorbHash]
+		if !ok {
+			reader, err := h.xorbs.Get(ctx, "default", xorbHash)
+			if err != nil {
+				return reconstruct.ResolvedRange{}, err
+			}
+			data, err := io.ReadAll(reader)
+			_ = reader.Close()
+			if err != nil {
+				return reconstruct.ResolvedRange{}, err
+			}
+			info, _, err = parseXorbInfo(data)
+			if err != nil {
+				return reconstruct.ResolvedRange{}, err
+			}
+			parsed[xorbHash] = info
+		}
+		byteRange, err := xorbByteRange(info, chunks)
+		if err != nil {
+			return reconstruct.ResolvedRange{}, err
+		}
+		url, _, err := h.xorbs.adapter.GetPreSignedURL(ctx, xetstore.XorbObjectPointer(h.xorbs.storageNamespace, "default", xorbHash), block.PreSignModeRead)
+		if err != nil {
+			return reconstruct.ResolvedRange{}, err
+		}
+		return reconstruct.ResolvedRange{URL: url, Bytes: byteRange}, nil
+	}, nil
+}
+
+func xorbByteRange(info parsedXorbInfo, chunks reconstruct.IndexRange) (reconstruct.HTTPRange, error) {
+	if chunks.End <= chunks.Start || int(chunks.End) > len(info.ChunkBoundaries) {
+		return reconstruct.HTTPRange{}, fmt.Errorf("invalid xorb chunk range %d-%d", chunks.Start, chunks.End)
+	}
+	start := uint64(0)
+	if chunks.Start > 0 {
+		start = uint64(info.ChunkBoundaries[chunks.Start-1])
+	}
+	end := uint64(info.ChunkBoundaries[chunks.End-1])
+	if end == 0 || end <= start {
+		return reconstruct.HTTPRange{}, fmt.Errorf("invalid xorb byte range")
+	}
+	return reconstruct.HTTPRange{Start: start, End: end - 1}, nil
+}
+
+func shardFileByHash(info xetstore.ShardInfo, fileHash string) (xetstore.ShardFileInfo, bool) {
+	for _, file := range info.Files {
+		if file.FileHash == fileHash {
+			return file, true
+		}
+	}
+	return xetstore.ShardFileInfo{}, false
 }
 
 func computedShimFileHash(shard string) string {

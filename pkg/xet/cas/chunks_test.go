@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/treeverse/lakefs/pkg/block/mem"
 	"github.com/treeverse/lakefs/pkg/kv/kvtest"
+	"github.com/treeverse/lakefs/pkg/xet/reconstruct"
 	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
@@ -314,6 +315,58 @@ func TestPostBinaryShardRegistersFileAndChunks(t *testing.T) {
 	meta, err := kvStore.Get(ctx, []byte(xetstore.Partition), []byte("xet/shard_meta/"+fileHash))
 	require.NoError(t, err)
 	require.JSONEq(t, `{"created_at":0,"size":12,"num_xorbs":1,"num_chunks":1}`, string(meta.Value))
+}
+
+func TestGetReconstructionReturnsV2Manifest(t *testing.T) {
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	chunkHash := xetstore.ComputeDataHash([]byte("hello world!"))
+	xorbHash, err := xetstore.ComputeXorbMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: 12,
+	}})
+	require.NoError(t, err)
+	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: 12,
+	}})
+	require.NoError(t, err)
+	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: fileHash,
+		Shard:    testXETBinaryShard(t, fileHash, xorbHash, chunkHash),
+	})
+	require.NoError(t, err)
+	handler := NewHandler(registry, withReconstructionRangeResolverFactory(func(ctx context.Context, terms []reconstruct.Term) (reconstruct.RangeResolver, error) {
+		return func(xorbHash string, chunks reconstruct.IndexRange) (reconstruct.ResolvedRange, error) {
+			return reconstruct.ResolvedRange{
+				URL:   "https://cas.example/" + xorbHash,
+				Bytes: reconstruct.HTTPRange{Start: 0, End: 63},
+			}, nil
+		}, nil
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/v2/reconstructions/"+fileHash, nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.JSONEq(t, `{
+		"offset_into_first_range": 0,
+		"terms": [{
+			"hash": "`+xorbHash+`",
+			"range": {"start": 0, "end": 1},
+			"unpacked_length": 12
+		}],
+		"xorbs": {
+			"`+xorbHash+`": [{
+				"url": "https://cas.example/`+xorbHash+`",
+				"ranges": [{
+					"chunks": {"start": 0, "end": 1},
+					"bytes": {"start": 0, "end": 63}
+				}]
+			}]
+		}
+	}`, rec.Body.String())
 }
 
 func testShimFileHash(shard string) string {
