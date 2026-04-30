@@ -19,13 +19,45 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/pierrec/lz4/v4"
 	"github.com/stretchr/testify/require"
+	"github.com/treeverse/lakefs/pkg/auth"
+	"github.com/treeverse/lakefs/pkg/auth/model"
 	"github.com/treeverse/lakefs/pkg/block/mem"
 	"github.com/treeverse/lakefs/pkg/kv/kvtest"
 	"github.com/treeverse/lakefs/pkg/xet/reconstruct"
 	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
+
+func TestPostTokenIssuesScopedJWT(t *testing.T) {
+	ctx := auth.WithUser(context.Background(), &model.User{Username: "user-a"})
+	handler := NewHandler(
+		xetstore.NewRegistry(kvtest.GetStore(ctx, t)),
+		WithTokenSigningKey([]byte("test-token-key")),
+		WithTokenTTL(time.Hour),
+	)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/token", nil).WithContext(ctx)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var body tokenResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.NotEmpty(t, body.AccessToken)
+	require.Greater(t, body.ExpiresAt, time.Now().Unix())
+
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(body.AccessToken, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte("test-token-key"), nil
+	})
+	require.NoError(t, err)
+	require.True(t, token.Valid)
+	require.Equal(t, "user-a", claims["sub"])
+	require.Equal(t, "xet", claims["aud"])
+	require.Equal(t, "read write", claims["scope"])
+}
 
 func TestGetChunkReturnsDedupShardBytes(t *testing.T) {
 	ctx := context.Background()

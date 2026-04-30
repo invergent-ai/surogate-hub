@@ -452,6 +452,7 @@ Last updated: 2026-04-30.
 - [x] Added a server-side XET file range reconstruction reader over canonical shards and serialized xorbs, with focused range-read coverage.
 - [x] Added lakeFS API `GetObject` dispatch for `xet://` physical addresses with ranged reconstruction.
 - [x] Added S3 gateway `GetObject` dispatch for `xet://` physical addresses with ranged reconstruction.
+- [x] Added `POST /xet/v1/token` that issues short-lived HS256 XET JWTs for the authenticated user.
 
 **In progress:**
 
@@ -482,8 +483,9 @@ Last updated: 2026-04-30.
   - [x] Add S3 gateway GET dispatch for `xet://` physical addresses.
   - [x] Add range-read correctness tests.
 - [ ] Implement XET token auth:
-  - [ ] Add `POST /xet/v1/token` and `GET /xet/v1/token/refresh`.
-  - [ ] Issue short-lived JWTs signed with `auth.encrypt.secret_key`.
+  - [x] Add `POST /xet/v1/token`.
+  - [ ] Add `GET /xet/v1/token/refresh`.
+  - [x] Issue short-lived JWTs signed with `auth.encrypt.secret_key`.
   - [ ] Enforce read/write scopes per XET route.
 - [ ] Implement reconstruction capability checks:
   - [ ] Direct `(repo, ref, path)` authorization and graveler verification path.

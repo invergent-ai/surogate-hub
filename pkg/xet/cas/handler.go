@@ -19,6 +19,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt"
+	"github.com/treeverse/lakefs/pkg/auth"
 	"github.com/treeverse/lakefs/pkg/block"
 	"github.com/treeverse/lakefs/pkg/kv"
 	"github.com/treeverse/lakefs/pkg/xet/reconstruct"
@@ -32,6 +34,8 @@ type Handler struct {
 	verifyXorb                         func(expectedHash string, data []byte) error
 	reconstructionRangeResolverFactory reconstructionRangeResolverFactory
 	proxyGrantKey                      []byte
+	tokenSigningKey                    []byte
+	tokenTTL                           time.Duration
 }
 
 type HandlerOption func(*Handler)
@@ -53,6 +57,18 @@ func WithVerifyMaxConcurrent(maxConcurrent int) HandlerOption {
 func WithProxyGrantKey(key []byte) HandlerOption {
 	return func(h *Handler) {
 		h.proxyGrantKey = append([]byte(nil), key...)
+	}
+}
+
+func WithTokenSigningKey(key []byte) HandlerOption {
+	return func(h *Handler) {
+		h.tokenSigningKey = append([]byte(nil), key...)
+	}
+}
+
+func WithTokenTTL(ttl time.Duration) HandlerOption {
+	return func(h *Handler) {
+		h.tokenTTL = ttl
 	}
 }
 
@@ -88,6 +104,11 @@ type uploadShardResponse struct {
 	Result int `json:"result"`
 }
 
+type tokenResponse struct {
+	AccessToken string `json:"access_token"`
+	ExpiresAt   int64  `json:"exp"`
+}
+
 type proxyGrant struct {
 	FileHash string                  `json:"file_hash"`
 	XorbHash string                  `json:"xorb_hash"`
@@ -100,6 +121,7 @@ func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler
 		registry:     registry,
 		verifyTokens: make(chan struct{}, normalizeVerifyMaxConcurrent(0)),
 		verifyXorb:   validateSerializedXorb,
+		tokenTTL:     time.Hour,
 	}
 	for _, opt := range opts {
 		opt(h)
@@ -108,6 +130,7 @@ func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler
 	r.Get("/v1/chunks/{prefix}/{hash}", h.getChunk)
 	r.Get("/v1/xorbs/{prefix}/{hash}", h.getXorbProxy)
 	r.Get("/v2/reconstructions/{file_hash}", h.getReconstruction)
+	r.Post("/v1/token", h.postToken)
 	r.Post("/v1/shards", h.postShard)
 	r.Post("/v1/xorbs/{prefix}/{hash}", h.postXorb)
 	return r
@@ -144,6 +167,38 @@ func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(putXorbResponse{WasInserted: result.WasInserted})
+}
+
+func (h *Handler) postToken(w http.ResponseWriter, r *http.Request) {
+	user, err := auth.GetUser(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	if len(h.tokenSigningKey) == 0 {
+		http.Error(w, "token signing key is not configured", http.StatusInternalServerError)
+		return
+	}
+	now := time.Now()
+	expires := now.Add(h.tokenTTL)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":   user.Username,
+		"aud":   "xet",
+		"scope": "read write",
+		"iat":   now.Unix(),
+		"exp":   expires.Unix(),
+	})
+	signed, err := token.SignedString(h.tokenSigningKey)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(tokenResponse{
+		AccessToken: signed,
+		ExpiresAt:   expires.Unix(),
+	})
 }
 
 func (h *Handler) getXorbProxy(w http.ResponseWriter, r *http.Request) {
