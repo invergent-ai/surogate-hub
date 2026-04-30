@@ -44,6 +44,7 @@ import (
 	"github.com/treeverse/lakefs/pkg/stats"
 	"github.com/treeverse/lakefs/pkg/testutil"
 	"github.com/treeverse/lakefs/pkg/upload"
+	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 	"golang.org/x/exp/slices"
 )
 
@@ -78,6 +79,66 @@ func verifyResponseOK(t testing.TB, resp Statuser, err error) {
 
 func onBlock(deps *dependencies, path string) string {
 	return fmt.Sprintf("%s://%s", deps.blocks.BlockstoreType(), path)
+}
+
+func TestController_LinkXETPhysicalAddressWritesFileRef(t *testing.T) {
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	const fileHash = "file-a"
+	const path = "models/checkpoint.bin"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+	registry := xetstore.NewRegistry(deps.catalog.KVStore)
+	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: fileHash,
+		Shard:    []byte("raw-shard"),
+	})
+	require.NoError(t, err)
+
+	physicalAddress := "xet://" + fileHash
+	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, repo, branch, &apigen.LinkPhysicalAddressParams{
+		Path: path,
+	}, apigen.LinkPhysicalAddressJSONRequestBody{
+		Checksum:  "checksum-a",
+		SizeBytes: 9,
+		Staging: apigen.StagingLocation{
+			PhysicalAddress: &physicalAddress,
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode())
+
+	entry, err := deps.catalog.GetEntry(ctx, repo, branch, path, catalog.GetEntryParams{})
+	require.NoError(t, err)
+	require.Equal(t, physicalAddress, entry.PhysicalAddress)
+
+	fileRef, err := deps.catalog.KVStore.Get(ctx, []byte(xetstore.Partition), []byte("xet/file_refs/file-a/"+repo+"/"+branch+"/"+path))
+	require.NoError(t, err)
+	require.Equal(t, []byte{}, fileRef.Value)
+}
+
+func TestController_LinkXETPhysicalAddressRejectsMissingShard(t *testing.T) {
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+
+	physicalAddress := "xet://missing-file"
+	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, repo, branch, &apigen.LinkPhysicalAddressParams{
+		Path: "models/checkpoint.bin",
+	}, apigen.LinkPhysicalAddressJSONRequestBody{
+		Checksum:  "checksum-a",
+		SizeBytes: 9,
+		Staging: apigen.StagingLocation{
+			PhysicalAddress: &physicalAddress,
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNotFound, resp.StatusCode())
 }
 
 func TestController_ListRepositoriesHandler(t *testing.T) {

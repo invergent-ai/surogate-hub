@@ -47,6 +47,7 @@ import (
 	"github.com/treeverse/lakefs/pkg/upload"
 	"github.com/treeverse/lakefs/pkg/validator"
 	"github.com/treeverse/lakefs/pkg/version"
+	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 const (
@@ -796,6 +797,22 @@ func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request,
 		writeTime = time.Unix(*mtime, 0)
 	}
 	fullPhysicalAddress := swag.StringValue(body.Staging.PhysicalAddress)
+	xetFileHash, isXETAddress := parseXETPhysicalAddress(fullPhysicalAddress)
+	if isXETAddress {
+		if xetFileHash == "" {
+			writeError(w, r, http.StatusBadRequest, "xet physical address is missing file hash")
+			return
+		}
+		exists, err := xetstore.NewRegistry(c.Catalog.KVStore).HasShard(ctx, xetFileHash)
+		if err != nil {
+			writeError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+		if !exists {
+			writeError(w, r, http.StatusNotFound, "xet shard not found")
+			return
+		}
+	}
 	physicalAddress, addressType := normalizePhysicalAddress(repo.StorageNamespace, fullPhysicalAddress)
 
 	if addressType == catalog.AddressTypeRelative {
@@ -833,6 +850,18 @@ func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request,
 	if c.handleAPIError(ctx, w, r, err) {
 		return
 	}
+	if isXETAddress {
+		err = xetstore.NewRegistry(c.Catalog.KVStore).PutFileRef(ctx, xetstore.FileRef{
+			FileHash: xetFileHash,
+			Repo:     repo.Name,
+			Ref:      branch,
+			Path:     params.Path,
+		})
+		if err != nil {
+			writeError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+	}
 
 	metadata := apigen.ObjectUserMetadata{AdditionalProperties: entry.Metadata}
 	response := apigen.ObjectStats{
@@ -847,6 +876,10 @@ func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request,
 	}
 
 	writeResponse(w, r, http.StatusOK, response)
+}
+
+func parseXETPhysicalAddress(address string) (string, bool) {
+	return strings.TrimPrefix(address, "xet://"), strings.HasPrefix(address, "xet://")
 }
 
 // normalizePhysicalAddress return relative address based on storage namespace if possible. If address doesn't match
