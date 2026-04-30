@@ -30,6 +30,32 @@ func TestRegisterShardWritesCanonicalShardAndIndexesChunks(t *testing.T) {
 	requireKVValue(t, ctx, kvStore, "xet/chunk/chunk-b", []byte("file-a"))
 }
 
+func TestGetDedupShardByChunkReturnsShardBytes(t *testing.T) {
+	ctx := context.Background()
+	kvStore := kvtest.GetStore(ctx, t)
+	registry := NewRegistry(kvStore)
+	_, err := registry.RegisterShard(ctx, RegisterShardParams{
+		FileHash: "file-a",
+		Shard:    []byte("raw-shard"),
+		ChunkIDs: []string{"chunk-a"},
+	})
+	require.NoError(t, err)
+
+	shard, err := registry.GetDedupShardByChunk(ctx, "chunk-a")
+	require.NoError(t, err)
+	require.Equal(t, []byte("raw-shard"), shard)
+}
+
+func TestGetDedupShardByChunkReturnsNotFoundWhenIndexedShardIsMissing(t *testing.T) {
+	ctx := context.Background()
+	kvStore := kvtest.GetStore(ctx, t)
+	registry := NewRegistry(kvStore)
+	require.NoError(t, kvStore.Set(ctx, []byte(Partition), []byte("xet/chunk/chunk-a"), []byte("missing-file")))
+
+	_, err := registry.GetDedupShardByChunk(ctx, "chunk-a")
+	require.True(t, errors.Is(err, kv.ErrNotFound), "expected missing shard to look like a dedup miss, got %v", err)
+}
+
 func requireKVValue(t *testing.T, ctx context.Context, kvStore kv.Store, key string, expected []byte) {
 	t.Helper()
 	res, err := kvStore.Get(ctx, []byte(Partition), []byte(key))

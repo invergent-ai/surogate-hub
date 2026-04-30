@@ -53,6 +53,18 @@ func (r *Registry) RegisterShard(ctx context.Context, params RegisterShardParams
 	return RegisterShardResult{WasInserted: inserted}, nil
 }
 
+func (r *Registry) GetDedupShardByChunk(ctx context.Context, chunkID string) ([]byte, error) {
+	chunk, err := r.store.Get(ctx, []byte(Partition), chunkKey(chunkID))
+	if err != nil {
+		return nil, err
+	}
+	shard, err := r.store.Get(ctx, []byte(Partition), shardKey(string(chunk.Value)))
+	if err != nil {
+		return nil, err
+	}
+	return shard.Value, nil
+}
+
 func shardKey(fileHash string) []byte {
 	return []byte("xet/shard/" + fileHash)
 }
