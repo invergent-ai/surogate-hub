@@ -3,6 +3,7 @@ package cas
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -27,6 +28,7 @@ type registerShardRequest struct {
 	FileHash string   `json:"file_hash"`
 	Shard    string   `json:"shard"`
 	ChunkIDs []string `json:"chunk_ids"`
+	XorbIDs  []string `json:"xorb_ids"`
 }
 
 type registerShardResponse struct {
@@ -75,6 +77,10 @@ func (h *Handler) postShard(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "file_hash and shard are required", http.StatusBadRequest)
 		return
 	}
+	if err := h.validateXorbs(r, req.XorbIDs); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	result, err := h.registry.RegisterShard(r.Context(), xetstore.RegisterShardParams{
 		FileHash: req.FileHash,
@@ -92,6 +98,25 @@ func (h *Handler) postShard(w http.ResponseWriter, r *http.Request) {
 		FileHash:    req.FileHash,
 		WasInserted: result.WasInserted,
 	})
+}
+
+func (h *Handler) validateXorbs(r *http.Request, xorbIDs []string) error {
+	if len(xorbIDs) == 0 {
+		return nil
+	}
+	if h.xorbs == nil {
+		return fmt.Errorf("xorb store is not configured")
+	}
+	for _, xorbID := range xorbIDs {
+		exists, err := h.xorbs.Exists(r.Context(), "default", xorbID)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("xorb %s not found", xorbID)
+		}
+	}
+	return nil
 }
 
 func (h *Handler) getChunk(w http.ResponseWriter, r *http.Request) {

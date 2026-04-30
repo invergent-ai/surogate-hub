@@ -92,3 +92,45 @@ func TestPostShardRegistersChunkDedupIndex(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []byte("raw-shard"), body)
 }
+
+func TestPostShardRejectsMissingReferencedXorb(t *testing.T) {
+	ctx := context.Background()
+	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
+	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewBufferString(`{
+		"file_hash": "file-a",
+		"shard": "raw-shard",
+		"chunk_ids": ["chunk-a"],
+		"xorb_ids": ["missing-xorb"]
+	}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Contains(t, rec.Body.String(), "xorb missing-xorb not found")
+}
+
+func TestPostShardAcceptsExistingReferencedXorb(t *testing.T) {
+	ctx := context.Background()
+	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
+	_, err := xorbStore.Put(ctx, "default", "xorb-a", int64(len("xorb-bytes")), bytes.NewReader([]byte("xorb-bytes")))
+	require.NoError(t, err)
+	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewBufferString(`{
+		"file_hash": "file-a",
+		"shard": "raw-shard",
+		"chunk_ids": ["chunk-a"],
+		"xorb_ids": ["xorb-a"]
+	}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.JSONEq(t, `{"file_hash":"file-a","was_inserted":true}`, rec.Body.String())
+}
