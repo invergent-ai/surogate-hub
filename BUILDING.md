@@ -3,7 +3,7 @@
 To build the project from source, follow these steps:
 
 1. Clone the repository
-2. `make build` (to build the project binaries `lakectl` and `lakefs`)
+2. `make build` (to build the project binaries `hubctl` and `sghub`)
 3. `make build-docker` (optional, requires Docker)
 
 ## Bump version

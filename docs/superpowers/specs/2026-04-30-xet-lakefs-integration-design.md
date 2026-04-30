@@ -407,7 +407,7 @@ JWT signing reuses `auth.encrypt.secret_key` — no new secret material.
 
 ### Phase 4 — Smart client
 - `clients/python/surogate-xet/` — Python package wrapping `hf_xet`'s PyO3 bindings + lakeFS staging call.
-- Token-exchange helper (lakectl creds → JWT).
+- Token-exchange helper (hubctl creds → JWT).
 - Reconstruction helper supplies `repo/ref/path` context when invoking the Surogate reconstruction endpoint so the direct logical-context capability check is used after upload/link.
 - Integration test: upload checkpoint → commit → read via S3 → re-upload similar checkpoint → verify dedup hit-rate on the second upload.
 
@@ -529,7 +529,7 @@ Last updated: 2026-04-30.
 
 - Focused XET unit/API/ESTI tests passed at the last green checkpoint.
 - The ESTI runner's stale `-skip` flag usage was fixed while adding the focused XET smoke coverage.
-- The full local ESTI suite was run earlier and failed on pre-existing local-suite issues unrelated to the focused XET path: read-only repository setup, local import configuration, `lakectl` golden output drift, help-branding drift, and a multipart upload panic.
+- The full local ESTI suite was run earlier and failed on pre-existing local-suite issues unrelated to the focused XET path: read-only repository setup, local import configuration, `hubctl` golden output drift, help-branding drift, and a multipart upload panic.
 
 ## 12. Out of Scope (v1)
 

@@ -29,7 +29,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -gcflags "all=-N -l" -ldflags "-X github.com/invergent-ai/surogate-hub/pkg/version.Version=${VERSION}" -o sghub ./cmd/sghub \
     && GOOS=$TARGETOS GOARCH=$TARGETARCH \
-    go build -ldflags "-X github.com/invergent-ai/surogate-hub/pkg/version.Version=${VERSION}" -o lakectl ./cmd/lakectl
+    go build -ldflags "-X github.com/invergent-ai/surogate-hub/pkg/version.Version=${VERSION}" -o hubctl ./cmd/hubctl
 
 # Build the stats worker virtualenv on the same base as the final image so
 # the Python binary in the venv is ABI-compatible at runtime.
@@ -55,7 +55,7 @@ RUN $UPDATE_PACKAGES \
     && $ADD_PACKAGES $IMAGE_PACKAGES python3 \
     && rm -rf /var/lib/apt/lists/*
 RUN addgroup --system lakefs && adduser --system --ingroup lakefs lakefs
-COPY --from=build-sghub /build/sghub /build/lakectl /app/
+COPY --from=build-sghub /build/sghub /build/hubctl /app/
 COPY ./scripts/wait-for /app/
 COPY --from=build-stats-worker /opt/stats-worker-venv /opt/stats-worker-venv
 RUN printf '#!/bin/sh\nexec /opt/stats-worker-venv/bin/python -m surogate_hub_worker "$@"\n' \

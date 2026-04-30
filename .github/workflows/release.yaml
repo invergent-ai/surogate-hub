@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-binaries:
-    name: Build sghub & lakectl (linux/amd64)
+    name: Build sghub & hubctl (linux/amd64)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -57,7 +57,7 @@ jobs:
           LDFLAGS="-X github.com/invergent-ai/surogate-hub/pkg/version.Version=${VERSION}"
           mkdir -p dist
           go build -ldflags "${LDFLAGS}" -o dist/sghub ./cmd/sghub
-          go build -ldflags "${LDFLAGS}" -o dist/lakectl ./cmd/lakectl
+          go build -ldflags "${LDFLAGS}" -o dist/hubctl ./cmd/hubctl
 
       - name: Package archive
         id: archive
@@ -65,7 +65,7 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           NAME="sghub_${VERSION}_linux_amd64"
           mkdir -p out
-          tar -C dist -czf "out/${NAME}.tar.gz" sghub lakectl
+          tar -C dist -czf "out/${NAME}.tar.gz" sghub hubctl
           echo "asset=out/${NAME}.tar.gz" >> "$GITHUB_OUTPUT"
 
       - name: Upload artifact

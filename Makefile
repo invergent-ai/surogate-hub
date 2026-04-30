@@ -34,7 +34,7 @@ GOFMT=$(GOCMD)fmt
 GOTEST_PARALLELISM=4
 
 SGHUB_BINARY_NAME=sghub
-LAKECTL_BINARY_NAME=lakectl
+HUBCTL_BINARY_NAME=hubctl
 
 UI_DIR=webui
 UI_BUILD_DIR=$(UI_DIR)/dist
@@ -60,7 +60,7 @@ all: build
 
 clean:
 	@rm -rf \
-		$(LAKECTL_BINARY_NAME) \
+		$(HUBCTL_BINARY_NAME) \
 		$(SGHUB_BINARY_NAME) \
 		$(UI_BUILD_DIR) \
 		$(UI_DIR)/node_modules \
@@ -72,7 +72,7 @@ check-licenses: check-licenses-go-mod check-licenses-npm
 check-licenses-go-mod:
 	$(GOCMD) install github.com/google/go-licenses@latest
 	$(GOBINPATH)/go-licenses check ./cmd/$(SGHUB_BINARY_NAME)
-	$(GOBINPATH)/go-licenses check ./cmd/$(LAKECTL_BINARY_NAME)
+	$(GOBINPATH)/go-licenses check ./cmd/$(HUBCTL_BINARY_NAME)
 
 check-licenses-npm:
 	$(GOCMD) install github.com/senseyeio/diligent/cmd/diligent@latest
@@ -155,7 +155,7 @@ gen-code: gen-api ## Run the generator for inline commands
 LD_FLAGS := "-X github.com/invergent-ai/surogate-hub/pkg/version.Version=$(VERSION)-$(REVISION)"
 build-go:
 	$(GOBUILD) -o $(SGHUB_BINARY_NAME) -gcflags "all=-N -l" -ldflags $(LD_FLAGS) -v ./cmd/$(SGHUB_BINARY_NAME)
-	$(GOBUILD) -o $(LAKECTL_BINARY_NAME) -ldflags $(LD_FLAGS) -v ./cmd/$(LAKECTL_BINARY_NAME)
+	$(GOBUILD) -o $(HUBCTL_BINARY_NAME) -ldflags $(LD_FLAGS) -v ./cmd/$(HUBCTL_BINARY_NAME)
 
  ## Download dependencies and build the default binary
 build: gen build-go

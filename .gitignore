@@ -35,11 +35,10 @@
 
 # Our binaries
 /sghub
-/lakefs
-/lakectl
+/hubctl
 /main
 /cmd/sghub/sghub
-/cmd/lakectl/lakectl
+/cmd/hubctl/hubctl
 /dist
 /delta/
 

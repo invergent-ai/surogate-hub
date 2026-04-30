@@ -15,7 +15,7 @@ import (
 
 const (
 	IndexFileName = ".lakefs_ref.yaml"
-	IgnoreMarker  = "ignored by lakectl local"
+	IgnoreMarker  = "ignored by hubctl local"
 	IndexFileMode = 0o644
 )
 

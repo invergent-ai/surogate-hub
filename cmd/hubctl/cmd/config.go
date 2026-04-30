@@ -1,0 +1,82 @@
+package cmd
+
+import (
+	"fmt"
+	"net/url"
+	"path/filepath"
+
+	"github.com/manifoldco/promptui"
+	"github.com/mitchellh/go-homedir"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+)
+
+// configCmd represents the config command
+var configCmd = &cobra.Command{
+	Use:   "config",
+	Short: "Create/update local Surogate Hub configuration",
+	Run: func(cmd *cobra.Command, args []string) {
+		if viper.ConfigFileUsed() == "" {
+			// Find home directory.
+			home, err := homedir.Dir()
+			if err != nil {
+				DieErr(err)
+			}
+			// Setup default config file
+			viper.SetConfigFile(filepath.Join(home, ".hubctl.yaml"))
+		}
+		fmt.Printf("Config file %s will be used\n", viper.ConfigFileUsed())
+
+		// get user input
+		questions := []struct {
+			Key    string
+			Prompt promptui.Prompt
+		}{
+			{
+				Key: "credentials.access_key_id",
+				Prompt: promptui.Prompt{
+					Label: "Access key ID",
+				},
+			},
+			{
+				Key: "credentials.secret_access_key",
+				Prompt: promptui.Prompt{
+					Label: "Secret access key",
+					Mask:  '*',
+				},
+			},
+			{
+				Key: "server.endpoint_url",
+				Prompt: promptui.Prompt{
+					Label: "Server endpoint URL (e.g. http://localhost:8000)",
+					Validate: func(rawURL string) error {
+						_, err := url.ParseRequestURI(rawURL)
+						return err
+					},
+				},
+			},
+		}
+
+		for _, question := range questions {
+			question.Prompt.Default = viper.GetString(question.Key)
+			val, err := question.Prompt.Run()
+			if err != nil {
+				DieErr(err)
+			}
+			viper.Set(question.Key, val)
+		}
+
+		err := viper.SafeWriteConfig()
+		if err != nil {
+			err = viper.WriteConfig()
+		}
+		if err != nil {
+			DieErr(err)
+		}
+	},
+}
+
+//nolint:gochecknoinits
+func init() {
+	rootCmd.AddCommand(configCmd)
+}

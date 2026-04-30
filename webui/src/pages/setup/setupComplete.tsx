@@ -22,7 +22,7 @@ export const SetupComplete: FC<SetupCompleteProps> = ({
     apiEndpoint,
 }) => {
     const router = useRouter();
-    const downloadContent = 'data:application/octet-stream,' + encodeURIComponent(`# lakectl command line configuration - save under the filename $HOME/.lakectl.yaml
+    const downloadContent = 'data:application/octet-stream,' + encodeURIComponent(`# hubctl command line configuration - save under the filename $HOME/.hubctl.yaml
 credentials:
     access_key_id: ${accessKeyId}
     secret_access_key: ${secretAccessKey}
@@ -70,16 +70,16 @@ server:
                                 <a className="btn p-2 pl-3 pr-3 after-setup-btn"
                                    style={{backgroundColor: '#808080'}}
                                    href={downloadContent}
-                                   target="_blank" rel="noreferrer" download="lakectl.yaml"><DownloadIcon/> Download credentials
+                                   target="_blank" rel="noreferrer" download="hubctl.yaml"><DownloadIcon/> Download credentials
                                 </a>
                             </div>
                         </Alert>
-                        <h5>lakectl</h5>
+                        <h5>hubctl</h5>
                         <div className="ms-2 mt-2">
                             <a target="_blank" rel="noreferrer"
-                               href="https://docs.invergent.ai/densemax/reference/cli.html">lakectl</a> is a CLI tool for working with LakeFS.
+                               href="https://docs.invergent.ai/densemax/reference/cli.html">hubctl</a> is a CLI tool for working with LakeFS.
                             <p className="mt-2">
-                            Visit the documentation page to download lakectl and save the above credentials file as <code>~/.lakectl.yaml</code>.
+                            Visit the documentation page to download hubctl and save the above credentials file as <code>~/.hubctl.yaml</code>.
                             </p>
                         </div>
                         <div className="mt-3 text-md-center">

@@ -20,12 +20,12 @@ You might also be interested in this list of [additional lakeFS resources](#reso
 
 ## Setup
 
-If you're reading this within the sample repository on lakeFS then you've already got lakeFS running! In this quickstart we'll reference different ways to perform tasks depending on how you're running lakeFS. See below for how you need to set up your environment for these. 
+If you're reading this within the sample repository on lakeFS then you've already got lakeFS running! In this quickstart we'll reference different ways to perform tasks depending on how you're running lakeFS. See below for how you need to set up your environment for these.
 
 <details>
   <summary>Docker</summary>
 
-If you're running lakeFS with Docker then all the tools you need (`lakectl`) are included in the image already. 
+If you're running lakeFS with Docker then all the tools you need (`hubctl`) are included in the image already.
 
 ```bash
 docker run --name lakefs --pull always \
@@ -34,26 +34,26 @@ docker run --name lakefs --pull always \
              run --quickstart
 ```
 
-Configure `lakectl` by running the following in a new terminal window: 
+Configure `hubctl` by running the following in a new terminal window:
 
 ```bash
-docker exec -it lakefs lakectl config
+docker exec -it lakefs hubctl config
 ```
 
-Follow the prompts to enter your credentials that you created when you first setup lakeFS. Leave the **Server endpoint URL** as `http://127.0.0.1:8000`. 
+Follow the prompts to enter your credentials that you created when you first setup lakeFS. Leave the **Server endpoint URL** as `http://127.0.0.1:8000`.
 
 </details>
 
 <details>
   <summary>Local install</summary>
 
-1. When you download [lakeFS from the GitHub repository](https://github.com/treeverse/lakeFS/releases) the distribution includes the `lakectl` tool. 
+1. When you download [lakeFS from the GitHub repository](https://github.com/treeverse/lakeFS/releases) the distribution includes the `hubctl` tool.
 
     Add this to your `$PATH`, or when invoking it reference it from the downloaded folder
-2. [Configure](https://docs.lakefs.io/reference/cli.html#configuring-credentials-and-api-endpoint) `lakectl` by running
+2. [Configure](https://docs.lakefs.io/reference/cli.html#configuring-credentials-and-api-endpoint) `hubctl` by running
 
     ```bash
-    lakectl config
+    hubctl config
     ```
 </details>
 
@@ -112,13 +112,13 @@ From the [branches](./branches) page, click on **Create Branch**. Call the new b
 <details>
   <summary>CLI (Docker)</summary>
 
-_We'll use the `lakectl` tool to create the branch._
+_We'll use the `hubctl` tool to create the branch._
 
 In a new terminal window run the following:
 
 ```bash
 docker exec lakefs \
-    lakectl branch create \
+    hubctl branch create \
 	    lakefs://{{.RepoName}}/denmark-lakes \
       --source lakefs://{{.RepoName}}/main
 ```
@@ -134,12 +134,12 @@ created branch 'denmark-lakes' 3384cd7cdc4a2cd5eb6249b52f0a709b49081668bb1574ce8
 <details>
   <summary>CLI (local)</summary>
 
-_We'll use the `lakectl` tool to create the branch._
+_We'll use the `hubctl` tool to create the branch._
 
 In a new terminal window run the following:
 
 ```bash
-lakectl branch create \
+hubctl branch create \
   lakefs://{{.RepoName}}/denmark-lakes \
   --source lakefs://{{.RepoName}}/main
 ```
@@ -158,26 +158,26 @@ _Now we'll make a change to the data. lakeFS has several native clients, as well
 
 We're going to use DuckDB which is embedded within the web interface of lakeFS.
 
-From the lakeFS [**Objects** page](/repositories/{{.RepoName}}/objects?ref=main) select the [`lakes.parquet`](/repositories/{{.RepoName}}/object?ref=main&path=lakes.parquet) file to open the DuckDB editor: 
+From the lakeFS [**Objects** page](/repositories/{{.RepoName}}/objects?ref=main) select the [`lakes.parquet`](/repositories/{{.RepoName}}/object?ref=main&path=lakes.parquet) file to open the DuckDB editor:
 
 <img width="75%" src="/api/v1/repositories/{{.RepoName}}/refs/main/objects?path=images%2Fduckdb-main-01.png" alt="The lakeFS object viewer with embedded DuckDB to query parquet files. A query has run automagically to preview the contents of the selected parquet file." class="quickstart"/>
 
-To start with, we'll load the lakes data into a DuckDB table so that we can manipulate it. Replace the previous text in the DuckDB editor with this: 
+To start with, we'll load the lakes data into a DuckDB table so that we can manipulate it. Replace the previous text in the DuckDB editor with this:
 
 ```sql
-CREATE OR REPLACE TABLE lakes AS 
+CREATE OR REPLACE TABLE lakes AS
     SELECT * FROM READ_PARQUET('lakefs://{{.RepoName}}/denmark-lakes/lakes.parquet');
 ```
 
-You'll see a row count of 100,000 to confirm that the DuckDB table has been created. 
+You'll see a row count of 100,000 to confirm that the DuckDB table has been created.
 
-Just to check that it's the same data that we saw before we'll run the same query. Note that now we are querying a DuckDB table (`lakes`), rather than using a function to query a parquet file directly. 
+Just to check that it's the same data that we saw before we'll run the same query. Note that now we are querying a DuckDB table (`lakes`), rather than using a function to query a parquet file directly.
 
 ```sql
 SELECT   country, COUNT(*)
 FROM     lakes
 GROUP BY country
-ORDER BY COUNT(*) 
+ORDER BY COUNT(*)
 DESC LIMIT 5;
 ```
 
@@ -200,7 +200,7 @@ We can verify that it's worked by reissuing the same query as before:
 SELECT   country, COUNT(*)
 FROM     lakes
 GROUP BY country
-ORDER BY COUNT(*) 
+ORDER BY COUNT(*)
 DESC LIMIT 5;
 ```
 
@@ -208,7 +208,7 @@ DESC LIMIT 5;
 
 ## Write the Data back to lakeFS
 
-_The changes so far have only been to DuckDB's copy of the data. Let's now push it back to lakeFS._ 
+_The changes so far have only been to DuckDB's copy of the data. Let's now push it back to lakeFS._
 
 _Note the lakeFS path is different this time as we're writing it to the `denmark-lakes` branch, not `main`._
 
@@ -220,7 +220,7 @@ COPY lakes TO 'lakefs://{{.RepoName}}/denmark-lakes/lakes.parquet';
 
 ## Verify that the Data's Changed on the Branch
 
-_Let's just confirm for ourselves that the parquet file itself has the new data._ 
+_Let's just confirm for ourselves that the parquet file itself has the new data._
 
 _We'll drop the `lakes` table just to be sure, and then query the parquet file directly:_
 
@@ -238,7 +238,7 @@ DESC LIMIT 5;
 
 ## What about the data in `main`?
 
-_So we've changed the data in our `denmark-lakes` branch, deleting swathes of the dataset. What's this done to our original data in the `main` branch? Absolutely nothing!_ 
+_So we've changed the data in our `denmark-lakes` branch, deleting swathes of the dataset. What's this done to our original data in the `main` branch? Absolutely nothing!_
 
 See for yourself by returning to [the lakeFS object view](object?ref=main&path=lakes.parquet) and re-running the same query:
 
@@ -258,7 +258,7 @@ _In the next step we'll see how to merge our branch back into main._
 
 _In the previous step we branched our data from `main` into a new `denmark-lakes` branch, and overwrote the `lakes.parquet` to hold solely information about lakes in Denmark. Now we're going to commit that change (just like Git) and merge it back to main (just like Git)._
 
-_Having make the change to the datafile in the `denmark-lakes` branch, we now want to commit it. There are various options for interacting with lakeFS' API, including the web interface, [a Python client](https://pydocs.lakefs.io/), and `lakectl`._
+_Having make the change to the datafile in the `denmark-lakes` branch, we now want to commit it. There are various options for interacting with lakeFS' API, including the web interface, [a Python client](https://pydocs.lakefs.io/), and `hubctl`._
 
 Choose one of the following methods depending on your preferred interface and how you're running lakeFS.
 
@@ -283,7 +283,7 @@ Run the following from a terminal window:
 
 ```bash
 docker exec lakefs \
-  lakectl commit lakefs://{{.RepoName}}/denmark-lakes \
+  hubctl commit lakefs://{{.RepoName}}/denmark-lakes \
 	-m "Create a dataset of just the lakes in Denmark"
 ```
 
@@ -306,7 +306,7 @@ Parents: 3384cd7cdc4a2cd5eb6249b52f0a709b49081668bb1574ce8f1ef2d956646816
 Run the following from a terminal window:
 
 ```bash
-lakectl commit lakefs://{{.RepoName}}/denmark-lakes \
+hubctl commit lakefs://{{.RepoName}}/denmark-lakes \
   -m "Create a dataset of just the lakes in Denmark"
 ```
 
@@ -347,13 +347,13 @@ _As with most operations in lakeFS, merging can be done through a variety of int
 <details>
   <summary>CLI (Docker)</summary>
 
-_The syntax for `merge` requires us to specify the source and target of the merge._ 
+_The syntax for `merge` requires us to specify the source and target of the merge._
 
 Run this from a terminal window.
 
 ```bash
 docker exec lakefs \
-	lakectl merge \
+	hubctl merge \
 		lakefs://{{.RepoName}}/denmark-lakes \
 		lakefs://{{.RepoName}}/main
 ```
@@ -363,12 +363,12 @@ docker exec lakefs \
 <details>
   <summary>CLI (local)</summary>
 
-_The syntax for `merge` requires us to specify the source and target of the merge._ 
+_The syntax for `merge` requires us to specify the source and target of the merge._
 
 Run this from a terminal window.
 
 ```bash
-lakectl merge \
+hubctl merge \
   lakefs://{{.RepoName}}/denmark-lakes \
   lakefs://{{.RepoName}}/main
 ```
@@ -396,11 +396,11 @@ _The good news for them (you) is that lakeFS can revert changes made, similar to
 <details>
   <summary>CLI (Docker)</summary>
 
-From your terminal window run `lakectl` with the `revert` command:
+From your terminal window run `hubctl` with the `revert` command:
 
 ```bash
 docker exec -it lakefs \
-    lakectl branch revert \
+    hubctl branch revert \
 	    lakefs://{{.RepoName}}/main \
 	    main --parent-number 1 --yes
 ```
@@ -417,10 +417,10 @@ commit main successfully reverted
 <details>
   <summary>CLI (local)</summary>
 
-From your terminal window run `lakectl` with the `revert` command:
+From your terminal window run `hubctl` with the `revert` command:
 
 ```bash
-lakectl branch revert \
+hubctl branch revert \
   lakefs://{{.RepoName}}/main \
   main --parent-number 1 --yes
 ```
@@ -444,7 +444,7 @@ Back in the object page and the DuckDB query we can see that the original file i
 
 When we interact with lakeFS it can be useful to have certain checks performed at stages along the way. Let's see how [actions in lakeFS](https://docs.lakefs.io/howto/hooks/) can be of benefit here.
 
-We're going to enforce a rule that when a commit is made to any branch that begins with `etl`: 
+We're going to enforce a rule that when a commit is made to any branch that begins with `etl`:
 
 * the commit message must not be blank
 * there must be `job_name` and `version` metadata
@@ -456,22 +456,22 @@ _Hooks_ can be either a Lua script that lakeFS will execute itself, an external 
 
 ## Configuring the Action
 
-1. In lakeFS create a new branch called `add_action`. You can do this through the UI or with `lakectl`: 
+1. In lakeFS create a new branch called `add_action`. You can do this through the UI or with `hubctl`:
 
     ```bash
     docker exec lakefs \
-        lakectl branch create \
+        hubctl branch create \
                 lakefs://quickstart/add_action \
                         --source lakefs://quickstart/main
     ```
 
-1. Open up your favorite text editor (or emacs), and paste the following YAML: 
+1. Open up your favorite text editor (or emacs), and paste the following YAML:
 
     ```yaml
     name: Check Commit Message and Metadata
     on:
     pre-commit:
-        branches: 
+        branches:
         - etl**
     hooks:
     - id: check_metadata
@@ -509,20 +509,20 @@ _Hooks_ can be either a Lua script that lakeFS will execute itself, an external 
 
     * You can save it elsewhere, but make sure you change the path below when uploading
 
-1. Upload the `check_commit_metadata.yml` file to the `add_action` branch under `_lakefs_actions/`. As above, you can use the UI (make sure you select the correct branch when you do), or with `lakectl`:
+1. Upload the `check_commit_metadata.yml` file to the `add_action` branch under `_lakefs_actions/`. As above, you can use the UI (make sure you select the correct branch when you do), or with `hubctl`:
 
     ```bash
     docker exec lakefs \
-        lakectl fs upload \
+        hubctl fs upload \
             lakefs://quickstart/add_action/_lakefs_actions/check_commit_metadata.yml \
             --source /tmp/check_commit_metadata.yml
     ```
 
-1. Go to the **Uncommitted Changes** tab in the UI, and make sure that you see the new file in the path shown: 
+1. Go to the **Uncommitted Changes** tab in the UI, and make sure that you see the new file in the path shown:
 
     <img width="75%" src="/api/v1/repositories/{{.RepoName}}/refs/main/objects?path=images%2Fhooks-00.png" alt="lakeFS Uncommitted Changes view showing a file called `check_commit_metadata.yml` under the path `_lakefs_actions/`" class="quickstart"/>
 
-    Click **Commit Changes** and enter a suitable message to commit this new file to the branch. 
+    Click **Commit Changes** and enter a suitable message to commit this new file to the branch.
 
 1. Now we'll merge this new branch into `main`. From the **Compare** tab in the UI compare the `main` branch with `add_action` and click **Merge**
 
@@ -530,25 +530,25 @@ _Hooks_ can be either a Lua script that lakeFS will execute itself, an external 
 
 ## Testing the Action
 
-Let's remind ourselves what the rules are that the action is going to enforce. 
+Let's remind ourselves what the rules are that the action is going to enforce.
 
-> When a commit is made to any branch that begins with `etl`: 
+> When a commit is made to any branch that begins with `etl`:
 
 > * the commit message must not be blank
 > * there must be `job_name` and `version` metadata
 > * the `version` must be numeric
 
-We'll start by creating a branch that's going to match the `etl` pattern, and then go ahead and commit a change and see how the action works. 
+We'll start by creating a branch that's going to match the `etl` pattern, and then go ahead and commit a change and see how the action works.
 
-1. Create a new branch (see above instructions on how to do this if necessary) called `etl_20230504`. Make sure you use `main` as the source branch. 
+1. Create a new branch (see above instructions on how to do this if necessary) called `etl_20230504`. Make sure you use `main` as the source branch.
 
-    In your new branch you should see the action that you created and merged above: 
+    In your new branch you should see the action that you created and merged above:
 
     <img width="75%" src="/api/v1/repositories/{{.RepoName}}/refs/main/objects?path=images%2Fhooks-02.png" alt="lakeFS branch etl_20230504 with object /_lakefs_actions/check_commit_metadata.yml" class="quickstart"/>
 
-1. To simulate an ETL job we'll use the built-in DuckDB editor to run some SQL and write the result back to the lakeFS branch. 
+1. To simulate an ETL job we'll use the built-in DuckDB editor to run some SQL and write the result back to the lakeFS branch.
 
-    Open the `lakes.parquet` file on the `etl_20230504` branch from the **Objects** tab. Replace the SQL statement with the following: 
+    Open the `lakes.parquet` file on the `etl_20230504` branch from the **Objects** tab. Replace the SQL statement with the following:
 
     ```sql
     COPY (
@@ -557,28 +557,28 @@ We'll start by creating a branch that's going to match the `etl` pattern, and th
                 RANK() OVER ( ORDER BY depth_m DESC) AS lake_rank
             FROM READ_PARQUET('lakefs://quickstart/etl_20230504/lakes.parquet'))
         SELECT * FROM SRC WHERE lake_rank <= 10
-    ) TO 'lakefs://quickstart/etl_20230504/top10_lakes.parquet'    
+    ) TO 'lakefs://quickstart/etl_20230504/top10_lakes.parquet'
     ```
 
-1. Head to the **Uncommitted Changes** tab in the UI and notice that there is now a file called `top10_lakes.parquet` waiting to be committed. 
+1. Head to the **Uncommitted Changes** tab in the UI and notice that there is now a file called `top10_lakes.parquet` waiting to be committed.
 
     <img width="75%" src="/api/v1/repositories/{{.RepoName}}/refs/main/objects?path=images%2Fhooks-03.png" alt="lakeFS branch etl_20230504 with uncommitted file top10_lakes.parquet" class="quickstart"/>
 
     Now we're ready to start trying out the commit rules, and seeing what happens if we violate them.
-    
-1. Click on **Commit Changes**, leave the _Commit message_ blank, and click **Commit Changes** to confirm. 
+
+1. Click on **Commit Changes**, leave the _Commit message_ blank, and click **Commit Changes** to confirm.
 
     Note that the commit fails because the hook did not succeed
-    
+
     `pre-commit hook aborted`
-    
+
     with the output from the hook's code displayed
 
     `❌ A commit message must be provided`
 
     <img width="75%" src="/api/v1/repositories/{{.RepoName}}/refs/main/objects?path=images%2Fhooks-04.png" alt="lakeFS blocking an attempt to commit with no commit message" class="quickstart"/>
 
-1. Do the same as the previous step, but provide a message this time: 
+1. Do the same as the previous step, but provide a message this time:
 
     <img width="75%" src="/api/v1/repositories/{{.RepoName}}/refs/main/objects?path=images%2Fhooks-05.png" alt="A commit to lakeFS with commit message in place" class="quickstart"/>
 
@@ -586,11 +586,11 @@ We'll start by creating a branch that's going to match the `etl` pattern, and th
 
     `❌ Commit metadata must include job_name`
 
-1. Repeat the **Commit Changes** dialog and use the **Add Metadata field** to add the required metadata: 
+1. Repeat the **Commit Changes** dialog and use the **Add Metadata field** to add the required metadata:
 
     <img width="75%" src="/api/v1/repositories/{{.RepoName}}/refs/main/objects?path=images%2Fhooks-06.png" alt="A commit to lakeFS with commit message and metadata in place" class="quickstart"/>
 
-    We're almost there, but this still fails (as it should), since the version is not entirely numeric but includes `v` and `ß`: 
+    We're almost there, but this still fails (as it should), since the version is not entirely numeric but includes `v` and `ß`:
 
     `❌ Version metadata must be numeric: v1.00ß`
 
@@ -600,7 +600,7 @@ We'll start by creating a branch that's going to match the `etl` pattern, and th
 
 ---
 
-You can view the history of all action runs from the **Action** tab: 
+You can view the history of all action runs from the **Action** tab:
 
 <img width="75%" src="/api/v1/repositories/{{.RepoName}}/refs/main/objects?path=images%2Fhooks-08.png" alt="Action run history in lakeFS" class="quickstart"/>
 

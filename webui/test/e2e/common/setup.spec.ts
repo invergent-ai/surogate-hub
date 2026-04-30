@@ -5,7 +5,7 @@ import { RepositoriesPage } from "../poms/repositoriesPage";
 import { COMMON_STORAGE_STATE_PATH } from "../consts";
 import {writeCredentials} from "../credentialsFile";
 
-const LAKECTL_CONFIGURATION_FILE_NAME = "lakectl.yaml";
+const HUBCTL_CONFIGURATION_FILE_NAME = "hubctl.yaml";
 
 test.describe("Setup Page", () => {
     test("initial navigation to the base URL should redirect to /setup", async ({ page }) => {
@@ -47,7 +47,7 @@ test.describe("Setup Page", () => {
 
         // download credentials
         const download = await setupPage.donwloadCredentialsButton();
-        expect(download.suggestedFilename()).toBe(LAKECTL_CONFIGURATION_FILE_NAME);
+        expect(download.suggestedFilename()).toBe(HUBCTL_CONFIGURATION_FILE_NAME);
 
         // open login page in a new tab
         // and do login
