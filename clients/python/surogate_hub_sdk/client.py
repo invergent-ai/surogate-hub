@@ -63,7 +63,7 @@ class LakeFSClient:
         configuration.verify_ssl = False
         configuration = LakeFSClient._ensure_endpoint(configuration)
         self._api = _WrappedApiClient(configuration=configuration, header_name=header_name,
-                                          header_value=header_value, cookie=cookie, pool_threads=pool_threads)
+                                          header_value=header_value, cookie=cookie)
         self.actions_api = actions_api.ActionsApi(self._api)
         self.auth_api = auth_api.AuthApi(self._api)
         self.branches_api = branches_api.BranchesApi(self._api)

@@ -108,6 +108,19 @@ class FakeLakeFSClient:
 
 
 class TestXETClient(unittest.TestCase):
+    def test_lakefs_client_accepts_default_pool_threads_argument(self):
+        from surogate_hub_sdk.client import LakeFSClient
+
+        configuration = Configuration(
+            host="http://lakefs.example/api/v1",
+            username="access",
+            password="secret",
+        )
+
+        client = LakeFSClient(configuration=configuration)
+
+        self.assertEqual(client._api.configuration.host, "http://lakefs.example/api/v1")
+
     def test_upload_file_uploads_to_hf_xet_and_links_physical_address(self):
         from surogate_hub_sdk.xet import XETClient
 
