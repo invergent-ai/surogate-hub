@@ -491,6 +491,39 @@ func TestPostRootShardRegistersFileAndChunks(t *testing.T) {
 	require.True(t, hasShard)
 }
 
+func TestPostDuplicateAbbreviatedShardIsIdempotent(t *testing.T) {
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	handler := NewHandler(registry, WithXorbStore(NewXorbStore(mem.New(ctx), "mem://xet-cas")))
+	abbreviatedShard := testHFAbbreviatedShard(t)
+	fileHash := "42226dec0f0a21fe4e9404480ecdc7714b963c61c37c7870b2c8b18dea5b274c"
+	chunkHash := "9b23a87215b2aaf3f91275d77f3aafce3079a83de4d13523d010c51eb11489a3"
+	canonicalShard := testXETBinaryShard(
+		t,
+		fileHash,
+		"3a6082dc9d95bdb717b5d799bdbbb71ec4b3b3502847e0d50f536113e143f0c8",
+		chunkHash,
+	)
+	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: fileHash,
+		Shard:    canonicalShard,
+		ChunkIDs: []string{chunkHash},
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/shards", bytes.NewReader(abbreviatedShard))
+	req.Header.Set("Content-Type", "application/octet-stream")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	require.Equalf(t, http.StatusOK, rec.Code, "body: %s", rec.Body.String())
+	require.JSONEq(t, `{"result":0}`, rec.Body.String())
+	stored, err := registry.GetShardByFileHash(ctx, fileHash)
+	require.NoError(t, err)
+	require.Equal(t, canonicalShard, stored)
+}
+
 func TestGetReconstructionReturnsV2Manifest(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
@@ -823,6 +856,13 @@ func TestReconstructFileRangeReadsXorbBytes(t *testing.T) {
 func testShimFileHash(shard string) string {
 	sum := sha256.Sum256([]byte(shard))
 	return hex.EncodeToString(sum[:])
+}
+
+func testHFAbbreviatedShard(t *testing.T) []byte {
+	t.Helper()
+	shard, err := base64.StdEncoding.DecodeString("SEZSZXBvTWV0YURhdGEAVWlnRWp7gVeDpb3ZXM3RSqkCAAAAAAAAAAAAAAAAAAAA/iEKD+xtIkJxx80OSASUTnB4fMNhPJZLTCdb6o2xyLIAAADAAQAAAAAAAAAAAAAAt72VndyCYDoet7u9mde1F9XgRyhQs7PEyPBD4RNhUw8AAAAABBADAAAAAAACAAAASjM7S0fdp35JEFNeZGUvD497UZdxStR3ZflLrOyaGVMAAAAAAAAAAAAAAAAAAAAAye/Q1kDccACMFyFz8/1cV7h0QlzKd10VNm2G5UuZoeYAAAAAAAAAAAAAAAAAAAAA//////////////////////////////////////////8AAAAAAAAAAAAAAAAAAAAA//////////////////////////////////////////8AAAAAAAAAAAAAAAAAAAAA")
+	require.NoError(t, err)
+	return shard
 }
 
 func testXETBinaryShard(t *testing.T, fileHash, xorbHash, chunkHash string) []byte {

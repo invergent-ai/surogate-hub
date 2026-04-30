@@ -520,6 +520,12 @@ func (h *Handler) postBinaryShard(w http.ResponseWriter, r *http.Request) {
 	}
 	canonicalShard, info, err := xetstore.CanonicalShard(shard)
 	if err != nil {
+		if h.acceptExistingAbbreviatedShard(r.Context(), shard) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(uploadShardResponse{Result: 0})
+			return
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -559,6 +565,20 @@ func (h *Handler) postBinaryShard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(uploadShardResponse{Result: responseResult})
+}
+
+func (h *Handler) acceptExistingAbbreviatedShard(ctx context.Context, shard []byte) bool {
+	files, err := xetstore.ParseShardFiles(shard)
+	if err != nil || len(files) == 0 {
+		return false
+	}
+	for _, file := range files {
+		exists, err := h.registry.HasShard(ctx, file.FileHash)
+		if err != nil || !exists {
+			return false
+		}
+	}
+	return true
 }
 
 func (h *Handler) validateXorbs(r *http.Request, xorbIDs []string) error {

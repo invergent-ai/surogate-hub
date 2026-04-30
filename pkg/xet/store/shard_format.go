@@ -93,6 +93,14 @@ func ParseShardInfo(data []byte) (ShardInfo, error) {
 	return info, err
 }
 
+func ParseShardFiles(data []byte) ([]ShardFileInfo, error) {
+	reader := bytes.NewReader(data)
+	if _, err := readShardHeader(reader); err != nil {
+		return nil, err
+	}
+	return readShardFiles(reader)
+}
+
 func parseShardInfo(data []byte) (ShardInfo, uint64, error) {
 	reader := bytes.NewReader(data)
 	footerSize, err := readShardHeader(reader)
