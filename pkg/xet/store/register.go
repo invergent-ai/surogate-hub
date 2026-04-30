@@ -94,6 +94,14 @@ func (r *Registry) PutFileRef(ctx context.Context, ref FileRef) error {
 
 func (r *Registry) ListFileRefs(ctx context.Context, fileHash string, batchSize int) ([]FileRef, error) {
 	prefix := fileRefPrefix(fileHash)
+	return r.listFileRefsByPrefix(ctx, prefix, batchSize)
+}
+
+func (r *Registry) ListAllFileRefs(ctx context.Context, batchSize int) ([]FileRef, error) {
+	return r.listFileRefsByPrefix(ctx, "xet/file_refs/", batchSize)
+}
+
+func (r *Registry) listFileRefsByPrefix(ctx context.Context, prefix string, batchSize int) ([]FileRef, error) {
 	iter, err := r.store.Scan(ctx, []byte(Partition), kv.ScanOptions{
 		KeyStart:  []byte(prefix),
 		BatchSize: batchSize,
@@ -110,7 +118,7 @@ func (r *Registry) ListFileRefs(ctx context.Context, fileHash string, batchSize 
 		if !strings.HasPrefix(key, prefix) {
 			break
 		}
-		ref, ok := parseFileRefKey(fileHash, key)
+		ref, ok := parseFileRefKey(key)
 		if !ok {
 			continue
 		}
@@ -142,19 +150,19 @@ func fileRefPrefix(fileHash string) string {
 	return "xet/file_refs/" + fileHash + "/"
 }
 
-func parseFileRefKey(fileHash string, key string) (FileRef, bool) {
-	rest, ok := strings.CutPrefix(key, fileRefPrefix(fileHash))
+func parseFileRefKey(key string) (FileRef, bool) {
+	rest, ok := strings.CutPrefix(key, "xet/file_refs/")
 	if !ok {
 		return FileRef{}, false
 	}
-	parts := strings.SplitN(rest, "/", 3)
-	if len(parts) != 3 || parts[0] == "" || parts[1] == "" || parts[2] == "" {
+	parts := strings.SplitN(rest, "/", 4)
+	if len(parts) != 4 || parts[0] == "" || parts[1] == "" || parts[2] == "" || parts[3] == "" {
 		return FileRef{}, false
 	}
 	return FileRef{
-		FileHash: fileHash,
-		Repo:     parts[0],
-		Ref:      parts[1],
-		Path:     parts[2],
+		FileHash: parts[0],
+		Repo:     parts[1],
+		Ref:      parts[2],
+		Path:     parts[3],
 	}, true
 }

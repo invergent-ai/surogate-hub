@@ -459,6 +459,7 @@ Last updated: 2026-04-30.
 - [x] Added `file_refs` scan fallback for reconstruction capability checks, governed by `xet.read.capability_scan_batch_size`, with inaccessible or stale tuples returning 404.
 - [x] Added best-effort `file_refs` backfill after successful direct-context reconstruction capability checks.
 - [x] Added crash-injection coverage for link ordering: fail after graveler write, prove object reads still work, and prove direct reconstruction backfills `file_refs`.
+- [x] Added initial XET GC dry-run planner that scans per-tuple `file_refs` and reports stale entries without deleting them.
 
 **In progress:**
 
@@ -505,6 +506,7 @@ Last updated: 2026-04-30.
 - [ ] Add XET GC:
   - [ ] Add `cmd/lakefs gc xet --dry-run`.
   - [ ] Reuse the lakeFS GC walker to mark live XET shards and xorbs.
+  - [x] Dry-run stale per-tuple `file_refs` detection.
   - [ ] Sweep stale shards, chunk-index entries, xorbs older than `xet.gc.min_age`, and stale per-tuple `file_refs`.
 - [ ] Add smart-client smoke:
   - [ ] Add a curl or `hf_xet` smoke test that uploads xorbs, registers a shard, links the `xet://` object, reads it back, and verifies a second similar upload gets dedup hits.
