@@ -452,10 +452,12 @@ func (h *Handler) buildReconstructionManifest(w http.ResponseWriter, r *http.Req
 		return reconstruct.Manifest{}, false
 	}
 	resolverFactory := h.reconstructionRangeResolverFactory
+	var resolver reconstruct.RangeResolver
 	if resolverFactory == nil {
-		resolverFactory = h.presignedReconstructionRangeResolverFactory
+		resolver, err = h.presignedReconstructionRangeResolverFactory(r, fileHash, terms)
+	} else {
+		resolver, err = resolverFactory(r.Context(), fileHash, terms)
 	}
-	resolver, err := resolverFactory(r.Context(), fileHash, terms)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return reconstruct.Manifest{}, false
@@ -595,10 +597,12 @@ func normalizeVerifyMaxConcurrent(maxConcurrent int) int {
 	return runtime.NumCPU()
 }
 
-func (h *Handler) presignedReconstructionRangeResolverFactory(ctx context.Context, fileHash string, _ []reconstruct.Term) (reconstruct.RangeResolver, error) {
+func (h *Handler) presignedReconstructionRangeResolverFactory(r *http.Request, fileHash string, _ []reconstruct.Term) (reconstruct.RangeResolver, error) {
 	if h.xorbs == nil {
 		return nil, fmt.Errorf("xorb store is not configured")
 	}
+	ctx := r.Context()
+	proxyBaseURL := reconstructionProxyBaseURL(r)
 	parsed := make(map[string]parsedXorbInfo)
 	return func(xorbHash string, chunks reconstruct.IndexRange) (reconstruct.ResolvedRange, error) {
 		info, ok := parsed[xorbHash]
@@ -624,7 +628,7 @@ func (h *Handler) presignedReconstructionRangeResolverFactory(ctx context.Contex
 		}
 		url, _, err := h.xorbs.adapter.GetPreSignedURL(ctx, xetstore.XorbObjectPointer(h.xorbs.storageNamespace, "default", xorbHash), block.PreSignModeRead)
 		if errors.Is(err, block.ErrOperationNotSupported) {
-			url, err = h.proxyXorbURL(fileHash, "default", xorbHash, []reconstruct.HTTPRange{byteRange})
+			url, err = h.proxyXorbURL(proxyBaseURL, fileHash, "default", xorbHash, []reconstruct.HTTPRange{byteRange})
 			if err != nil {
 				return reconstruct.ResolvedRange{}, err
 			}
@@ -635,7 +639,7 @@ func (h *Handler) presignedReconstructionRangeResolverFactory(ctx context.Contex
 	}, nil
 }
 
-func (h *Handler) proxyXorbURL(fileHash, prefix, xorbHash string, ranges []reconstruct.HTTPRange) (string, error) {
+func (h *Handler) proxyXorbURL(baseURL, fileHash, prefix, xorbHash string, ranges []reconstruct.HTTPRange) (string, error) {
 	grant, err := h.signProxyGrant(proxyGrant{
 		FileHash: fileHash,
 		XorbHash: xorbHash,
@@ -645,7 +649,40 @@ func (h *Handler) proxyXorbURL(fileHash, prefix, xorbHash string, ranges []recon
 	if err != nil {
 		return "", err
 	}
-	return "/v1/xorbs/" + url.PathEscape(prefix) + "/" + url.PathEscape(xorbHash) + "?grant=" + url.QueryEscape(grant), nil
+	return baseURL + "/v1/xorbs/" + url.PathEscape(prefix) + "/" + url.PathEscape(xorbHash) + "?grant=" + url.QueryEscape(grant), nil
+}
+
+func reconstructionProxyBaseURL(r *http.Request) string {
+	scheme := firstHeaderValue(r.Header.Get("X-Forwarded-Proto"))
+	if scheme == "" {
+		if r.TLS != nil {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+	}
+	host := firstHeaderValue(r.Header.Get("X-Forwarded-Host"))
+	if host == "" {
+		host = r.Host
+	}
+	prefix := strings.TrimRight(r.Header.Get("X-Forwarded-Prefix"), "/")
+	return scheme + "://" + host + prefix + reconstructionMountPrefix(r.URL.Path)
+}
+
+func reconstructionMountPrefix(path string) string {
+	for _, marker := range []string{"/v1/reconstructions/", "/v2/reconstructions/"} {
+		if idx := strings.Index(path, marker); idx >= 0 {
+			return path[:idx]
+		}
+	}
+	return ""
+}
+
+func firstHeaderValue(value string) string {
+	if idx := strings.Index(value, ","); idx >= 0 {
+		value = value[:idx]
+	}
+	return strings.TrimSpace(value)
 }
 
 func xorbByteRange(info parsedXorbInfo, chunks reconstruct.IndexRange) (reconstruct.HTTPRange, error) {

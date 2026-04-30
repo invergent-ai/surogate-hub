@@ -770,9 +770,10 @@ func TestGetReconstructionFallsBackToGrantedProxyURL(t *testing.T) {
 	require.Len(t, manifest.Xorbs[xorbHash], 1)
 	fetch := manifest.Xorbs[xorbHash][0]
 	require.Len(t, fetch.Ranges, 1)
-	require.Contains(t, fetch.URL, "/v1/xorbs/default/"+xorbHash+"?grant=")
+	require.Contains(t, fetch.URL, "http://example.com/v1/xorbs/default/"+xorbHash+"?grant=")
 	parsedURL, err := url.Parse(fetch.URL)
 	require.NoError(t, err)
+	require.True(t, parsedURL.IsAbs())
 	grantToken := parsedURL.Query().Get("grant")
 	grantPayload, err := base64.RawURLEncoding.DecodeString(strings.Split(grantToken, ".")[0])
 	require.NoError(t, err)
