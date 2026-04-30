@@ -74,29 +74,48 @@ type ShardSummary struct {
 	NumChunks int    `json:"num_chunks"`
 }
 
+func CanonicalShard(data []byte) ([]byte, ShardInfo, error) {
+	info, footerSize, err := parseShardInfo(data)
+	if err != nil {
+		return nil, ShardInfo{}, err
+	}
+	if footerSize == mdbShardFooterSize {
+		return data, info, nil
+	}
+	canonical := append([]byte(nil), data...)
+	binary.LittleEndian.PutUint64(canonical[40:48], mdbShardFooterSize)
+	canonical = append(canonical, shardFooter(uint64(len(canonical)), info.Summary)...)
+	return canonical, info, nil
+}
+
 func ParseShardInfo(data []byte) (ShardInfo, error) {
+	info, _, err := parseShardInfo(data)
+	return info, err
+}
+
+func parseShardInfo(data []byte) (ShardInfo, uint64, error) {
 	reader := bytes.NewReader(data)
 	footerSize, err := readShardHeader(reader)
 	if err != nil {
-		return ShardInfo{}, err
+		return ShardInfo{}, 0, err
 	}
 
 	files, err := readShardFiles(reader)
 	if err != nil {
-		return ShardInfo{}, err
+		return ShardInfo{}, 0, err
 	}
 	xorbHashes, chunkHashes, err := readShardXorbs(reader)
 	if err != nil {
-		return ShardInfo{}, err
+		return ShardInfo{}, 0, err
 	}
 	if err := verifyShardFileHashes(files, xorbHashes); err != nil {
-		return ShardInfo{}, err
+		return ShardInfo{}, 0, err
 	}
 	var summary ShardSummary
 	if footerSize > 0 {
 		summary, err = readShardFooter(reader)
 		if err != nil {
-			return ShardInfo{}, err
+			return ShardInfo{}, 0, err
 		}
 	}
 	summary.NumXorbs = len(xorbHashes)
@@ -113,7 +132,37 @@ func ParseShardInfo(data []byte) (ShardInfo, error) {
 		Xorbs:       xorbHashes,
 		ChunkHashes: chunkHashes,
 		Summary:     summary,
-	}, nil
+	}, footerSize, nil
+}
+
+func shardFooter(offset uint64, summary ShardSummary) []byte {
+	var footer bytes.Buffer
+	writeShardU64(&footer, mdbShardFooterVersion)
+	writeShardU64(&footer, 48)
+	writeShardU64(&footer, 192)
+	writeShardU64(&footer, offset)
+	writeShardU64(&footer, 0)
+	writeShardU64(&footer, offset)
+	writeShardU64(&footer, 0)
+	writeShardU64(&footer, offset)
+	writeShardU64(&footer, 0)
+	footer.Write(make([]byte, 32))
+	writeShardU64(&footer, summary.CreatedAt)
+	writeShardU64(&footer, ^uint64(0))
+	for i := 0; i < 6; i++ {
+		writeShardU64(&footer, 0)
+	}
+	writeShardU64(&footer, summary.SizeBytes)
+	writeShardU64(&footer, summary.SizeBytes)
+	writeShardU64(&footer, summary.SizeBytes)
+	writeShardU64(&footer, offset)
+	return footer.Bytes()
+}
+
+func writeShardU64(w io.Writer, value uint64) {
+	var raw [8]byte
+	binary.LittleEndian.PutUint64(raw[:], value)
+	_, _ = w.Write(raw[:])
 }
 
 func readShardHeader(reader io.Reader) (uint64, error) {

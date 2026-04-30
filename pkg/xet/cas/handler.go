@@ -518,7 +518,7 @@ func (h *Handler) postBinaryShard(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	info, err := xetstore.ParseShardInfo(shard)
+	canonicalShard, info, err := xetstore.CanonicalShard(shard)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -541,7 +541,7 @@ func (h *Handler) postBinaryShard(w http.ResponseWriter, r *http.Request) {
 	for _, file := range info.Files {
 		result, err := h.registry.RegisterShard(r.Context(), xetstore.RegisterShardParams{
 			FileHash: file.FileHash,
-			Shard:    shard,
+			Shard:    canonicalShard,
 			Summary:  summary,
 			ChunkIDs: info.ChunkHashes,
 		})
