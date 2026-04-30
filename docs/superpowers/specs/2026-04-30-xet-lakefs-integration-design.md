@@ -462,6 +462,7 @@ Last updated: 2026-04-30.
 - [x] Added initial XET GC dry-run planner that scans per-tuple `file_refs` and reports stale entries without deleting them.
 - [x] Extended XET GC dry-run planning to mark live file hashes from live `file_refs`, then report unreferenced shards and chunk-index entries.
 - [x] Extended XET GC dry-run planning to parse live shards, mark referenced xorbs, and report unreferenced xorbs from a block-walker-backed xorb listing.
+- [x] Added a block-walker-backed xorb lister for `xet/xorbs/<prefix>/<hash>` candidate enumeration.
 
 **In progress:**
 
@@ -509,7 +510,7 @@ Last updated: 2026-04-30.
   - [ ] Add `cmd/lakefs gc xet --dry-run`.
   - [x] Mark live XET shards from live `file_refs`.
   - [x] Mark live XET xorbs from live shards.
-  - [ ] Reuse the lakeFS GC walker to list candidate xorbs.
+  - [x] Reuse the lakeFS GC walker to list candidate xorbs.
   - [x] Dry-run stale per-tuple `file_refs` detection.
   - [x] Dry-run stale shard and chunk-index detection.
   - [x] Dry-run stale xorb detection.
