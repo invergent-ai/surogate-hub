@@ -8,6 +8,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/pierrec/lz4/v4"
 	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
@@ -164,15 +165,13 @@ func validateXorbChunks(data []byte, info parsedXorbInfo) ([]xetstore.ShardChunk
 		if err != nil {
 			return nil, err
 		}
-		if header.compressionScheme != 0 {
-			return nil, fmt.Errorf("unsupported xorb chunk compression scheme %d", header.compressionScheme)
-		}
-		chunk := make([]byte, header.compressedLength)
-		if _, err := io.ReadFull(reader, chunk); err != nil {
+		serializedChunk := make([]byte, header.compressedLength)
+		if _, err := io.ReadFull(reader, serializedChunk); err != nil {
 			return nil, fmt.Errorf("read xorb chunk data: %w", err)
 		}
-		if header.compressedLength != header.uncompressedLength {
-			return nil, fmt.Errorf("xorb uncompressed chunk length mismatch")
+		chunk, err := decompressXorbChunk(header, serializedChunk)
+		if err != nil {
+			return nil, err
 		}
 
 		compressedOffset += xorbChunkHeaderSize + header.compressedLength
@@ -193,6 +192,27 @@ func validateXorbChunks(data []byte, info parsedXorbInfo) ([]xetstore.ShardChunk
 		return nil, fmt.Errorf("xorb content bytes after chunks")
 	}
 	return chunks, nil
+}
+
+func decompressXorbChunk(header xorbChunkHeader, serializedChunk []byte) ([]byte, error) {
+	switch header.compressionScheme {
+	case 0:
+		if header.compressedLength != header.uncompressedLength {
+			return nil, fmt.Errorf("xorb uncompressed chunk length mismatch")
+		}
+		return serializedChunk, nil
+	case 1:
+		var decompressed bytes.Buffer
+		if _, err := io.Copy(&decompressed, lz4.NewReader(bytes.NewReader(serializedChunk))); err != nil {
+			return nil, fmt.Errorf("decompress xorb lz4 chunk: %w", err)
+		}
+		if uint32(decompressed.Len()) != header.uncompressedLength {
+			return nil, fmt.Errorf("xorb lz4 chunk length mismatch")
+		}
+		return decompressed.Bytes(), nil
+	default:
+		return nil, fmt.Errorf("unsupported xorb chunk compression scheme %d", header.compressionScheme)
+	}
 }
 
 type xorbChunkHeader struct {

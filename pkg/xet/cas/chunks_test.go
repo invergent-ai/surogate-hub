@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/pierrec/lz4/v4"
 	"github.com/stretchr/testify/require"
 	"github.com/treeverse/lakefs/pkg/block/mem"
 	"github.com/treeverse/lakefs/pkg/kv/kvtest"
@@ -101,6 +102,20 @@ func TestPostXorbAcceptsMatchingSerializedHash(t *testing.T) {
 	body, err := io.ReadAll(reader)
 	require.NoError(t, err)
 	require.Equal(t, xorbBytes, body)
+}
+
+func TestPostXorbAcceptsLZ4SerializedHash(t *testing.T) {
+	ctx := context.Background()
+	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
+	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
+	xorbHash, xorbBytes := testSerializedXorbWithScheme(t, bytes.Repeat([]byte("a"), 2048), 1)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/"+xorbHash, bytes.NewReader(xorbBytes))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.JSONEq(t, `{"was_inserted":true}`, rec.Body.String())
 }
 
 func TestPostShardRegistersChunkDedupIndex(t *testing.T) {
@@ -330,6 +345,10 @@ func testWriteU64(b *bytes.Buffer, value uint64) {
 }
 
 func testSerializedXorb(t *testing.T, chunk []byte) (string, []byte) {
+	return testSerializedXorbWithScheme(t, chunk, 0)
+}
+
+func testSerializedXorbWithScheme(t *testing.T, chunk []byte, scheme byte) (string, []byte) {
 	t.Helper()
 	chunkHash := xetstore.ComputeDataHash(chunk)
 	xorbHash, err := xetstore.ComputeXorbMerkleHash([]xetstore.ShardChunkInfo{{
@@ -339,11 +358,20 @@ func testSerializedXorb(t *testing.T, chunk []byte) (string, []byte) {
 	require.NoError(t, err)
 
 	var b bytes.Buffer
+	serializedChunk := chunk
+	if scheme == 1 {
+		var compressed bytes.Buffer
+		writer := lz4.NewWriter(&compressed)
+		_, err := writer.Write(chunk)
+		require.NoError(t, err)
+		require.NoError(t, writer.Close())
+		serializedChunk = compressed.Bytes()
+	}
 	b.WriteByte(0)
+	writeThreeByteLE(&b, uint32(len(serializedChunk)))
+	b.WriteByte(scheme)
 	writeThreeByteLE(&b, uint32(len(chunk)))
-	b.WriteByte(0)
-	writeThreeByteLE(&b, uint32(len(chunk)))
-	b.Write(chunk)
+	b.Write(serializedChunk)
 
 	chunkBoundary := uint32(b.Len())
 	b.WriteString("XETBLOB")
