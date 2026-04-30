@@ -446,6 +446,7 @@ Last updated: 2026-04-30.
 - [x] Added internal V2 reconstruction manifest generation from mapped shard terms with resolver-supplied xorb byte ranges and URLs.
 - [x] Added shared xorb object addressing and a block-adapter presigned range resolver for reconstruction manifests.
 - [x] Added the initial `GET /xet/v2/reconstructions/{file_hash}` route that loads canonical shards and returns V2 manifests for full-file reconstructions.
+- [x] Added `Range: bytes=start-end` handling for reconstruction manifests, including mid-chunk offset reporting.
 
 **In progress:**
 

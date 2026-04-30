@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -147,7 +148,12 @@ func (h *Handler) getReconstruction(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	terms, err := reconstruct.MapRange(info, fileHash, reconstruct.ByteRange{Start: 0, End: file.SizeBytes})
+	byteRange, err := reconstructionByteRange(r.Header.Get("Range"), file.SizeBytes)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusRequestedRangeNotSatisfiable)
+		return
+	}
+	terms, err := reconstruct.MapRange(info, fileHash, byteRange)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -356,6 +362,36 @@ func shardFileByHash(info xetstore.ShardInfo, fileHash string) (xetstore.ShardFi
 		}
 	}
 	return xetstore.ShardFileInfo{}, false
+}
+
+func reconstructionByteRange(header string, fileSize uint64) (reconstruct.ByteRange, error) {
+	if header == "" {
+		return reconstruct.ByteRange{Start: 0, End: fileSize}, nil
+	}
+	spec, ok := strings.CutPrefix(header, "bytes=")
+	if !ok {
+		return reconstruct.ByteRange{}, fmt.Errorf("invalid range header")
+	}
+	startSpec, endSpec, ok := strings.Cut(spec, "-")
+	if !ok || startSpec == "" || endSpec == "" {
+		return reconstruct.ByteRange{}, fmt.Errorf("invalid range header")
+	}
+	start, err := strconv.ParseUint(startSpec, 10, 64)
+	if err != nil {
+		return reconstruct.ByteRange{}, fmt.Errorf("invalid range start")
+	}
+	endInclusive, err := strconv.ParseUint(endSpec, 10, 64)
+	if err != nil {
+		return reconstruct.ByteRange{}, fmt.Errorf("invalid range end")
+	}
+	if start > endInclusive || start >= fileSize {
+		return reconstruct.ByteRange{}, fmt.Errorf("range exceeds file size")
+	}
+	end := endInclusive + 1
+	if end < endInclusive || end > fileSize {
+		end = fileSize
+	}
+	return reconstruct.ByteRange{Start: start, End: end}, nil
 }
 
 func computedShimFileHash(shard string) string {
