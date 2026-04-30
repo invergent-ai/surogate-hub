@@ -1,5 +1,5 @@
 credentials:
-  access_key_id: AKIAJMYMDITQKLGEXIDQ
-  secret_access_key: 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
+  access_key_id: local-access-key
+  secret_access_key: local-secret-key
 server:
-  endpoint_url: https://localhost:8000/api/v1
+  endpoint_url: http://localhost:8000/api/v1
