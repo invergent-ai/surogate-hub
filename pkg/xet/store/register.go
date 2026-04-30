@@ -24,6 +24,13 @@ type RegisterShardResult struct {
 	WasInserted bool
 }
 
+type FileRef struct {
+	FileHash string
+	Repo     string
+	Ref      string
+	Path     string
+}
+
 func NewRegistry(store kv.Store) *Registry {
 	return &Registry{store: store}
 }
@@ -65,6 +72,21 @@ func (r *Registry) GetDedupShardByChunk(ctx context.Context, chunkID string) ([]
 	return shard.Value, nil
 }
 
+func (r *Registry) HasShard(ctx context.Context, fileHash string) (bool, error) {
+	_, err := r.store.Get(ctx, []byte(Partition), shardKey(fileHash))
+	if errors.Is(err, kv.ErrNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (r *Registry) PutFileRef(ctx context.Context, ref FileRef) error {
+	return r.store.Set(ctx, []byte(Partition), fileRefKey(ref), []byte{})
+}
+
 func shardKey(fileHash string) []byte {
 	return []byte("xet/shard/" + fileHash)
 }
@@ -75,4 +97,8 @@ func shardMetaKey(fileHash string) []byte {
 
 func chunkKey(chunkID string) []byte {
 	return []byte("xet/chunk/" + chunkID)
+}
+
+func fileRefKey(ref FileRef) []byte {
+	return []byte("xet/file_refs/" + ref.FileHash + "/" + ref.Repo + "/" + ref.Ref + "/" + ref.Path)
 }

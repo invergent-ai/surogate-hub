@@ -56,6 +56,42 @@ func TestGetDedupShardByChunkReturnsNotFoundWhenIndexedShardIsMissing(t *testing
 	require.True(t, errors.Is(err, kv.ErrNotFound), "expected missing shard to look like a dedup miss, got %v", err)
 }
 
+func TestHasShardReportsCanonicalShardVisibility(t *testing.T) {
+	ctx := context.Background()
+	kvStore := kvtest.GetStore(ctx, t)
+	registry := NewRegistry(kvStore)
+
+	exists, err := registry.HasShard(ctx, "file-a")
+	require.NoError(t, err)
+	require.False(t, exists)
+
+	_, err = registry.RegisterShard(ctx, RegisterShardParams{
+		FileHash: "file-a",
+		Shard:    []byte("raw-shard"),
+	})
+	require.NoError(t, err)
+
+	exists, err = registry.HasShard(ctx, "file-a")
+	require.NoError(t, err)
+	require.True(t, exists)
+}
+
+func TestPutFileRefWritesOneKeyPerTuple(t *testing.T) {
+	ctx := context.Background()
+	kvStore := kvtest.GetStore(ctx, t)
+	registry := NewRegistry(kvStore)
+
+	err := registry.PutFileRef(ctx, FileRef{
+		FileHash: "file-a",
+		Repo:     "repo-a",
+		Ref:      "main",
+		Path:     "models/checkpoint.bin",
+	})
+	require.NoError(t, err)
+
+	requireKVValue(t, ctx, kvStore, "xet/file_refs/file-a/repo-a/main/models/checkpoint.bin", []byte{})
+}
+
 func requireKVValue(t *testing.T, ctx context.Context, kvStore kv.Store, key string, expected []byte) {
 	t.Helper()
 	res, err := kvStore.Get(ctx, []byte(Partition), []byte(key))
