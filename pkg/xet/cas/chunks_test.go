@@ -543,6 +543,56 @@ func TestGetReconstructionReturnsV2Manifest(t *testing.T) {
 	}`, rec.Body.String())
 }
 
+func TestGetReconstructionReturnsV1Manifest(t *testing.T) {
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	chunkHash := xetstore.ComputeDataHash([]byte("hello world!"))
+	xorbHash, err := xetstore.ComputeXorbMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: 12,
+	}})
+	require.NoError(t, err)
+	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: 12,
+	}})
+	require.NoError(t, err)
+	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: fileHash,
+		Shard:    testXETBinaryShard(t, fileHash, xorbHash, chunkHash),
+	})
+	require.NoError(t, err)
+	handler := NewHandler(registry, withReconstructionRangeResolverFactory(func(ctx context.Context, fileHash string, terms []reconstruct.Term) (reconstruct.RangeResolver, error) {
+		return func(xorbHash string, chunks reconstruct.IndexRange) (reconstruct.ResolvedRange, error) {
+			return reconstruct.ResolvedRange{
+				URL:   "https://cas.example/" + xorbHash,
+				Bytes: reconstruct.HTTPRange{Start: 0, End: 63},
+			}, nil
+		}, nil
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/reconstructions/"+fileHash, nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.JSONEq(t, `{
+		"offset_into_first_range": 0,
+		"terms": [{
+			"hash": "`+xorbHash+`",
+			"range": {"start": 0, "end": 1},
+			"unpacked_length": 12
+		}],
+		"fetch_info": {
+			"`+xorbHash+`": [{
+				"url": "https://cas.example/`+xorbHash+`",
+				"range": {"start": 0, "end": 1},
+				"url_range": {"start": 0, "end": 63}
+			}]
+		}
+	}`, rec.Body.String())
+}
+
 func TestGetReconstructionRequiresDirectCapabilityWhenConfigured(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))

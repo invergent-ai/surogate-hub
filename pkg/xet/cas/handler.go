@@ -154,6 +154,7 @@ func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler
 	r := chi.NewRouter()
 	r.With(h.requireXETScope("read")).Get("/v1/chunks/{prefix}/{hash}", h.getChunk)
 	r.Get("/v1/token/refresh", h.getTokenRefresh)
+	r.With(h.requireXETScope("read")).Get("/v1/reconstructions/{file_hash}", h.getReconstructionV1)
 	r.Get("/v1/xorbs/{prefix}/{hash}", h.getXorbProxy)
 	r.With(h.requireXETScope("read")).Get("/v2/reconstructions/{file_hash}", h.getReconstruction)
 	r.Post("/v1/token", h.postToken)
@@ -385,6 +386,26 @@ func (h *Handler) getXorbProxy(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getReconstruction(w http.ResponseWriter, r *http.Request) {
+	manifest, ok := h.buildReconstructionManifest(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(manifest)
+}
+
+func (h *Handler) getReconstructionV1(w http.ResponseWriter, r *http.Request) {
+	manifest, ok := h.buildReconstructionManifest(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(manifest.V1())
+}
+
+func (h *Handler) buildReconstructionManifest(w http.ResponseWriter, r *http.Request) (reconstruct.Manifest, bool) {
 	fileHash := chi.URLParam(r, "file_hash")
 	if h.reconstructionCapabilityChecker != nil {
 		logical := ReconstructionLogicalContext{
@@ -395,40 +416,40 @@ func (h *Handler) getReconstruction(w http.ResponseWriter, r *http.Request) {
 		if err := h.reconstructionCapabilityChecker(r.Context(), fileHash, logical); err != nil {
 			if errors.Is(err, ErrReconstructionCapabilityNotFound) {
 				http.NotFound(w, r)
-				return
+				return reconstruct.Manifest{}, false
 			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			return reconstruct.Manifest{}, false
 		}
 	}
 	shard, err := h.registry.GetShardByFileHash(r.Context(), fileHash)
 	if errors.Is(err, kv.ErrNotFound) {
 		http.NotFound(w, r)
-		return
+		return reconstruct.Manifest{}, false
 	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return reconstruct.Manifest{}, false
 	}
 	info, err := xetstore.ParseShardInfo(shard)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return reconstruct.Manifest{}, false
 	}
 	file, ok := shardFileByHash(info, fileHash)
 	if !ok {
 		http.NotFound(w, r)
-		return
+		return reconstruct.Manifest{}, false
 	}
 	byteRange, err := reconstructionByteRange(r.Header.Get("Range"), file.SizeBytes)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusRequestedRangeNotSatisfiable)
-		return
+		return reconstruct.Manifest{}, false
 	}
 	terms, err := reconstruct.MapRange(info, fileHash, byteRange)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return reconstruct.Manifest{}, false
 	}
 	resolverFactory := h.reconstructionRangeResolverFactory
 	if resolverFactory == nil {
@@ -437,17 +458,14 @@ func (h *Handler) getReconstruction(w http.ResponseWriter, r *http.Request) {
 	resolver, err := resolverFactory(r.Context(), fileHash, terms)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return reconstruct.Manifest{}, false
 	}
 	manifest, err := reconstruct.BuildManifest(terms, resolver)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return reconstruct.Manifest{}, false
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(manifest)
+	return manifest, true
 }
 
 func (h *Handler) postShard(w http.ResponseWriter, r *http.Request) {
