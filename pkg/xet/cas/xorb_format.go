@@ -202,17 +202,64 @@ func decompressXorbChunk(header xorbChunkHeader, serializedChunk []byte) ([]byte
 		}
 		return serializedChunk, nil
 	case 1:
-		var decompressed bytes.Buffer
-		if _, err := io.Copy(&decompressed, lz4.NewReader(bytes.NewReader(serializedChunk))); err != nil {
-			return nil, fmt.Errorf("decompress xorb lz4 chunk: %w", err)
+		decompressed, err := decompressLZ4XorbChunk(serializedChunk)
+		if err != nil {
+			return nil, err
 		}
-		if uint32(decompressed.Len()) != header.uncompressedLength {
-			return nil, fmt.Errorf("xorb lz4 chunk length mismatch")
+		return validateXorbChunkLength("lz4", decompressed, header.uncompressedLength)
+	case 2:
+		decompressed, err := decompressLZ4XorbChunk(serializedChunk)
+		if err != nil {
+			return nil, err
 		}
-		return decompressed.Bytes(), nil
+		return validateXorbChunkLength("bg4-lz4", bg4Regroup(decompressed), header.uncompressedLength)
 	default:
 		return nil, fmt.Errorf("unsupported xorb chunk compression scheme %d", header.compressionScheme)
 	}
+}
+
+func decompressLZ4XorbChunk(serializedChunk []byte) ([]byte, error) {
+	var decompressed bytes.Buffer
+	if _, err := io.Copy(&decompressed, lz4.NewReader(bytes.NewReader(serializedChunk))); err != nil {
+		return nil, fmt.Errorf("decompress xorb lz4 chunk: %w", err)
+	}
+	return decompressed.Bytes(), nil
+}
+
+func validateXorbChunkLength(name string, chunk []byte, expected uint32) ([]byte, error) {
+	if uint32(len(chunk)) != expected {
+		return nil, fmt.Errorf("xorb %s chunk length mismatch", name)
+	}
+	return chunk, nil
+}
+
+func bg4Regroup(grouped []byte) []byte {
+	n := len(grouped)
+	split := n / 4
+	rem := n % 4
+	data := make([]byte, n)
+	g0 := 0
+	g1 := g0 + split + min(1, rem)
+	g2 := g1 + split + min(1, max(0, rem-1))
+	g3 := g2 + split + min(1, max(0, rem-2))
+	for i := 0; i < split; i++ {
+		data[4*i] = grouped[g0+i]
+		data[4*i+1] = grouped[g1+i]
+		data[4*i+2] = grouped[g2+i]
+		data[4*i+3] = grouped[g3+i]
+	}
+	switch rem {
+	case 1:
+		data[4*split] = grouped[g0+split]
+	case 2:
+		data[4*split] = grouped[g0+split]
+		data[4*split+1] = grouped[g1+split]
+	case 3:
+		data[4*split] = grouped[g0+split]
+		data[4*split+1] = grouped[g1+split]
+		data[4*split+2] = grouped[g2+split]
+	}
+	return data
 }
 
 type xorbChunkHeader struct {

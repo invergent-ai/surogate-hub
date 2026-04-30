@@ -118,6 +118,20 @@ func TestPostXorbAcceptsLZ4SerializedHash(t *testing.T) {
 	require.JSONEq(t, `{"was_inserted":true}`, rec.Body.String())
 }
 
+func TestPostXorbAcceptsBG4LZ4SerializedHash(t *testing.T) {
+	ctx := context.Background()
+	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
+	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
+	xorbHash, xorbBytes := testSerializedXorbWithScheme(t, bytes.Repeat([]byte{0x01, 0x02, 0x03, 0x04}, 512), 2)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/"+xorbHash, bytes.NewReader(xorbBytes))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.JSONEq(t, `{"was_inserted":true}`, rec.Body.String())
+}
+
 func TestPostShardRegistersChunkDedupIndex(t *testing.T) {
 	ctx := context.Background()
 	kvStore := kvtest.GetStore(ctx, t)
@@ -359,7 +373,10 @@ func testSerializedXorbWithScheme(t *testing.T, chunk []byte, scheme byte) (stri
 
 	var b bytes.Buffer
 	serializedChunk := chunk
-	if scheme == 1 {
+	if scheme == 2 {
+		chunk = bg4Split(chunk)
+	}
+	if scheme == 1 || scheme == 2 {
 		var compressed bytes.Buffer
 		writer := lz4.NewWriter(&compressed)
 		_, err := writer.Write(chunk)
@@ -401,4 +418,33 @@ func writeThreeByteLE(b *bytes.Buffer, value uint32) {
 	b.WriteByte(byte(value))
 	b.WriteByte(byte(value >> 8))
 	b.WriteByte(byte(value >> 16))
+}
+
+func bg4Split(data []byte) []byte {
+	n := len(data)
+	split := n / 4
+	rem := n % 4
+	grouped := make([]byte, n)
+	g0 := 0
+	g1 := g0 + split + min(1, rem)
+	g2 := g1 + split + min(1, max(0, rem-1))
+	g3 := g2 + split + min(1, max(0, rem-2))
+	for i := 0; i < split; i++ {
+		grouped[g0+i] = data[4*i]
+		grouped[g1+i] = data[4*i+1]
+		grouped[g2+i] = data[4*i+2]
+		grouped[g3+i] = data[4*i+3]
+	}
+	switch rem {
+	case 1:
+		grouped[g0+split] = data[4*split]
+	case 2:
+		grouped[g0+split] = data[4*split]
+		grouped[g1+split] = data[4*split+1]
+	case 3:
+		grouped[g0+split] = data[4*split]
+		grouped[g1+split] = data[4*split+1]
+		grouped[g2+split] = data[4*split+2]
+	}
+	return grouped
 }

@@ -440,6 +440,7 @@ Last updated: 2026-04-30.
 - [x] Added real XET file MerkleHash recomputation from parsed chunk sequences and reject binary shards whose embedded file hash does not match.
 - [x] Added initial serialized-xorb upload validation for real 64-hex xorb hashes: parse V1 footer metadata, verify no-compression chunk hashes/boundaries, and reject mismatched xorb hashes.
 - [x] Added LZ4-framed chunk decompression to serialized-xorb upload validation.
+- [x] Added BG4-LZ4 byte-regrouping decompression to serialized-xorb upload validation.
 
 **In progress:**
 
@@ -454,7 +455,7 @@ Last updated: 2026-04-30.
 - [ ] Verify xorb upload content:
   - [x] Parse V1 xorb footer metadata and no-compression chunk payloads enough to recompute and validate the uploaded xorb hash.
   - [x] Add LZ4 decompression support for compressed xorb chunks.
-  - [ ] Add BG4-LZ4 decompression support for byte-grouped compressed xorb chunks.
+  - [x] Add BG4-LZ4 decompression support for byte-grouped compressed xorb chunks.
   - [ ] Add `xet.verify.max_concurrent` CPU-bound verification control.
   - [ ] Keep idempotent duplicate-upload behavior unchanged.
   - [x] Add focused CAS tests for matching and mismatched serialized xorb body hashes while preserving duplicate upload behavior.
