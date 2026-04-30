@@ -5,6 +5,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -44,6 +46,7 @@ import (
 	"github.com/treeverse/lakefs/pkg/stats"
 	"github.com/treeverse/lakefs/pkg/testutil"
 	"github.com/treeverse/lakefs/pkg/upload"
+	xetcas "github.com/treeverse/lakefs/pkg/xet/cas"
 	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 	"golang.org/x/exp/slices"
 )
@@ -139,6 +142,51 @@ func TestController_LinkXETPhysicalAddressRejectsMissingShard(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNotFound, resp.StatusCode())
+}
+
+func TestController_GetObjectXETPhysicalAddressRange(t *testing.T) {
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	const path = "models/checkpoint.bin"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+
+	chunk := []byte("hello world!")
+	xorbHash, xorbBytes := testAPISerializedXorb(t, chunk)
+	chunkHash := xetstore.ComputeDataHash(chunk)
+	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: uint64(len(chunk)),
+	}})
+	require.NoError(t, err)
+	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_lakefs_xet")
+	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
+	require.NoError(t, err)
+	_, err = xetstore.NewRegistry(deps.catalog.KVStore).RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: fileHash,
+		Shard:    testAPIXETBinaryShard(t, fileHash, xorbHash, chunkHash, uint32(len(chunk))),
+	})
+	require.NoError(t, err)
+	err = deps.catalog.CreateEntry(ctx, repo, branch, catalog.DBEntry{
+		Path:            path,
+		PhysicalAddress: "xet://" + fileHash,
+		AddressType:     catalog.AddressTypeFull,
+		CreationDate:    time.Now(),
+		Size:            int64(len(chunk)),
+		Checksum:        "checksum-a",
+	})
+	require.NoError(t, err)
+
+	rng := "bytes=3-8"
+	resp, err := clt.GetObjectWithResponse(ctx, repo, branch, &apigen.GetObjectParams{
+		Path:  path,
+		Range: &rng,
+	})
+	require.NoError(t, err)
+	require.Equalf(t, http.StatusPartialContent, resp.StatusCode(), "body: %s", string(resp.Body))
+	require.Equal(t, []byte("lo wor"), resp.Body)
 }
 
 func TestController_ListRepositoriesHandler(t *testing.T) {
@@ -6476,4 +6524,139 @@ func pollRestoreStatus(t *testing.T, clt apigen.ClientWithResponsesInterface, re
 		}
 	}
 	return nil
+}
+
+func testAPISerializedXorb(t *testing.T, chunk []byte) (string, []byte) {
+	t.Helper()
+	chunkHash := xetstore.ComputeDataHash(chunk)
+	xorbHash, err := xetstore.ComputeXorbMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: uint64(len(chunk)),
+	}})
+	require.NoError(t, err)
+
+	var b bytes.Buffer
+	b.WriteByte(0)
+	writeAPIThreeByteLE(&b, uint32(len(chunk)))
+	b.WriteByte(0)
+	writeAPIThreeByteLE(&b, uint32(len(chunk)))
+	b.Write(chunk)
+	chunkBoundary := uint32(b.Len())
+
+	var footer bytes.Buffer
+	footer.WriteString("XETBLOB")
+	footer.WriteByte(1)
+	testAPIWriteHash(t, &footer, xorbHash)
+	hashSectionOffset := footer.Len()
+	footer.WriteString("XBLBHSH")
+	footer.WriteByte(0)
+	testAPIWriteU32(&footer, 1)
+	testAPIWriteHash(t, &footer, chunkHash)
+	boundarySectionOffset := footer.Len()
+	footer.WriteString("XBLBBND")
+	footer.WriteByte(1)
+	testAPIWriteU32(&footer, 1)
+	testAPIWriteU32(&footer, chunkBoundary)
+	testAPIWriteU32(&footer, uint32(len(chunk)))
+	testAPIWriteU32(&footer, 1)
+	infoLengthWithoutOffsets := footer.Len()
+	testAPIWriteU32(&footer, uint32(infoLengthWithoutOffsets-hashSectionOffset+24))
+	testAPIWriteU32(&footer, uint32(infoLengthWithoutOffsets-boundarySectionOffset+24))
+	footer.Write(make([]byte, 16))
+
+	b.Write(footer.Bytes())
+	testAPIWriteU32(&b, uint32(footer.Len()))
+	return xorbHash, b.Bytes()
+}
+
+func testAPIXETBinaryShard(t *testing.T, fileHash, xorbHash, chunkHash string, size uint32) []byte {
+	t.Helper()
+	var b bytes.Buffer
+	b.Write([]byte{'H', 'F', 'R', 'e', 'p', 'o', 'M', 'e', 't', 'a', 'D', 'a', 't', 'a', 0, 85,
+		105, 103, 69, 106, 123, 129, 87, 131, 165, 189, 217, 92, 205, 209, 74, 169})
+	testAPIWriteU64(&b, 2)
+	testAPIWriteU64(&b, 200)
+
+	testAPIWriteHash(t, &b, fileHash)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, 1)
+	testAPIWriteU64(&b, 0)
+
+	testAPIWriteHash(t, &b, xorbHash)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, size)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, 1)
+
+	b.Write(bytes.Repeat([]byte{0xff}, 32))
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU64(&b, 0)
+
+	testAPIWriteHash(t, &b, xorbHash)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, 1)
+	testAPIWriteU32(&b, size)
+	testAPIWriteU32(&b, size-2)
+
+	testAPIWriteHash(t, &b, chunkHash)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, size)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, 0)
+
+	b.Write(bytes.Repeat([]byte{0xff}, 32))
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, 0)
+
+	footerOffset := uint64(b.Len())
+	testAPIWriteU64(&b, 1)
+	testAPIWriteU64(&b, 48)
+	testAPIWriteU64(&b, 192)
+	testAPIWriteU64(&b, footerOffset)
+	testAPIWriteU64(&b, 0)
+	testAPIWriteU64(&b, footerOffset)
+	testAPIWriteU64(&b, 0)
+	testAPIWriteU64(&b, footerOffset)
+	testAPIWriteU64(&b, 0)
+	b.Write(make([]byte, 32))
+	testAPIWriteU64(&b, 0)
+	testAPIWriteU64(&b, ^uint64(0))
+	for i := 0; i < 6; i++ {
+		testAPIWriteU64(&b, 0)
+	}
+	testAPIWriteU64(&b, uint64(size-2))
+	testAPIWriteU64(&b, uint64(size))
+	testAPIWriteU64(&b, uint64(size))
+	testAPIWriteU64(&b, footerOffset)
+
+	return b.Bytes()
+}
+
+func testAPIWriteHash(t *testing.T, b *bytes.Buffer, value string) {
+	t.Helper()
+	raw, err := hex.DecodeString(value)
+	require.NoError(t, err)
+	require.Len(t, raw, 32)
+	for i := 0; i < 4; i++ {
+		for j := 7; j >= 0; j-- {
+			b.WriteByte(raw[i*8+j])
+		}
+	}
+}
+
+func testAPIWriteU32(b *bytes.Buffer, value uint32) {
+	_ = binary.Write(b, binary.LittleEndian, value)
+}
+
+func testAPIWriteU64(b *bytes.Buffer, value uint64) {
+	_ = binary.Write(b, binary.LittleEndian, value)
+}
+
+func writeAPIThreeByteLE(b *bytes.Buffer, value uint32) {
+	b.WriteByte(byte(value))
+	b.WriteByte(byte(value >> 8))
+	b.WriteByte(byte(value >> 16))
 }

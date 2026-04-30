@@ -450,6 +450,7 @@ Last updated: 2026-04-30.
 - [x] Added server-side proxy fallback grants for adapters that cannot presign, plus `/xet/v1/xorbs/{prefix}/{hash}?grant=...` range serving.
 - [x] Bound proxy fallback grants to the authorized file hash as well as xorb hash, expiry, and byte ranges.
 - [x] Added a server-side XET file range reconstruction reader over canonical shards and serialized xorbs, with focused range-read coverage.
+- [x] Added lakeFS API `GetObject` dispatch for `xet://` physical addresses with ranged reconstruction.
 
 **In progress:**
 
@@ -476,7 +477,8 @@ Last updated: 2026-04-30.
   - [x] Add manifest generation for `GET /xet/v2/reconstructions/{file_hash}`.
   - [x] Add block-adapter presigned URL support for xorb range manifests.
   - [x] Add server-side proxy fallback grants for adapters that cannot presign.
-  - [ ] Add S3 gateway and lakeFS API GET dispatch for `xet://` physical addresses.
+  - [x] Add lakeFS API GET dispatch for `xet://` physical addresses.
+  - [ ] Add S3 gateway GET dispatch for `xet://` physical addresses.
   - [x] Add range-read correctness tests.
 - [ ] Implement XET token auth:
   - [ ] Add `POST /xet/v1/token` and `GET /xet/v1/token/refresh`.
