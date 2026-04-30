@@ -94,7 +94,7 @@ sdk-python: api/swagger.yml  ## Generate SDK for Python client - openapi generat
 	# NOTE: do NOT use `-depth` + `-name surogate_hub_sdk -prune` here — GNU find's `-delete` auto-enables
 	# `-depth`, which disables `-prune`, so descendants get deleted anyway. We guard with `-path` instead.
 	rm -rf clients/python/build; cd clients/python && \
-		find . -type f ! \( -path './surogate_hub_sdk/*' -or -name Gemfile -or -name Gemfile.lock -or -name _config.yml -or -name .openapi-generator-ignore -or -name pyproject.mustache -or -name setup.mustache -or -name client.mustache -or -name requirements.mustache -or -name pydantic.sh -or -name python-codegen-config.yaml -or -name test_stats.py -or -name test_parquet.py \) -delete
+		find . -type f ! \( -path './surogate_hub_sdk/*' -or -name Gemfile -or -name Gemfile.lock -or -name _config.yml -or -name .openapi-generator-ignore -or -name pyproject.mustache -or -name setup.mustache -or -name client.mustache -or -name requirements.mustache -or -name pydantic.sh -or -name python-codegen-config.yaml -or -name 'test_xet_*.py' -or -name test_stats.py -or -name test_parquet.py \) -delete
 	$(PY_OPENAPI_GENERATOR) generate \
 		-i /mnt/$< \
 		-g python \
@@ -130,10 +130,6 @@ package-python: package-python-client package-python-sdk
 
 package-python-sdk: sdk-python
 	$(DOCKER) run --user $(UID_GID) --rm -v $(shell pwd):/mnt -e HOME=/tmp/ -w /mnt/clients/python $(PYTHON_IMAGE) /bin/bash -c \
-		"python -m pip install build --user && python -m build --sdist --wheel --outdir dist/"
-
-package-python-wrapper:
-	$(DOCKER) run --user $(UID_GID) --rm -v $(shell pwd):/mnt -e HOME=/tmp/ -w /mnt/clients/python-wrapper $(PYTHON_IMAGE) /bin/bash -c \
 		"python -m pip install build --user && python -m build --sdist --wheel --outdir dist/"
 
 package: package-python
@@ -251,18 +247,12 @@ validate-python-sdk:
 validate-client-java:
 	git diff --quiet -- clients/java || (echo "Modification verification failed! java client"; false)
 
-validate-python-wrapper:
-	git diff --quiet -- clients/python-wrapper || (echo 'Modification verification failed! python wrapper client'; false)
-
 # Run all validation/linting steps
 checks-validator: lint validate-fmt validate-proto \
 	validate-client-python validate-client-java validate-reference \
 	validate-mockgen \
 	validate-permissions-gen \
 	validate-wrapper validate-wrapgen-testcode
-
-python-wrapper-lint:
-	$(DOCKER) run --user $(UID_GID) --rm -v $(shell pwd):/mnt -e HOME=/tmp/ -w /mnt/clients/python-wrapper $(PYTHON_IMAGE) /bin/bash -c "./pylint.sh"
 
 $(UI_DIR)/node_modules:
 	cd $(UI_DIR) && $(NPM) install

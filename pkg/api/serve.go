@@ -1,9 +1,11 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -21,10 +23,14 @@ import (
 	"github.com/treeverse/lakefs/pkg/catalog"
 	"github.com/treeverse/lakefs/pkg/cloud"
 	"github.com/treeverse/lakefs/pkg/config"
+	"github.com/treeverse/lakefs/pkg/graveler"
 	"github.com/treeverse/lakefs/pkg/httputil"
 	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/treeverse/lakefs/pkg/permissions"
 	"github.com/treeverse/lakefs/pkg/stats"
 	"github.com/treeverse/lakefs/pkg/upload"
+	xetcas "github.com/treeverse/lakefs/pkg/xet/cas"
+	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 const (
@@ -64,11 +70,54 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 	)
 	controller := NewController(cfg, catalog, middlewareAuthenticator, authService, authenticationService, blockAdapter, metadataManager, migrator, collector, cloudMetadataProvider, actions, auditChecker, logger, sessionStore, pathProvider, usageReporter)
 	apigen.HandlerFromMuxWithBaseURL(controller, apiRouter, apiutil.BaseURL)
+	xetSecurityRequirements := openapi3.SecurityRequirements{
+		{"jwt_token": []string{}},
+		{"basic_auth": []string{}},
+		{"cookie_auth": []string{}},
+		{"oidc_auth": []string{}},
+	}
+	xetTokenIssuerAuthMiddleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPost || !strings.HasSuffix(r.URL.Path, "/v1/token") {
+				next.ServeHTTP(w, r)
+				return
+			}
+			user, err := checkSecurityRequirements(r, xetSecurityRequirements, logger, middlewareAuthenticator, authService, sessionStore, &oidcConfig, &cookieAuthConfig)
+			if err != nil {
+				writeError(w, r, http.StatusUnauthorized, err)
+				return
+			}
+			if user == nil {
+				writeError(w, r, http.StatusUnauthorized, ErrAuthenticatingRequest)
+				return
+			}
+			if user != nil {
+				ctx := logging.AddFields(r.Context(), logging.Fields{logging.UserFieldKey: user.Username})
+				r = r.WithContext(auth.WithUser(ctx, user))
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 
 	r.Mount("/_health", httputil.ServeHealth())
 	r.Mount("/metrics", promhttp.Handler())
 	r.Mount("/_pprof/", httputil.ServePPROF("/_pprof/"))
 	r.Mount("/openapi.json", http.HandlerFunc(swaggerSpecHandler))
+	xetRegistry := xetstore.NewRegistry(catalog.KVStore)
+	r.Mount("/xet", xetTokenIssuerAuthMiddleware(xetcas.NewHandler(
+		xetRegistry,
+		xetcas.WithXorbStore(xetcas.NewXorbStore(blockAdapter, xetStorageNamespace(cfg, blockAdapter))),
+		xetcas.WithVerifyMaxConcurrent(cfg.GetBaseConfig().XET.Verify.MaxConcurrent),
+		xetcas.WithProxyGrantKey([]byte(cfg.GetBaseConfig().Auth.Encrypt.SecretKey.SecureValue())),
+		xetcas.WithTokenSigningKey([]byte(cfg.GetBaseConfig().Auth.Encrypt.SecretKey.SecureValue())),
+		xetcas.WithTokenAuthRequired(),
+		xetcas.WithReconstructionCapabilityChecker(xetReconstructionCapabilityChecker(
+			catalog,
+			authService,
+			xetRegistry,
+			cfg.GetBaseConfig().XET.Read.CapabilityScanBatchSize,
+		)),
+	)))
 	r.Mount(apiutil.BaseURL, http.HandlerFunc(InvalidAPIEndpointHandler))
 	r.Mount("/logout", NewLogoutHandler(sessionStore, logger, cfg.GetBaseConfig().Auth.LogoutRedirectURL))
 
@@ -88,6 +137,86 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 	r.Mount("/", rootHandler)
 
 	return r
+}
+
+func xetStorageNamespace(cfg config.Config, blockAdapter block.Adapter) string {
+	if storage := cfg.StorageConfig().GetStorageByID(config.SingleBlockstoreID); storage != nil {
+		if prefix := storage.GetDefaultNamespacePrefix(); prefix != nil && *prefix != "" {
+			return strings.TrimRight(*prefix, "/") + "/_lakefs_xet"
+		}
+	}
+	return blockAdapter.BlockstoreType() + "://_lakefs_xet"
+}
+
+func xetReconstructionCapabilityChecker(cat *catalog.Catalog, authService auth.Service, registry *xetstore.Registry, scanBatchSize int) xetcas.ReconstructionCapabilityChecker {
+	return func(ctx context.Context, fileHash string, logical xetcas.ReconstructionLogicalContext) error {
+		if logical.Repo != "" && logical.Ref != "" && logical.Path != "" {
+			if err := checkXETReconstructionCandidate(ctx, cat, authService, fileHash, logical); err != nil {
+				return err
+			}
+			_ = registry.PutFileRef(ctx, xetstore.FileRef{
+				FileHash: fileHash,
+				Repo:     logical.Repo,
+				Ref:      logical.Ref,
+				Path:     logical.Path,
+			})
+			return nil
+		}
+		refs, err := registry.ListFileRefs(ctx, fileHash, scanBatchSize)
+		if err != nil {
+			return err
+		}
+		for _, ref := range refs {
+			err := checkXETReconstructionCandidate(ctx, cat, authService, fileHash, xetcas.ReconstructionLogicalContext{
+				Repo: ref.Repo,
+				Ref:  ref.Ref,
+				Path: ref.Path,
+			})
+			if err == nil {
+				return nil
+			}
+			if !errors.Is(err, xetcas.ErrReconstructionCapabilityNotFound) {
+				return err
+			}
+		}
+		return xetcas.ErrReconstructionCapabilityNotFound
+	}
+}
+
+func checkXETReconstructionCandidate(ctx context.Context, cat *catalog.Catalog, authService auth.Service, fileHash string, logical xetcas.ReconstructionLogicalContext) error {
+	if logical.Repo == "" || logical.Ref == "" || logical.Path == "" {
+		return xetcas.ErrReconstructionCapabilityNotFound
+	}
+	user, err := auth.GetUser(ctx)
+	if err != nil {
+		return xetcas.ErrReconstructionCapabilityNotFound
+	}
+	resp, err := authService.Authorize(ctx, &auth.AuthorizationRequest{
+		Username: user.Username,
+		RequiredPermissions: permissions.Node{
+			Permission: permissions.Permission{
+				Action:   permissions.ReadObjectAction,
+				Resource: permissions.ObjectArn(logical.Repo, logical.Path),
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if resp.Error != nil || !resp.Allowed {
+		return xetcas.ErrReconstructionCapabilityNotFound
+	}
+	entry, err := cat.GetEntry(ctx, logical.Repo, logical.Ref, logical.Path, catalog.GetEntryParams{})
+	if errors.Is(err, graveler.ErrNotFound) {
+		return xetcas.ErrReconstructionCapabilityNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if entry.PhysicalAddress != "xet://"+fileHash {
+		return xetcas.ErrReconstructionCapabilityNotFound
+	}
+	return nil
 }
 
 func swaggerSpecHandler(w http.ResponseWriter, _ *http.Request) {

@@ -2,6 +2,7 @@ import warnings
 
 from urllib3.util import parse_url, Url
 from surogate_hub_sdk import ApiClient
+from surogate_hub_sdk.xet_objects_api import XetObjectsApi
 {{#apiInfo}}
 {{#apis}}
 from {{apiPackage}} import {{classFilename}}
@@ -51,12 +52,13 @@ class LakeFSClient:
         configuration.verify_ssl = False
         configuration = LakeFSClient._ensure_endpoint(configuration)
         self._api = _WrappedApiClient(configuration=configuration, header_name=header_name,
-                                          header_value=header_value, cookie=cookie, pool_threads=pool_threads)
+                                          header_value=header_value, cookie=cookie)
 {{#apiInfo}}
 {{#apis}}
         self.{{classFilename}} = {{classFilename}}.{{{classname}}}(self._api)
 {{/apis}}
 {{/apiInfo}}
+        self.objects_api = XetObjectsApi(self._api)
 
     @staticmethod
     def _ensure_endpoint(configuration):

@@ -47,6 +47,9 @@ import (
 	"github.com/treeverse/lakefs/pkg/upload"
 	"github.com/treeverse/lakefs/pkg/validator"
 	"github.com/treeverse/lakefs/pkg/version"
+	xetcas "github.com/treeverse/lakefs/pkg/xet/cas"
+	xetreconstruct "github.com/treeverse/lakefs/pkg/xet/reconstruct"
+	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 const (
@@ -796,6 +799,22 @@ func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request,
 		writeTime = time.Unix(*mtime, 0)
 	}
 	fullPhysicalAddress := swag.StringValue(body.Staging.PhysicalAddress)
+	xetFileHash, isXETAddress := parseXETPhysicalAddress(fullPhysicalAddress)
+	if isXETAddress {
+		if xetFileHash == "" {
+			writeError(w, r, http.StatusBadRequest, "xet physical address is missing file hash")
+			return
+		}
+		exists, err := xetstore.NewRegistry(c.Catalog.KVStore).HasShard(ctx, xetFileHash)
+		if err != nil {
+			writeError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+		if !exists {
+			writeError(w, r, http.StatusNotFound, "xet shard not found")
+			return
+		}
+	}
 	physicalAddress, addressType := normalizePhysicalAddress(repo.StorageNamespace, fullPhysicalAddress)
 
 	if addressType == catalog.AddressTypeRelative {
@@ -833,6 +852,18 @@ func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request,
 	if c.handleAPIError(ctx, w, r, err) {
 		return
 	}
+	if isXETAddress {
+		err = xetstore.NewRegistry(c.Catalog.KVStore).PutFileRef(ctx, xetstore.FileRef{
+			FileHash: xetFileHash,
+			Repo:     repo.Name,
+			Ref:      branch,
+			Path:     params.Path,
+		})
+		if err != nil {
+			writeError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+	}
 
 	metadata := apigen.ObjectUserMetadata{AdditionalProperties: entry.Metadata}
 	response := apigen.ObjectStats{
@@ -847,6 +878,10 @@ func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request,
 	}
 
 	writeResponse(w, r, http.StatusOK, response)
+}
+
+func parseXETPhysicalAddress(address string) (string, bool) {
+	return strings.TrimPrefix(address, "xet://"), strings.HasPrefix(address, "xet://")
 }
 
 // normalizePhysicalAddress return relative address based on storage namespace if possible. If address doesn't match
@@ -4578,6 +4613,11 @@ func (c *Controller) GetObject(w http.ResponseWriter, r *http.Request, repositor
 		return
 	}
 
+	if fileHash, isXETAddress := parseXETPhysicalAddress(entry.PhysicalAddress); isXETAddress {
+		c.getXETObject(w, r, entry, fileHash, params, requestStart)
+		return
+	}
+
 	// if pre-sign, return a redirect
 	pointer := block.ObjectPointer{
 		StorageID:        repo.StorageID,
@@ -4651,6 +4691,67 @@ func (c *Controller) GetObject(w http.ResponseWriter, r *http.Request, repositor
 				"physical_address":  entry.PhysicalAddress,
 			}).
 			Debug("GetObject copy content")
+	}
+}
+
+func (c *Controller) getXETObject(w http.ResponseWriter, r *http.Request, entry *catalog.DBEntry, fileHash string, params apigen.GetObjectParams, requestStart time.Time) {
+	if swag.BoolValue(params.Presign) {
+		writeError(w, r, http.StatusBadRequest, "presigned xet object reads are not supported")
+		return
+	}
+	byteRange := xetreconstruct.ByteRange{Start: 0, End: uint64(entry.Size)}
+	statusCode := http.StatusOK
+	contentLength := entry.Size
+	contentRange := ""
+	if params.Range != nil {
+		rng, err := httputil.ParseRange(*params.Range, entry.Size)
+		if err != nil {
+			writeError(w, r, http.StatusRequestedRangeNotSatisfiable, "Requested Range Not Satisfiable")
+			return
+		}
+		byteRange = xetreconstruct.ByteRange{Start: uint64(rng.StartOffset), End: uint64(rng.EndOffset + 1)}
+		statusCode = http.StatusPartialContent
+		contentLength = rng.EndOffset - rng.StartOffset + 1
+		contentRange = fmt.Sprintf("bytes %d-%d/%d", rng.StartOffset, rng.EndOffset, entry.Size)
+	}
+	reader, err := xetcas.ReconstructFileRange(
+		r.Context(),
+		xetstore.NewRegistry(c.Catalog.KVStore),
+		xetcas.NewXorbStore(c.BlockAdapter, xetStorageNamespace(c.Config, c.BlockAdapter)),
+		fileHash,
+		byteRange,
+	)
+	if c.handleAPIError(r.Context(), w, r, err) {
+		return
+	}
+	defer func() {
+		_ = reader.Close()
+	}()
+
+	w.Header().Set("ETag", httputil.ETag(entry.Checksum))
+	w.Header().Set("Last-Modified", httputil.HeaderTimestamp(entry.CreationDate))
+	w.Header().Set("Content-Type", entry.ContentType)
+	w.Header().Set("Cache-Control", "no-store, must-revalidate")
+	w.Header().Set("Expires", "0")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "SAMEORIGIN")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'")
+	if contentRange != "" {
+		w.Header().Set("Content-Range", contentRange)
+	}
+	w.Header().Set("Content-Length", fmt.Sprint(contentLength))
+	w.WriteHeader(statusCode)
+
+	requestTTFBHistograms.
+		WithLabelValues("GetObject").
+		Observe(time.Since(requestStart).Seconds())
+
+	_, err = io.Copy(w, reader)
+	if err != nil {
+		c.Logger.
+			WithError(err).
+			WithField("physical_address", entry.PhysicalAddress).
+			Debug("GetObject copy xet content")
 	}
 }
 
@@ -4785,9 +4886,14 @@ func (c *Controller) StatObject(w http.ResponseWriter, r *http.Request, reposito
 		return
 	}
 
-	qk, err := c.BlockAdapter.ResolveNamespace(repo.StorageID, repo.StorageNamespace, entry.PhysicalAddress, entry.AddressType.ToIdentifierType())
-	if c.handleAPIError(ctx, w, r, err) {
-		return
+	physicalAddress := entry.PhysicalAddress
+	_, isXETAddress := parseXETPhysicalAddress(entry.PhysicalAddress)
+	if !isXETAddress {
+		qk, err := c.BlockAdapter.ResolveNamespace(repo.StorageID, repo.StorageNamespace, entry.PhysicalAddress, entry.AddressType.ToIdentifierType())
+		if c.handleAPIError(ctx, w, r, err) {
+			return
+		}
+		physicalAddress = qk.Format()
 	}
 
 	objStat := apigen.ObjectStats{
@@ -4795,7 +4901,7 @@ func (c *Controller) StatObject(w http.ResponseWriter, r *http.Request, reposito
 		Mtime:           entry.CreationDate.Unix(),
 		Path:            entry.Path,
 		PathType:        entryTypeObject,
-		PhysicalAddress: qk.Format(),
+		PhysicalAddress: physicalAddress,
 		SizeBytes:       swag.Int64(entry.Size),
 		ContentType:     swag.String(entry.ContentType),
 	}
@@ -4813,6 +4919,10 @@ func (c *Controller) StatObject(w http.ResponseWriter, r *http.Request, reposito
 	if entry.Expired {
 		code = http.StatusGone
 	} else if swag.BoolValue(params.Presign) {
+		if isXETAddress {
+			writeError(w, r, http.StatusBadRequest, "xet physical address cannot be presigned")
+			return
+		}
 		// need to pre-sign the physical address
 		preSignedURL, expiry, err := c.BlockAdapter.GetPreSignedURL(ctx, block.ObjectPointer{
 			StorageID:        repo.StorageID,

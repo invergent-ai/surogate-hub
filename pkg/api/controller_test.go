@@ -5,6 +5,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +15,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -25,6 +28,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-openapi/swag"
 	"github.com/go-test/deep"
+	"github.com/golang-jwt/jwt"
 	"github.com/hashicorp/go-multierror"
 	nanoid "github.com/matoous/go-nanoid/v2"
 	"github.com/rs/xid"
@@ -40,10 +44,13 @@ import (
 	"github.com/treeverse/lakefs/pkg/config"
 	"github.com/treeverse/lakefs/pkg/graveler"
 	"github.com/treeverse/lakefs/pkg/httputil"
+	"github.com/treeverse/lakefs/pkg/kv"
 	"github.com/treeverse/lakefs/pkg/permissions"
 	"github.com/treeverse/lakefs/pkg/stats"
 	"github.com/treeverse/lakefs/pkg/testutil"
 	"github.com/treeverse/lakefs/pkg/upload"
+	xetcas "github.com/treeverse/lakefs/pkg/xet/cas"
+	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 	"golang.org/x/exp/slices"
 )
 
@@ -78,6 +85,244 @@ func verifyResponseOK(t testing.TB, resp Statuser, err error) {
 
 func onBlock(deps *dependencies, path string) string {
 	return fmt.Sprintf("%s://%s", deps.blocks.BlockstoreType(), path)
+}
+
+func TestController_LinkXETPhysicalAddressWritesFileRef(t *testing.T) {
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	const fileHash = "file-a"
+	const path = "models/checkpoint.bin"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+	registry := xetstore.NewRegistry(deps.catalog.KVStore)
+	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: fileHash,
+		Shard:    []byte("raw-shard"),
+	})
+	require.NoError(t, err)
+
+	physicalAddress := "xet://" + fileHash
+	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, repo, branch, &apigen.LinkPhysicalAddressParams{
+		Path: path,
+	}, apigen.LinkPhysicalAddressJSONRequestBody{
+		Checksum:  "checksum-a",
+		SizeBytes: 9,
+		Staging: apigen.StagingLocation{
+			PhysicalAddress: &physicalAddress,
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode())
+
+	entry, err := deps.catalog.GetEntry(ctx, repo, branch, path, catalog.GetEntryParams{})
+	require.NoError(t, err)
+	require.Equal(t, physicalAddress, entry.PhysicalAddress)
+
+	fileRef, err := deps.catalog.KVStore.Get(ctx, []byte(xetstore.Partition), []byte("xet/file_refs/file-a/"+repo+"/"+branch+"/"+path))
+	require.NoError(t, err)
+	require.Equal(t, []byte{}, fileRef.Value)
+}
+
+func TestController_LinkXETPhysicalAddressRejectsMissingShard(t *testing.T) {
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+
+	physicalAddress := "xet://missing-file"
+	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, repo, branch, &apigen.LinkPhysicalAddressParams{
+		Path: "models/checkpoint.bin",
+	}, apigen.LinkPhysicalAddressJSONRequestBody{
+		Checksum:  "checksum-a",
+		SizeBytes: 9,
+		Staging: apigen.StagingLocation{
+			PhysicalAddress: &physicalAddress,
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNotFound, resp.StatusCode())
+}
+
+func TestController_StatObjectXETPhysicalAddress(t *testing.T) {
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	const path = "models/checkpoint.bin"
+	const physicalAddress = "xet://file-a"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+	err = deps.catalog.CreateEntry(ctx, repo, branch, catalog.DBEntry{
+		Path:            path,
+		PhysicalAddress: physicalAddress,
+		AddressType:     catalog.AddressTypeFull,
+		CreationDate:    time.Now(),
+		Size:            9,
+		Checksum:        "checksum-a",
+		ContentType:     "application/octet-stream",
+	})
+	require.NoError(t, err)
+
+	resp, err := clt.StatObjectWithResponse(ctx, repo, branch, &apigen.StatObjectParams{Path: path})
+	require.NoError(t, err)
+	require.Equalf(t, http.StatusOK, resp.StatusCode(), "body: %s", string(resp.Body))
+	require.NotNil(t, resp.JSON200)
+	require.Equal(t, physicalAddress, resp.JSON200.PhysicalAddress)
+	require.Equal(t, path, resp.JSON200.Path)
+	require.Equal(t, int64(9), swag.Int64Value(resp.JSON200.SizeBytes))
+}
+
+func TestController_LinkXETPhysicalAddressCrashAfterGravelerWrite(t *testing.T) {
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	const path = "models/checkpoint.bin"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+
+	chunk := []byte("hello world!")
+	xorbHash, xorbBytes := testAPISerializedXorb(t, chunk)
+	chunkHash := xetstore.ComputeDataHash(chunk)
+	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: uint64(len(chunk)),
+	}})
+	require.NoError(t, err)
+	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_lakefs_xet")
+	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
+	require.NoError(t, err)
+	registry := xetstore.NewRegistry(deps.catalog.KVStore)
+	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: fileHash,
+		Shard:    testAPIXETBinaryShard(t, fileHash, xorbHash, chunkHash, uint32(len(chunk))),
+	})
+	require.NoError(t, err)
+
+	failingStore := &failOnceFileRefSetStore{Store: deps.catalog.KVStore}
+	deps.catalog.KVStore = failingStore
+	physicalAddress := "xet://" + fileHash
+	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, repo, branch, &apigen.LinkPhysicalAddressParams{
+		Path: path,
+	}, apigen.LinkPhysicalAddressJSONRequestBody{
+		Checksum:  "checksum-a",
+		SizeBytes: int64(len(chunk)),
+		Staging: apigen.StagingLocation{
+			PhysicalAddress: &physicalAddress,
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode())
+
+	entry, err := deps.catalog.GetEntry(ctx, repo, branch, path, catalog.GetEntryParams{})
+	require.NoError(t, err)
+	require.Equal(t, physicalAddress, entry.PhysicalAddress)
+	refs, err := xetstore.NewRegistry(deps.catalog.KVStore).ListFileRefs(ctx, fileHash, 32)
+	require.NoError(t, err)
+	require.Empty(t, refs)
+
+	getResp, err := clt.GetObjectWithResponse(ctx, repo, branch, &apigen.GetObjectParams{Path: path})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, getResp.StatusCode(), "body: %s", string(getResp.Body))
+	require.Equal(t, chunk, getResp.Body)
+
+	token := signedXETTokenForTest(t, "admin")
+	req, err := http.NewRequest(
+		http.MethodGet,
+		deps.server.URL+"/xet/v2/reconstructions/"+fileHash+"?repo="+url.QueryEscape(repo)+"&ref=main&path="+url.QueryEscape(path),
+		nil,
+	)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+token)
+	reconstructionResp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer reconstructionResp.Body.Close()
+	require.Equal(t, http.StatusOK, reconstructionResp.StatusCode)
+
+	refs, err = xetstore.NewRegistry(deps.catalog.KVStore).ListFileRefs(ctx, fileHash, 32)
+	require.NoError(t, err)
+	require.Contains(t, refs, xetstore.FileRef{
+		FileHash: fileHash,
+		Repo:     repo,
+		Ref:      branch,
+		Path:     path,
+	})
+}
+
+func TestController_GetObjectXETPhysicalAddressRange(t *testing.T) {
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	const path = "models/checkpoint.bin"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+
+	chunk := []byte("hello world!")
+	xorbHash, xorbBytes := testAPISerializedXorb(t, chunk)
+	chunkHash := xetstore.ComputeDataHash(chunk)
+	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: uint64(len(chunk)),
+	}})
+	require.NoError(t, err)
+	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_lakefs_xet")
+	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
+	require.NoError(t, err)
+	_, err = xetstore.NewRegistry(deps.catalog.KVStore).RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: fileHash,
+		Shard:    testAPIXETBinaryShard(t, fileHash, xorbHash, chunkHash, uint32(len(chunk))),
+	})
+	require.NoError(t, err)
+	err = deps.catalog.CreateEntry(ctx, repo, branch, catalog.DBEntry{
+		Path:            path,
+		PhysicalAddress: "xet://" + fileHash,
+		AddressType:     catalog.AddressTypeFull,
+		CreationDate:    time.Now(),
+		Size:            int64(len(chunk)),
+		Checksum:        "checksum-a",
+	})
+	require.NoError(t, err)
+
+	rng := "bytes=3-8"
+	resp, err := clt.GetObjectWithResponse(ctx, repo, branch, &apigen.GetObjectParams{
+		Path:  path,
+		Range: &rng,
+	})
+	require.NoError(t, err)
+	require.Equalf(t, http.StatusPartialContent, resp.StatusCode(), "body: %s", string(resp.Body))
+	require.Equal(t, []byte("lo wor"), resp.Body)
+}
+
+type failOnceFileRefSetStore struct {
+	kv.Store
+	failed bool
+}
+
+func (s *failOnceFileRefSetStore) Set(ctx context.Context, partitionKey, key, value []byte) error {
+	if string(partitionKey) == xetstore.Partition && strings.HasPrefix(string(key), "xet/file_refs/") && !s.failed {
+		s.failed = true
+		return errors.New("injected file_refs failure")
+	}
+	return s.Store.Set(ctx, partitionKey, key, value)
+}
+
+func signedXETTokenForTest(t testing.TB, subject string) string {
+	t.Helper()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":   subject,
+		"aud":   "xet",
+		"scope": "read write",
+		"iat":   time.Now().Unix(),
+		"exp":   time.Now().Add(time.Hour).Unix(),
+	})
+	signed, err := token.SignedString([]byte("some secret"))
+	require.NoError(t, err)
+	return signed
 }
 
 func TestController_ListRepositoriesHandler(t *testing.T) {
@@ -6415,4 +6660,139 @@ func pollRestoreStatus(t *testing.T, clt apigen.ClientWithResponsesInterface, re
 		}
 	}
 	return nil
+}
+
+func testAPISerializedXorb(t *testing.T, chunk []byte) (string, []byte) {
+	t.Helper()
+	chunkHash := xetstore.ComputeDataHash(chunk)
+	xorbHash, err := xetstore.ComputeXorbMerkleHash([]xetstore.ShardChunkInfo{{
+		Hash:      chunkHash,
+		SizeBytes: uint64(len(chunk)),
+	}})
+	require.NoError(t, err)
+
+	var b bytes.Buffer
+	b.WriteByte(0)
+	writeAPIThreeByteLE(&b, uint32(len(chunk)))
+	b.WriteByte(0)
+	writeAPIThreeByteLE(&b, uint32(len(chunk)))
+	b.Write(chunk)
+	chunkBoundary := uint32(b.Len())
+
+	var footer bytes.Buffer
+	footer.WriteString("XETBLOB")
+	footer.WriteByte(1)
+	testAPIWriteHash(t, &footer, xorbHash)
+	hashSectionOffset := footer.Len()
+	footer.WriteString("XBLBHSH")
+	footer.WriteByte(0)
+	testAPIWriteU32(&footer, 1)
+	testAPIWriteHash(t, &footer, chunkHash)
+	boundarySectionOffset := footer.Len()
+	footer.WriteString("XBLBBND")
+	footer.WriteByte(1)
+	testAPIWriteU32(&footer, 1)
+	testAPIWriteU32(&footer, chunkBoundary)
+	testAPIWriteU32(&footer, uint32(len(chunk)))
+	testAPIWriteU32(&footer, 1)
+	infoLengthWithoutOffsets := footer.Len()
+	testAPIWriteU32(&footer, uint32(infoLengthWithoutOffsets-hashSectionOffset+24))
+	testAPIWriteU32(&footer, uint32(infoLengthWithoutOffsets-boundarySectionOffset+24))
+	footer.Write(make([]byte, 16))
+
+	b.Write(footer.Bytes())
+	testAPIWriteU32(&b, uint32(footer.Len()))
+	return xorbHash, b.Bytes()
+}
+
+func testAPIXETBinaryShard(t *testing.T, fileHash, xorbHash, chunkHash string, size uint32) []byte {
+	t.Helper()
+	var b bytes.Buffer
+	b.Write([]byte{'H', 'F', 'R', 'e', 'p', 'o', 'M', 'e', 't', 'a', 'D', 'a', 't', 'a', 0, 85,
+		105, 103, 69, 106, 123, 129, 87, 131, 165, 189, 217, 92, 205, 209, 74, 169})
+	testAPIWriteU64(&b, 2)
+	testAPIWriteU64(&b, 200)
+
+	testAPIWriteHash(t, &b, fileHash)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, 1)
+	testAPIWriteU64(&b, 0)
+
+	testAPIWriteHash(t, &b, xorbHash)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, size)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, 1)
+
+	b.Write(bytes.Repeat([]byte{0xff}, 32))
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU64(&b, 0)
+
+	testAPIWriteHash(t, &b, xorbHash)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, 1)
+	testAPIWriteU32(&b, size)
+	testAPIWriteU32(&b, size-2)
+
+	testAPIWriteHash(t, &b, chunkHash)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, size)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, 0)
+
+	b.Write(bytes.Repeat([]byte{0xff}, 32))
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, 0)
+	testAPIWriteU32(&b, 0)
+
+	footerOffset := uint64(b.Len())
+	testAPIWriteU64(&b, 1)
+	testAPIWriteU64(&b, 48)
+	testAPIWriteU64(&b, 192)
+	testAPIWriteU64(&b, footerOffset)
+	testAPIWriteU64(&b, 0)
+	testAPIWriteU64(&b, footerOffset)
+	testAPIWriteU64(&b, 0)
+	testAPIWriteU64(&b, footerOffset)
+	testAPIWriteU64(&b, 0)
+	b.Write(make([]byte, 32))
+	testAPIWriteU64(&b, 0)
+	testAPIWriteU64(&b, ^uint64(0))
+	for i := 0; i < 6; i++ {
+		testAPIWriteU64(&b, 0)
+	}
+	testAPIWriteU64(&b, uint64(size-2))
+	testAPIWriteU64(&b, uint64(size))
+	testAPIWriteU64(&b, uint64(size))
+	testAPIWriteU64(&b, footerOffset)
+
+	return b.Bytes()
+}
+
+func testAPIWriteHash(t *testing.T, b *bytes.Buffer, value string) {
+	t.Helper()
+	raw, err := hex.DecodeString(value)
+	require.NoError(t, err)
+	require.Len(t, raw, 32)
+	for i := 0; i < 4; i++ {
+		for j := 7; j >= 0; j-- {
+			b.WriteByte(raw[i*8+j])
+		}
+	}
+}
+
+func testAPIWriteU32(b *bytes.Buffer, value uint32) {
+	_ = binary.Write(b, binary.LittleEndian, value)
+}
+
+func testAPIWriteU64(b *bytes.Buffer, value uint64) {
+	_ = binary.Write(b, binary.LittleEndian, value)
+}
+
+func writeAPIThreeByteLE(b *bytes.Buffer, value uint32) {
+	b.WriteByte(byte(value))
+	b.WriteByte(byte(value >> 8))
+	b.WriteByte(byte(value >> 16))
 }

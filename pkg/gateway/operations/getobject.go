@@ -18,6 +18,9 @@ import (
 	"github.com/treeverse/lakefs/pkg/httputil"
 	"github.com/treeverse/lakefs/pkg/logging"
 	"github.com/treeverse/lakefs/pkg/permissions"
+	xetcas "github.com/treeverse/lakefs/pkg/xet/cas"
+	xetreconstruct "github.com/treeverse/lakefs/pkg/xet/reconstruct"
+	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 const (
@@ -116,6 +119,29 @@ func (controller *GetObject) Handle(w http.ResponseWriter, req *http.Request, o 
 		Identifier:       entry.PhysicalAddress,
 	}
 
+	if fileHash, isXETAddress := parseXETPhysicalAddress(entry.PhysicalAddress); isXETAddress {
+		byteRange := xetreconstruct.ByteRange{Start: 0, End: uint64(entry.Size)}
+		if rangeSpec != "" && err == nil {
+			contentLength = rng.Size()
+			contentRange = fmt.Sprintf("bytes %d-%d/%d", rng.StartOffset, rng.EndOffset, entry.Size)
+			statusCode = http.StatusPartialContent
+			byteRange = xetreconstruct.ByteRange{Start: uint64(rng.StartOffset), End: uint64(rng.EndOffset + 1)}
+		}
+		data, err = xetcas.ReconstructFileRange(
+			ctx,
+			xetstore.NewRegistry(o.Catalog.KVStore),
+			xetcas.NewXorbStore(o.BlockStore, gatewayXETStorageNamespace(o.BlockStore)),
+			fileHash,
+			byteRange,
+		)
+		if err != nil {
+			code := gatewayerrors.ErrInternalError
+			_ = o.EncodeError(w, req, err, gatewayerrors.Codes.ToAPIErr(code))
+			return
+		}
+		goto writeResponse
+	}
+
 	if redirect {
 		preSignedURL, _, err := o.BlockStore.GetPreSignedURL(ctx, objectPointer, block.PreSignModeRead)
 		if err != nil {
@@ -147,6 +173,7 @@ func (controller *GetObject) Handle(w http.ResponseWriter, req *http.Request, o 
 		return
 	}
 
+writeResponse:
 	o.SetHeader(w, "Last-Modified", httputil.HeaderTimestamp(entry.CreationDate))
 	o.SetHeader(w, "ETag", httputil.ETag(entry.Checksum))
 	o.SetHeader(w, "Content-Type", entry.ContentType)
@@ -244,4 +271,12 @@ func handleListParts(w http.ResponseWriter, req *http.Request, o *PathOperation)
 	}
 
 	o.EncodeResponse(w, req, resp, http.StatusOK)
+}
+
+func parseXETPhysicalAddress(address string) (string, bool) {
+	return strings.TrimPrefix(address, "xet://"), strings.HasPrefix(address, "xet://")
+}
+
+func gatewayXETStorageNamespace(adapter block.Adapter) string {
+	return adapter.BlockstoreType() + "://_lakefs_xet"
 }
