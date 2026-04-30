@@ -467,6 +467,7 @@ Last updated: 2026-04-30.
 - [x] Added XET GC sweep of stale shard records and chunk-index entries while preserving live roots.
 - [x] Added XET GC sweep of stale xorbs with an `xet.gc.min_age`-style age guard.
 - [x] Added `lakefs gc xet --dry-run` command wiring that opens configured KV/catalog/block storage and emits the XET GC report as JSON.
+- [x] Added an ESTI smart-client smoke path that uploads a serialized xorb, registers a binary shard, links a `xet://` object, reads it through lakeFS, and verifies chunk dedup discovery for a second upload path.
 
 **In progress:**
 
@@ -521,13 +522,14 @@ Last updated: 2026-04-30.
   - [x] Sweep stale per-tuple `file_refs`.
   - [x] Sweep stale shards and chunk-index entries.
   - [x] Sweep stale xorbs older than `xet.gc.min_age`.
-- [ ] Add smart-client smoke:
-  - [ ] Add a curl or `hf_xet` smoke test that uploads xorbs, registers a shard, links the `xet://` object, reads it back, and verifies a second similar upload gets dedup hits.
+- [x] Add smart-client smoke:
+  - [x] Add an HTTP/ESTI smoke test that uploads xorbs, registers a shard, links the `xet://` object, reads it back, and verifies a second similar upload gets dedup hits.
 
 **Known test-suite status:**
 
 - Focused XET unit/API/ESTI tests passed at the last green checkpoint.
-- The full local ESTI suite was run and failed on pre-existing local-suite issues unrelated to the focused XET path: stale runner flag usage, read-only repository setup, local import configuration, `lakectl` golden output drift, help-branding drift, and a multipart upload panic.
+- The ESTI runner's stale `-skip` flag usage was fixed while adding the focused XET smoke coverage.
+- The full local ESTI suite was run earlier and failed on pre-existing local-suite issues unrelated to the focused XET path: read-only repository setup, local import configuration, `lakectl` golden output drift, help-branding drift, and a multipart upload panic.
 
 ## 12. Out of Scope (v1)
 
