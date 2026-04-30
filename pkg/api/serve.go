@@ -25,6 +25,8 @@ import (
 	"github.com/treeverse/lakefs/pkg/logging"
 	"github.com/treeverse/lakefs/pkg/stats"
 	"github.com/treeverse/lakefs/pkg/upload"
+	xetcas "github.com/treeverse/lakefs/pkg/xet/cas"
+	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 const (
@@ -69,6 +71,7 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 	r.Mount("/metrics", promhttp.Handler())
 	r.Mount("/_pprof/", httputil.ServePPROF("/_pprof/"))
 	r.Mount("/openapi.json", http.HandlerFunc(swaggerSpecHandler))
+	r.Mount("/xet", xetcas.NewHandler(xetstore.NewRegistry(catalog.KVStore)))
 	r.Mount(apiutil.BaseURL, http.HandlerFunc(InvalidAPIEndpointHandler))
 	r.Mount("/logout", NewLogoutHandler(sessionStore, logger, cfg.GetBaseConfig().Auth.LogoutRedirectURL))
 

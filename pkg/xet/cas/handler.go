@@ -16,7 +16,7 @@ type Handler struct {
 func NewHandler(registry *xetstore.Registry) http.Handler {
 	h := &Handler{registry: registry}
 	r := chi.NewRouter()
-	r.Get("/xet/v1/chunks/{prefix}/{hash}", h.getChunk)
+	r.Get("/v1/chunks/{prefix}/{hash}", h.getChunk)
 	return r
 }
 

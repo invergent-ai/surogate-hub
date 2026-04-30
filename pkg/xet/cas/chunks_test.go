@@ -23,7 +23,7 @@ func TestGetChunkReturnsDedupShardBytes(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodGet, "/xet/v1/chunks/default/chunk-a", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/chunks/default/chunk-a", nil)
 	rec := httptest.NewRecorder()
 
 	NewHandler(registry).ServeHTTP(rec, req)

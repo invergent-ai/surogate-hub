@@ -3,6 +3,7 @@ package api_test
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
 	"github.com/go-openapi/swag"
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/require"
 	"github.com/treeverse/lakefs/pkg/actions"
 	"github.com/treeverse/lakefs/pkg/api"
 	"github.com/treeverse/lakefs/pkg/api/apigen"
@@ -38,6 +40,7 @@ import (
 	"github.com/treeverse/lakefs/pkg/testutil"
 	"github.com/treeverse/lakefs/pkg/upload"
 	"github.com/treeverse/lakefs/pkg/version"
+	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 const (
@@ -245,6 +248,29 @@ func setupClientWithAdmin(t testing.TB) (apigen.ClientWithResponsesInterface, *d
 	cred := createDefaultAdminUser(t, clt)
 	clt = setupClientByEndpoint(t, server.URL, cred.AccessKeyID, cred.SecretAccessKey)
 	return clt, deps
+}
+
+func TestServeXETChunkDedupRoute(t *testing.T) {
+	handler, deps := setupHandler(t)
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(deps.catalog.KVStore)
+	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: "file-a",
+		Shard:    []byte("raw-shard"),
+		ChunkIDs: []string{"chunk-a"},
+	})
+	require.NoError(t, err)
+
+	server := setupServer(t, handler)
+	resp, err := http.Get(server.URL + "/xet/v1/chunks/default/chunk-a")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Equal(t, "application/octet-stream", resp.Header.Get("Content-Type"))
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, []byte("raw-shard"), body)
 }
 
 func TestInvalidRoute(t *testing.T) {
