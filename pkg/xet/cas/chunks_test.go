@@ -567,7 +567,10 @@ func TestGetReconstructionRejectsMissingDirectCapabilityContext(t *testing.T) {
 		WithTokenSigningKey([]byte("test-token-key")),
 		WithTokenAuthRequired(),
 		WithReconstructionCapabilityChecker(func(ctx context.Context, fileHash string, logical ReconstructionLogicalContext) error {
-			return nil
+			require.Empty(t, logical.Repo)
+			require.Empty(t, logical.Ref)
+			require.Empty(t, logical.Path)
+			return ErrReconstructionCapabilityNotFound
 		}),
 	)
 

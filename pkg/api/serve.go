@@ -103,14 +103,20 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 	r.Mount("/metrics", promhttp.Handler())
 	r.Mount("/_pprof/", httputil.ServePPROF("/_pprof/"))
 	r.Mount("/openapi.json", http.HandlerFunc(swaggerSpecHandler))
+	xetRegistry := xetstore.NewRegistry(catalog.KVStore)
 	r.Mount("/xet", xetTokenIssuerAuthMiddleware(xetcas.NewHandler(
-		xetstore.NewRegistry(catalog.KVStore),
+		xetRegistry,
 		xetcas.WithXorbStore(xetcas.NewXorbStore(blockAdapter, xetStorageNamespace(cfg, blockAdapter))),
 		xetcas.WithVerifyMaxConcurrent(cfg.GetBaseConfig().XET.Verify.MaxConcurrent),
 		xetcas.WithProxyGrantKey([]byte(cfg.GetBaseConfig().Auth.Encrypt.SecretKey.SecureValue())),
 		xetcas.WithTokenSigningKey([]byte(cfg.GetBaseConfig().Auth.Encrypt.SecretKey.SecureValue())),
 		xetcas.WithTokenAuthRequired(),
-		xetcas.WithReconstructionCapabilityChecker(xetReconstructionCapabilityChecker(catalog, authService)),
+		xetcas.WithReconstructionCapabilityChecker(xetReconstructionCapabilityChecker(
+			catalog,
+			authService,
+			xetRegistry,
+			cfg.GetBaseConfig().XET.Read.CapabilityScanBatchSize,
+		)),
 	)))
 	r.Mount(apiutil.BaseURL, http.HandlerFunc(InvalidAPIEndpointHandler))
 	r.Mount("/logout", NewLogoutHandler(sessionStore, logger, cfg.GetBaseConfig().Auth.LogoutRedirectURL))
@@ -142,39 +148,66 @@ func xetStorageNamespace(cfg config.Config, blockAdapter block.Adapter) string {
 	return blockAdapter.BlockstoreType() + "://_lakefs_xet"
 }
 
-func xetReconstructionCapabilityChecker(cat *catalog.Catalog, authService auth.Service) xetcas.ReconstructionCapabilityChecker {
+func xetReconstructionCapabilityChecker(cat *catalog.Catalog, authService auth.Service, registry *xetstore.Registry, scanBatchSize int) xetcas.ReconstructionCapabilityChecker {
 	return func(ctx context.Context, fileHash string, logical xetcas.ReconstructionLogicalContext) error {
-		user, err := auth.GetUser(ctx)
-		if err != nil {
-			return xetcas.ErrReconstructionCapabilityNotFound
+		if logical.Repo != "" && logical.Ref != "" && logical.Path != "" {
+			return checkXETReconstructionCandidate(ctx, cat, authService, fileHash, logical)
 		}
-		resp, err := authService.Authorize(ctx, &auth.AuthorizationRequest{
-			Username: user.Username,
-			RequiredPermissions: permissions.Node{
-				Permission: permissions.Permission{
-					Action:   permissions.ReadObjectAction,
-					Resource: permissions.ObjectArn(logical.Repo, logical.Path),
-				},
-			},
-		})
+		refs, err := registry.ListFileRefs(ctx, fileHash, scanBatchSize)
 		if err != nil {
 			return err
 		}
-		if resp.Error != nil || !resp.Allowed {
-			return xetcas.ErrReconstructionCapabilityNotFound
+		for _, ref := range refs {
+			err := checkXETReconstructionCandidate(ctx, cat, authService, fileHash, xetcas.ReconstructionLogicalContext{
+				Repo: ref.Repo,
+				Ref:  ref.Ref,
+				Path: ref.Path,
+			})
+			if err == nil {
+				return nil
+			}
+			if !errors.Is(err, xetcas.ErrReconstructionCapabilityNotFound) {
+				return err
+			}
 		}
-		entry, err := cat.GetEntry(ctx, logical.Repo, logical.Ref, logical.Path, catalog.GetEntryParams{})
-		if errors.Is(err, graveler.ErrNotFound) {
-			return xetcas.ErrReconstructionCapabilityNotFound
-		}
-		if err != nil {
-			return err
-		}
-		if entry.PhysicalAddress != "xet://"+fileHash {
-			return xetcas.ErrReconstructionCapabilityNotFound
-		}
-		return nil
+		return xetcas.ErrReconstructionCapabilityNotFound
 	}
+}
+
+func checkXETReconstructionCandidate(ctx context.Context, cat *catalog.Catalog, authService auth.Service, fileHash string, logical xetcas.ReconstructionLogicalContext) error {
+	if logical.Repo == "" || logical.Ref == "" || logical.Path == "" {
+		return xetcas.ErrReconstructionCapabilityNotFound
+	}
+	user, err := auth.GetUser(ctx)
+	if err != nil {
+		return xetcas.ErrReconstructionCapabilityNotFound
+	}
+	resp, err := authService.Authorize(ctx, &auth.AuthorizationRequest{
+		Username: user.Username,
+		RequiredPermissions: permissions.Node{
+			Permission: permissions.Permission{
+				Action:   permissions.ReadObjectAction,
+				Resource: permissions.ObjectArn(logical.Repo, logical.Path),
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+	if resp.Error != nil || !resp.Allowed {
+		return xetcas.ErrReconstructionCapabilityNotFound
+	}
+	entry, err := cat.GetEntry(ctx, logical.Repo, logical.Ref, logical.Path, catalog.GetEntryParams{})
+	if errors.Is(err, graveler.ErrNotFound) {
+		return xetcas.ErrReconstructionCapabilityNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if entry.PhysicalAddress != "xet://"+fileHash {
+		return xetcas.ErrReconstructionCapabilityNotFound
+	}
+	return nil
 }
 
 func swaggerSpecHandler(w http.ResponseWriter, _ *http.Request) {

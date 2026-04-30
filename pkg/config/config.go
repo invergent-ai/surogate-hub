@@ -478,6 +478,9 @@ type BaseConfig struct {
 		Verify struct {
 			MaxConcurrent int `mapstructure:"max_concurrent"`
 		} `mapstructure:"verify"`
+		Read struct {
+			CapabilityScanBatchSize int `mapstructure:"capability_scan_batch_size"`
+		} `mapstructure:"read"`
 	} `mapstructure:"xet"`
 	Graveler struct {
 		EnsureReadableRootNamespace bool `mapstructure:"ensure_readable_root_namespace"`

@@ -107,6 +107,38 @@ func TestPutFileRefWritesOneKeyPerTuple(t *testing.T) {
 	requireKVValue(t, ctx, kvStore, "xet/file_refs/file-a/repo-a/main/models/checkpoint.bin", []byte{})
 }
 
+func TestListFileRefsScansOneFileHashPrefix(t *testing.T) {
+	ctx := context.Background()
+	kvStore := kvtest.GetStore(ctx, t)
+	registry := NewRegistry(kvStore)
+	require.NoError(t, registry.PutFileRef(ctx, FileRef{
+		FileHash: "file-a",
+		Repo:     "repo-a",
+		Ref:      "main",
+		Path:     "models/a.bin",
+	}))
+	require.NoError(t, registry.PutFileRef(ctx, FileRef{
+		FileHash: "file-a",
+		Repo:     "repo-b",
+		Ref:      "dev",
+		Path:     "models/b.bin",
+	}))
+	require.NoError(t, registry.PutFileRef(ctx, FileRef{
+		FileHash: "file-b",
+		Repo:     "repo-c",
+		Ref:      "main",
+		Path:     "models/c.bin",
+	}))
+
+	refs, err := registry.ListFileRefs(ctx, "file-a", 32)
+
+	require.NoError(t, err)
+	require.ElementsMatch(t, []FileRef{
+		{FileHash: "file-a", Repo: "repo-a", Ref: "main", Path: "models/a.bin"},
+		{FileHash: "file-a", Repo: "repo-b", Ref: "dev", Path: "models/b.bin"},
+	}, refs)
+}
+
 func requireKVValue(t *testing.T, ctx context.Context, kvStore kv.Store, key string, expected []byte) {
 	t.Helper()
 	res, err := kvStore.Get(ctx, []byte(Partition), []byte(key))

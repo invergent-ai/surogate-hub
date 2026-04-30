@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/treeverse/lakefs/pkg/kv"
 )
@@ -91,6 +92,36 @@ func (r *Registry) PutFileRef(ctx context.Context, ref FileRef) error {
 	return r.store.Set(ctx, []byte(Partition), fileRefKey(ref), []byte{})
 }
 
+func (r *Registry) ListFileRefs(ctx context.Context, fileHash string, batchSize int) ([]FileRef, error) {
+	prefix := fileRefPrefix(fileHash)
+	iter, err := r.store.Scan(ctx, []byte(Partition), kv.ScanOptions{
+		KeyStart:  []byte(prefix),
+		BatchSize: batchSize,
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer iter.Close()
+
+	var refs []FileRef
+	for iter.Next() {
+		entry := iter.Entry()
+		key := string(entry.Key)
+		if !strings.HasPrefix(key, prefix) {
+			break
+		}
+		ref, ok := parseFileRefKey(fileHash, key)
+		if !ok {
+			continue
+		}
+		refs = append(refs, ref)
+	}
+	if err := iter.Err(); err != nil && !errors.Is(err, kv.ErrClosedEntries) {
+		return nil, err
+	}
+	return refs, nil
+}
+
 func shardKey(fileHash string) []byte {
 	return []byte("xet/shard/" + fileHash)
 }
@@ -104,5 +135,26 @@ func chunkKey(chunkID string) []byte {
 }
 
 func fileRefKey(ref FileRef) []byte {
-	return []byte("xet/file_refs/" + ref.FileHash + "/" + ref.Repo + "/" + ref.Ref + "/" + ref.Path)
+	return []byte(fileRefPrefix(ref.FileHash) + ref.Repo + "/" + ref.Ref + "/" + ref.Path)
+}
+
+func fileRefPrefix(fileHash string) string {
+	return "xet/file_refs/" + fileHash + "/"
+}
+
+func parseFileRefKey(fileHash string, key string) (FileRef, bool) {
+	rest, ok := strings.CutPrefix(key, fileRefPrefix(fileHash))
+	if !ok {
+		return FileRef{}, false
+	}
+	parts := strings.SplitN(rest, "/", 3)
+	if len(parts) != 3 || parts[0] == "" || parts[1] == "" || parts[2] == "" {
+		return FileRef{}, false
+	}
+	return FileRef{
+		FileHash: fileHash,
+		Repo:     parts[0],
+		Ref:      parts[1],
+		Path:     parts[2],
+	}, true
 }

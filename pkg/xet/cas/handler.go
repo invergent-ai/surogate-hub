@@ -383,10 +383,6 @@ func (h *Handler) getReconstruction(w http.ResponseWriter, r *http.Request) {
 			Ref:  r.URL.Query().Get("ref"),
 			Path: r.URL.Query().Get("path"),
 		}
-		if logical.Repo == "" || logical.Ref == "" || logical.Path == "" {
-			http.NotFound(w, r)
-			return
-		}
 		if err := h.reconstructionCapabilityChecker(r.Context(), fileHash, logical); err != nil {
 			if errors.Is(err, ErrReconstructionCapabilityNotFound) {
 				http.NotFound(w, r)

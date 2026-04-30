@@ -173,6 +173,7 @@ func setBaseDefaults(cfgType string) {
 	viper.SetDefault("ugc.prepare_max_file_size", 20*1024*1024)
 
 	viper.SetDefault("xet.verify.max_concurrent", 0)
+	viper.SetDefault("xet.read.capability_scan_batch_size", 32)
 
 	viper.SetDefault("usage_report.flush_interval", 5*time.Minute)
 }
