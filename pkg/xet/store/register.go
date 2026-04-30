@@ -93,6 +93,13 @@ func (r *Registry) HasShard(ctx context.Context, fileHash string) (bool, error) 
 	return true, nil
 }
 
+func (r *Registry) DeleteShard(ctx context.Context, fileHash string) error {
+	if err := r.store.Delete(ctx, []byte(Partition), shardKey(fileHash)); err != nil {
+		return err
+	}
+	return r.store.Delete(ctx, []byte(Partition), shardMetaKey(fileHash))
+}
+
 func (r *Registry) PutFileRef(ctx context.Context, ref FileRef) error {
 	return r.store.Set(ctx, []byte(Partition), fileRefKey(ref), []byte{})
 }
@@ -165,6 +172,10 @@ func (r *Registry) ListChunkRefs(ctx context.Context, batchSize int) ([]ChunkRef
 		return nil, err
 	}
 	return refs, nil
+}
+
+func (r *Registry) DeleteChunkRef(ctx context.Context, ref ChunkRef) error {
+	return r.store.Delete(ctx, []byte(Partition), chunkKey(ref.ChunkHash))
 }
 
 func (r *Registry) listFileRefsByPrefix(ctx context.Context, prefix string, batchSize int) ([]FileRef, error) {

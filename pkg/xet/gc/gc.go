@@ -114,5 +114,15 @@ func Sweep(ctx context.Context, params Params) (Report, error) {
 			return Report{}, err
 		}
 	}
+	for _, ref := range report.StaleChunkRefs {
+		if err := params.Registry.DeleteChunkRef(ctx, ref); err != nil {
+			return Report{}, err
+		}
+	}
+	for _, fileHash := range report.StaleShards {
+		if err := params.Registry.DeleteShard(ctx, fileHash); err != nil {
+			return Report{}, err
+		}
+	}
 	return report, nil
 }

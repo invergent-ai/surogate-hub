@@ -173,3 +173,47 @@ func TestSweepDeletesStaleFileRefs(t *testing.T) {
 		Path:     "live.bin",
 	}}, refs)
 }
+
+func TestSweepDeletesStaleShardsAndChunkRefs(t *testing.T) {
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: "file-live",
+		Shard:    []byte("live-shard"),
+		ChunkIDs: []string{"chunk-live"},
+	})
+	require.NoError(t, err)
+	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: "file-stale",
+		Shard:    []byte("stale-shard"),
+		ChunkIDs: []string{"chunk-stale"},
+	})
+	require.NoError(t, err)
+	require.NoError(t, registry.PutFileRef(ctx, xetstore.FileRef{
+		FileHash: "file-live",
+		Repo:     "repo-a",
+		Ref:      "main",
+		Path:     "live.bin",
+	}))
+
+	report, err := Sweep(ctx, Params{
+		Registry: registry,
+		FileRefLive: func(ctx context.Context, ref xetstore.FileRef) (bool, error) {
+			return true, nil
+		},
+		ParseShard: func(data []byte) (xetstore.ShardInfo, error) {
+			return xetstore.ShardInfo{}, nil
+		},
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"file-stale"}, report.StaleShards)
+	hasLive, err := registry.HasShard(ctx, "file-live")
+	require.NoError(t, err)
+	require.True(t, hasLive)
+	hasStale, err := registry.HasShard(ctx, "file-stale")
+	require.NoError(t, err)
+	require.False(t, hasStale)
+	_, err = registry.GetDedupShardByChunk(ctx, "chunk-stale")
+	require.Error(t, err)
+}
