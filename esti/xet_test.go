@@ -29,7 +29,7 @@ func TestXETShardRegistrationDedupProbe(t *testing.T) {
 
 	chunkReq, err := http.NewRequest(http.MethodGet, xetRootEndpoint()+"/xet/v1/chunks/default/"+chunkID, nil)
 	require.NoError(t, err)
-	chunkReq.SetBasicAuth(viper.GetString("access_key_id"), viper.GetString("secret_access_key"))
+	authorizeXETRequest(t, chunkReq)
 
 	chunkResp, err := http.DefaultClient.Do(chunkReq)
 	require.NoError(t, err)
@@ -83,7 +83,7 @@ func putXETXorb(t *testing.T, xorbID, body string) {
 	t.Helper()
 	req, err := http.NewRequest(http.MethodPost, xetRootEndpoint()+"/xet/v1/xorbs/default/"+xorbID, strings.NewReader(body))
 	require.NoError(t, err)
-	req.SetBasicAuth(viper.GetString("access_key_id"), viper.GetString("secret_access_key"))
+	authorizeXETRequest(t, req)
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
@@ -111,7 +111,7 @@ func registerXETShard(t *testing.T, fileHash, shard string, chunkIDs, xorbIDs []
 	registerReq, err := http.NewRequest(http.MethodPost, xetRootEndpoint()+"/xet/v1/shards", bytes.NewReader(requestBody))
 	require.NoError(t, err)
 	registerReq.Header.Set("Content-Type", "application/json")
-	registerReq.SetBasicAuth(viper.GetString("access_key_id"), viper.GetString("secret_access_key"))
+	authorizeXETRequest(t, registerReq)
 
 	registerResp, err := http.DefaultClient.Do(registerReq)
 	require.NoError(t, err)
@@ -130,6 +130,31 @@ func registerXETShard(t *testing.T, fileHash, shard string, chunkIDs, xorbIDs []
 
 func xetRootEndpoint() string {
 	return strings.TrimSuffix(endpointURL, apiutil.BaseURL)
+}
+
+func authorizeXETRequest(t *testing.T, req *http.Request) {
+	t.Helper()
+	req.Header.Set("Authorization", "Bearer "+xetBearerToken(t))
+}
+
+func xetBearerToken(t *testing.T) string {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodPost, xetRootEndpoint()+"/xet/v1/token", nil)
+	require.NoError(t, err)
+	req.SetBasicAuth(viper.GetString("access_key_id"), viper.GetString("secret_access_key"))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var token struct {
+		AccessToken string `json:"access_token"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&token)
+	require.NoError(t, err)
+	require.NotEmpty(t, token.AccessToken)
+	return token.AccessToken
 }
 
 func xetShimFileHash(shard string) string {
