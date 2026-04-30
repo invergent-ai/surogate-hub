@@ -33,6 +33,13 @@ func TestParseShardInfoExtractsFilesXorbsAndChunks(t *testing.T) {
 		}},
 	}}, info.Files)
 	require.Equal(t, []string{xorbHash}, info.XorbHashes)
+	require.Equal(t, []ShardXorbInfo{{
+		Hash: xorbHash,
+		Chunks: []ShardChunkInfo{
+			{Hash: chunkA, SizeBytes: 10},
+			{Hash: chunkB, SizeBytes: 20},
+		},
+	}}, info.Xorbs)
 	require.Equal(t, []string{chunkA, chunkB}, info.ChunkHashes)
 }
 

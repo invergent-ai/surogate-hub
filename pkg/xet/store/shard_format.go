@@ -39,6 +39,7 @@ var dataHashKey = [32]byte{
 type ShardInfo struct {
 	Files       []ShardFileInfo
 	XorbHashes  []string
+	Xorbs       []ShardXorbInfo
 	ChunkHashes []string
 	Summary     ShardSummary
 }
@@ -61,7 +62,7 @@ type ShardChunkInfo struct {
 	SizeBytes uint64
 }
 
-type shardXorbInfo struct {
+type ShardXorbInfo struct {
 	Hash   string
 	Chunks []ShardChunkInfo
 }
@@ -105,6 +106,7 @@ func ParseShardInfo(data []byte) (ShardInfo, error) {
 	return ShardInfo{
 		Files:       files,
 		XorbHashes:  shardXorbHashes(xorbHashes),
+		Xorbs:       xorbHashes,
 		ChunkHashes: chunkHashes,
 		Summary:     summary,
 	}, nil
@@ -206,8 +208,8 @@ func readShardFiles(reader io.Reader) ([]ShardFileInfo, error) {
 	return files, nil
 }
 
-func readShardXorbs(reader io.Reader) ([]shardXorbInfo, []string, error) {
-	var xorbs []shardXorbInfo
+func readShardXorbs(reader io.Reader) ([]ShardXorbInfo, []string, error) {
+	var xorbs []ShardXorbInfo
 	var chunkHashes []string
 	for {
 		xorbHash, isBookend, err := readMDBHash(reader)
@@ -249,13 +251,13 @@ func readShardXorbs(reader io.Reader) ([]shardXorbInfo, []string, error) {
 				SizeBytes: uint64(unpackedSegmentBytes),
 			})
 		}
-		xorbs = append(xorbs, shardXorbInfo{Hash: xorbHash, Chunks: chunks})
+		xorbs = append(xorbs, ShardXorbInfo{Hash: xorbHash, Chunks: chunks})
 	}
 	return xorbs, chunkHashes, nil
 }
 
-func verifyShardFileHashes(files []ShardFileInfo, xorbs []shardXorbInfo) error {
-	xorbByHash := make(map[string]shardXorbInfo, len(xorbs))
+func verifyShardFileHashes(files []ShardFileInfo, xorbs []ShardXorbInfo) error {
+	xorbByHash := make(map[string]ShardXorbInfo, len(xorbs))
 	for _, xorb := range xorbs {
 		xorbByHash[xorb.Hash] = xorb
 	}
@@ -282,7 +284,7 @@ func verifyShardFileHashes(files []ShardFileInfo, xorbs []shardXorbInfo) error {
 	return nil
 }
 
-func shardXorbHashes(xorbs []shardXorbInfo) []string {
+func shardXorbHashes(xorbs []ShardXorbInfo) []string {
 	hashes := make([]string, 0, len(xorbs))
 	for _, xorb := range xorbs {
 		hashes = append(hashes, xorb.Hash)

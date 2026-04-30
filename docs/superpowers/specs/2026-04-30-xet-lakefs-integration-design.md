@@ -442,6 +442,7 @@ Last updated: 2026-04-30.
 - [x] Added LZ4-framed chunk decompression to serialized-xorb upload validation.
 - [x] Added BG4-LZ4 byte-regrouping decompression to serialized-xorb upload validation.
 - [x] Added `xet.verify.max_concurrent` configuration and a semaphore-backed upload verification limiter while preserving idempotent duplicate-upload behavior.
+- [x] Added `pkg/xet/reconstruct` range mapping over parsed shard terms and exported per-xorb chunk metadata from parsed shards.
 
 **In progress:**
 
@@ -464,7 +465,7 @@ Last updated: 2026-04-30.
 **Remaining TODOs:**
 
 - [ ] Implement reconstruction reads:
-  - [ ] Add `pkg/xet/reconstruct` range mapping over shard terms.
+  - [x] Add `pkg/xet/reconstruct` range mapping over shard terms.
   - [ ] Add manifest generation for `GET /xet/v2/reconstructions/{file_hash}`.
   - [ ] Add block-adapter presigned URL support and server-side proxy fallback grants.
   - [ ] Add S3 gateway and lakeFS API GET dispatch for `xet://` physical addresses.
