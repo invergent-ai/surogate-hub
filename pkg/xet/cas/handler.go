@@ -136,12 +136,18 @@ func (h *Handler) postBinaryShard(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	summary, err := json.Marshal(info.Summary)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	wasInserted := false
 	for _, file := range info.Files {
 		result, err := h.registry.RegisterShard(r.Context(), xetstore.RegisterShardParams{
 			FileHash: file.FileHash,
 			Shard:    shard,
+			Summary:  summary,
 			ChunkIDs: info.ChunkHashes,
 		})
 		if err != nil {

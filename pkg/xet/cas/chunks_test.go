@@ -194,6 +194,9 @@ func TestPostBinaryShardRegistersFileAndChunks(t *testing.T) {
 	hasShard, err := registry.HasShard(ctx, fileHash)
 	require.NoError(t, err)
 	require.True(t, hasShard)
+	meta, err := kvStore.Get(ctx, []byte(xetstore.Partition), []byte("xet/shard_meta/"+fileHash))
+	require.NoError(t, err)
+	require.JSONEq(t, `{"created_at":0,"size":12,"num_xorbs":1,"num_chunks":1}`, string(meta.Value))
 }
 
 func testShimFileHash(shard string) string {

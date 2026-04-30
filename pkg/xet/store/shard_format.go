@@ -26,11 +26,19 @@ type ShardInfo struct {
 	Files       []ShardFileInfo
 	XorbHashes  []string
 	ChunkHashes []string
+	Summary     ShardSummary
 }
 
 type ShardFileInfo struct {
 	FileHash  string
 	SizeBytes uint64
+}
+
+type ShardSummary struct {
+	CreatedAt uint64 `json:"created_at"`
+	SizeBytes uint64 `json:"size"`
+	NumXorbs  int    `json:"num_xorbs"`
+	NumChunks int    `json:"num_chunks"`
 }
 
 func ParseShardInfo(data []byte) (ShardInfo, error) {
@@ -47,14 +55,23 @@ func ParseShardInfo(data []byte) (ShardInfo, error) {
 	if err != nil {
 		return ShardInfo{}, err
 	}
-	if err := readShardFooter(reader); err != nil {
+	summary, err := readShardFooter(reader)
+	if err != nil {
 		return ShardInfo{}, err
+	}
+	summary.NumXorbs = len(xorbHashes)
+	summary.NumChunks = len(chunkHashes)
+	if summary.SizeBytes == 0 {
+		for _, file := range files {
+			summary.SizeBytes += file.SizeBytes
+		}
 	}
 
 	return ShardInfo{
 		Files:       files,
 		XorbHashes:  xorbHashes,
 		ChunkHashes: chunkHashes,
+		Summary:     summary,
 	}, nil
 }
 
@@ -176,18 +193,38 @@ func readShardXorbs(reader io.Reader) ([]string, []string, error) {
 	return xorbHashes, chunkHashes, nil
 }
 
-func readShardFooter(reader io.Reader) error {
+func readShardFooter(reader io.Reader) (ShardSummary, error) {
 	version, err := readU64(reader)
 	if err != nil {
-		return fmt.Errorf("read shard footer version: %w", err)
+		return ShardSummary{}, fmt.Errorf("read shard footer version: %w", err)
 	}
 	if version != mdbShardFooterVersion {
-		return fmt.Errorf("unsupported shard footer version %d", version)
+		return ShardSummary{}, fmt.Errorf("unsupported shard footer version %d", version)
 	}
-	if err := skipBytes(reader, mdbShardFooterSize-8); err != nil {
-		return fmt.Errorf("read shard footer: %w", err)
+	if err := skipBytes(reader, 8*8); err != nil {
+		return ShardSummary{}, fmt.Errorf("read shard footer offsets: %w", err)
 	}
-	return nil
+	if err := skipBytes(reader, 32); err != nil {
+		return ShardSummary{}, fmt.Errorf("read shard footer hmac key: %w", err)
+	}
+	createdAt, err := readU64(reader)
+	if err != nil {
+		return ShardSummary{}, fmt.Errorf("read shard footer creation timestamp: %w", err)
+	}
+	if err := skipBytes(reader, 8+6*8+8); err != nil {
+		return ShardSummary{}, fmt.Errorf("read shard footer size prelude: %w", err)
+	}
+	sizeBytes, err := readU64(reader)
+	if err != nil {
+		return ShardSummary{}, fmt.Errorf("read shard footer materialized bytes: %w", err)
+	}
+	if err := skipBytes(reader, 8+8); err != nil {
+		return ShardSummary{}, fmt.Errorf("read shard footer tail: %w", err)
+	}
+	return ShardSummary{
+		CreatedAt: createdAt,
+		SizeBytes: sizeBytes,
+	}, nil
 }
 
 func readMDBHash(reader io.Reader) (string, bool, error) {
