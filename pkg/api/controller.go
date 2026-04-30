@@ -4886,9 +4886,14 @@ func (c *Controller) StatObject(w http.ResponseWriter, r *http.Request, reposito
 		return
 	}
 
-	qk, err := c.BlockAdapter.ResolveNamespace(repo.StorageID, repo.StorageNamespace, entry.PhysicalAddress, entry.AddressType.ToIdentifierType())
-	if c.handleAPIError(ctx, w, r, err) {
-		return
+	physicalAddress := entry.PhysicalAddress
+	_, isXETAddress := parseXETPhysicalAddress(entry.PhysicalAddress)
+	if !isXETAddress {
+		qk, err := c.BlockAdapter.ResolveNamespace(repo.StorageID, repo.StorageNamespace, entry.PhysicalAddress, entry.AddressType.ToIdentifierType())
+		if c.handleAPIError(ctx, w, r, err) {
+			return
+		}
+		physicalAddress = qk.Format()
 	}
 
 	objStat := apigen.ObjectStats{
@@ -4896,7 +4901,7 @@ func (c *Controller) StatObject(w http.ResponseWriter, r *http.Request, reposito
 		Mtime:           entry.CreationDate.Unix(),
 		Path:            entry.Path,
 		PathType:        entryTypeObject,
-		PhysicalAddress: qk.Format(),
+		PhysicalAddress: physicalAddress,
 		SizeBytes:       swag.Int64(entry.Size),
 		ContentType:     swag.String(entry.ContentType),
 	}
@@ -4914,6 +4919,10 @@ func (c *Controller) StatObject(w http.ResponseWriter, r *http.Request, reposito
 	if entry.Expired {
 		code = http.StatusGone
 	} else if swag.BoolValue(params.Presign) {
+		if isXETAddress {
+			writeError(w, r, http.StatusBadRequest, "xet physical address cannot be presigned")
+			return
+		}
 		// need to pre-sign the physical address
 		preSignedURL, expiry, err := c.BlockAdapter.GetPreSignedURL(ctx, block.ObjectPointer{
 			StorageID:        repo.StorageID,

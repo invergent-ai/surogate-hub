@@ -147,6 +147,35 @@ func TestController_LinkXETPhysicalAddressRejectsMissingShard(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, resp.StatusCode())
 }
 
+func TestController_StatObjectXETPhysicalAddress(t *testing.T) {
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	const path = "models/checkpoint.bin"
+	const physicalAddress = "xet://file-a"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+	err = deps.catalog.CreateEntry(ctx, repo, branch, catalog.DBEntry{
+		Path:            path,
+		PhysicalAddress: physicalAddress,
+		AddressType:     catalog.AddressTypeFull,
+		CreationDate:    time.Now(),
+		Size:            9,
+		Checksum:        "checksum-a",
+		ContentType:     "application/octet-stream",
+	})
+	require.NoError(t, err)
+
+	resp, err := clt.StatObjectWithResponse(ctx, repo, branch, &apigen.StatObjectParams{Path: path})
+	require.NoError(t, err)
+	require.Equalf(t, http.StatusOK, resp.StatusCode(), "body: %s", string(resp.Body))
+	require.NotNil(t, resp.JSON200)
+	require.Equal(t, physicalAddress, resp.JSON200.PhysicalAddress)
+	require.Equal(t, path, resp.JSON200.Path)
+	require.Equal(t, int64(9), swag.Int64Value(resp.JSON200.SizeBytes))
+}
+
 func TestController_LinkXETPhysicalAddressCrashAfterGravelerWrite(t *testing.T) {
 	clt, deps := setupClientWithAdmin(t)
 	ctx := context.Background()
