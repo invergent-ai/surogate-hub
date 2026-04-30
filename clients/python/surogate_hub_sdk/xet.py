@@ -176,6 +176,6 @@ class XETClient:
             import hf_xet
         except ImportError as exc:
             raise ImportError(
-                "XET support requires hf_xet. Install surogate-hub-sdk[xet]."
+                "XET support requires hf_xet==1.4.3. Reinstall surogate-hub-sdk with its required dependencies."
             ) from exc
         return hf_xet
