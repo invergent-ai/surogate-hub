@@ -465,6 +465,7 @@ Last updated: 2026-04-30.
 - [x] Added a block-walker-backed xorb lister for `xet/xorbs/<prefix>/<hash>` candidate enumeration.
 - [x] Added the first destructive XET GC sweep step for stale per-tuple `file_refs`.
 - [x] Added XET GC sweep of stale shard records and chunk-index entries while preserving live roots.
+- [x] Added XET GC sweep of stale xorbs with an `xet.gc.min_age`-style age guard.
 
 **In progress:**
 
@@ -518,7 +519,7 @@ Last updated: 2026-04-30.
   - [x] Dry-run stale xorb detection.
   - [x] Sweep stale per-tuple `file_refs`.
   - [x] Sweep stale shards and chunk-index entries.
-  - [ ] Sweep stale xorbs older than `xet.gc.min_age`.
+  - [x] Sweep stale xorbs older than `xet.gc.min_age`.
 - [ ] Add smart-client smoke:
   - [ ] Add a curl or `hf_xet` smoke test that uploads xorbs, registers a shard, links the `xet://` object, reads it back, and verifies a second similar upload gets dedup hits.
 

@@ -3,6 +3,7 @@ package gc
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/treeverse/lakefs/pkg/kv/kvtest"
@@ -216,4 +217,53 @@ func TestSweepDeletesStaleShardsAndChunkRefs(t *testing.T) {
 	require.False(t, hasStale)
 	_, err = registry.GetDedupShardByChunk(ctx, "chunk-stale")
 	require.Error(t, err)
+}
+
+func TestSweepDeletesOnlyOldStaleXorbs(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: "file-live",
+		Shard:    []byte("live-shard"),
+	})
+	require.NoError(t, err)
+	require.NoError(t, registry.PutFileRef(ctx, xetstore.FileRef{
+		FileHash: "file-live",
+		Repo:     "repo-a",
+		Ref:      "main",
+		Path:     "live.bin",
+	}))
+	var removed []XorbRef
+
+	report, err := Sweep(ctx, Params{
+		Registry: registry,
+		FileRefLive: func(ctx context.Context, ref xetstore.FileRef) (bool, error) {
+			return true, nil
+		},
+		ParseShard: func(data []byte) (xetstore.ShardInfo, error) {
+			return xetstore.ShardInfo{XorbHashes: []string{"xorb-live"}}, nil
+		},
+		ListXorbs: func(ctx context.Context) ([]XorbRef, error) {
+			return []XorbRef{
+				{Prefix: "default", Hash: "xorb-live", Mtime: now.Add(-48 * time.Hour)},
+				{Prefix: "default", Hash: "xorb-old-stale", Mtime: now.Add(-48 * time.Hour)},
+				{Prefix: "default", Hash: "xorb-young-stale", Mtime: now.Add(-time.Hour)},
+			}, nil
+		},
+		RemoveXorb: func(ctx context.Context, ref XorbRef) error {
+			removed = append(removed, ref)
+			return nil
+		},
+		MinAge: 24 * time.Hour,
+		Now:    func() time.Time { return now },
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, []XorbRef{{
+		Prefix: "default",
+		Hash:   "xorb-old-stale",
+		Mtime:  now.Add(-48 * time.Hour),
+	}}, report.StaleXorbs)
+	require.Equal(t, report.StaleXorbs, removed)
 }
