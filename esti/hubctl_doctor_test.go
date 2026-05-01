@@ -17,7 +17,7 @@ func TestHubctlDoctor(t *testing.T) {
 	u, err := url.Parse(endpointURL)
 	require.NoError(t, err)
 	vars := map[string]string{
-		"LAKEFS_ENDPOINT": endPointURL,
+		"SGHUB_ENDPOINT": endPointURL,
 		"HOST":            fmt.Sprintf("%s://%s", u.Scheme, u.Host),
 	}
 

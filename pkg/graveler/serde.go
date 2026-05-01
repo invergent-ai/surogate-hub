@@ -13,9 +13,9 @@ const (
 	EntityTypeTag    = "tag"
 
 	EntitySchemaKey    = "schema_name"
-	EntitySchemaCommit = "io.treeverse.lakefs.graveler.CommitData"
-	EntitySchemaBranch = "io.treeverse.lakefs.graveler.BranchData"
-	EntitySchemaTag    = "io.treeverse.lakefs.graveler.TagData"
+	EntitySchemaCommit = "io.invergent.sghub.graveler.CommitData"
+	EntitySchemaBranch = "io.invergent.sghub.graveler.BranchData"
+	EntitySchemaTag    = "io.invergent.sghub.graveler.TagData"
 
 	EntitySchemaDefinitionKey = "schema_definition"
 )

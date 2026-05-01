@@ -3,7 +3,7 @@ option go_package = "github.com/invergent-ai/surogate-hub/actions";
 
 import "google/protobuf/timestamp.proto";
 
-package io.treeverse.lakefs.actions;
+package ai.invergent.shub.actions;
 
 // message data model for RunResult struct
 message RunResultData {

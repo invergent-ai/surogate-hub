@@ -40,7 +40,7 @@ func getS3BlockAdapter(t *testing.T, opts []s3a.AdapterOption) *s3a.Adapter {
 func TestS3Adapter(t *testing.T) {
 	basePath, err := url.JoinPath("s3://", bucketName)
 	require.NoError(t, err)
-	localPath, err := url.JoinPath(basePath, "lakefs")
+	localPath, err := url.JoinPath(basePath, "sghub")
 	require.NoError(t, err)
 	externalPath, err := url.JoinPath(basePath, "external")
 	require.NoError(t, err)
@@ -54,7 +54,7 @@ func TestS3Adapter(t *testing.T) {
 func TestS3AdapterPresignedOverride(t *testing.T) {
 	basePath, err := url.JoinPath("s3://", bucketName)
 	require.NoError(t, err)
-	localPath, err := url.JoinPath(basePath, "lakefs")
+	localPath, err := url.JoinPath(basePath, "sghub")
 	require.NoError(t, err)
 	externalPath, err := url.JoinPath(basePath, "external")
 	require.NoError(t, err)

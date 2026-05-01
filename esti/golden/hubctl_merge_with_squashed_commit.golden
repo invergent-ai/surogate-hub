@@ -7,7 +7,7 @@ Date:          <DATE> <TIME> <TZ>
 
 Metadata:
 	
-	.lakefs.merge.strategy = default
+	.hub.merge.strategy = default
 	
 	key1               = value1
 	

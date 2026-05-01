@@ -156,13 +156,13 @@ func file_kv_kvtest_test_model_proto_rawDescGZIP() []byte {
 
 var file_kv_kvtest_test_model_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_kv_kvtest_test_model_proto_goTypes = []interface{}{
-	(*TestModel)(nil),             // 0: io.treeverse.lakefs.kvtest.TestModel
-	nil,                           // 1: io.treeverse.lakefs.kvtest.TestModel.TestMapEntry
+	(*TestModel)(nil),             // 0: io.invergent.sghub.kvtest.TestModel
+	nil,                           // 1: io.invergent.sghub.kvtest.TestModel.TestMapEntry
 	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
 }
 var file_kv_kvtest_test_model_proto_depIdxs = []int32{
-	2, // 0: io.treeverse.lakefs.kvtest.TestModel.test_time:type_name -> google.protobuf.Timestamp
-	1, // 1: io.treeverse.lakefs.kvtest.TestModel.test_map:type_name -> io.treeverse.lakefs.kvtest.TestModel.TestMapEntry
+	2, // 0: io.invergent.sghub.kvtest.TestModel.test_time:type_name -> google.protobuf.Timestamp
+	1, // 1: io.invergent.sghub.kvtest.TestModel.test_map:type_name -> io.invergent.sghub.kvtest.TestModel.TestMapEntry
 	2, // [2:2] is the sub-list for method output_type
 	2, // [2:2] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name

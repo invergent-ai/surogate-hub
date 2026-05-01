@@ -1,7 +1,7 @@
 database:
   type: "local"
   local:
-    path: /tmp/lakefs/metadata
+    path: /tmp/sghub/metadata
 auth:
   encrypt:
     secret_key: "some random value that should be replaced for production environments"
@@ -9,7 +9,7 @@ auth:
 blockstore:
   type: local
   local:
-    path: /tmp/lakefs/data
+    path: /tmp/sghub/data
 
 logging:
   format: text

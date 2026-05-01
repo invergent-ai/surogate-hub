@@ -30,7 +30,7 @@ var (
 			Statement: model.Statements{
 				{
 					Action:   []string{"auth:DeleteUser"},
-					Resource: "arn:lakefs:auth:::user/foobar",
+					Resource: "arn:sghub:auth:::user/foobar",
 					Effect:   model.StatementEffectAllow,
 				},
 				{

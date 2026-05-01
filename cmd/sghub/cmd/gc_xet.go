@@ -105,10 +105,10 @@ func runXETGCDryRun(ctx context.Context, cfg config.Config) (xetgc.Report, error
 func xetGCStorageNamespace(cfg config.Config, blockAdapter block.Adapter) string {
 	if storage := cfg.StorageConfig().GetStorageByID(config.SingleBlockstoreID); storage != nil {
 		if prefix := storage.GetDefaultNamespacePrefix(); prefix != nil && *prefix != "" {
-			return strings.TrimRight(*prefix, "/") + "/_lakefs_xet"
+			return strings.TrimRight(*prefix, "/") + "/_hub_xet"
 		}
 	}
-	return blockAdapter.BlockstoreType() + "://_lakefs_xet"
+	return blockAdapter.BlockstoreType() + "://_hub_xet"
 }
 
 //nolint:gochecknoinits

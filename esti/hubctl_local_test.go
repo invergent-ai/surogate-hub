@@ -22,9 +22,9 @@ import (
 func localCreateTestData(t *testing.T, vars map[string]string, objects []string) {
 	for _, o := range objects {
 		vars["FILE_PATH"] = o
-		runCmd(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+vars["REPO"]+"/"+vars["BRANCH"]+"/"+vars["FILE_PATH"], false, false, vars)
+		runCmd(t, Hubctl()+" fs upload -s files/ro_1k sg://"+vars["REPO"]+"/"+vars["BRANCH"]+"/"+vars["FILE_PATH"], false, false, vars)
 	}
-	runCmd(t, Hubctl()+" commit lakefs://"+vars["REPO"]+"/"+vars["BRANCH"]+" --allow-empty-message -m \" \"", false, false, vars)
+	runCmd(t, Hubctl()+" commit sg://"+vars["REPO"]+"/"+vars["BRANCH"]+" --allow-empty-message -m \" \"", false, false, vars)
 }
 
 func localListDir(t *testing.T, dir string) []string {
@@ -97,22 +97,22 @@ func TestHubctlLocal_init(t *testing.T) {
 	}
 
 	// No repo
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local init lakefs://"+repoName+"/"+mainBranch+"/ "+tmpDir, false, "hubctl_local_repo_not_found", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local init sg://"+repoName+"/"+mainBranch+"/ "+tmpDir, false, "hubctl_local_repo_not_found", vars)
 
-	runCmd(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, false, vars)
-	runCmd(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch, false, false, vars)
+	runCmd(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, false, vars)
+	runCmd(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch, false, false, vars)
 
 	// Bad ref
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local init lakefs://"+repoName+"/bad_ref/"+" "+tmpDir, false, "hubctl_local_commit_not_found", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local init sg://"+repoName+"/bad_ref/"+" "+tmpDir, false, "hubctl_local_commit_not_found", vars)
 
 	filePath := "ro_1k.1"
 	vars["FILE_PATH"] = filePath
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+filePath, false, "hubctl_fs_upload", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch, false, "hubctl_log_initial", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+" --allow-empty-message -m \" \"", false, "hubctl_commit_with_empty_msg_flag", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+filePath, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch, false, "hubctl_log_initial", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+" --allow-empty-message -m \" \"", false, "hubctl_commit_with_empty_msg_flag", vars)
 
 	vars["LOCAL_DIR"] = dataDir
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" local init lakefs://"+repoName+"/"+mainBranch+"/ "+dataDir, false, "hubctl_local_init", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" local init sg://"+repoName+"/"+mainBranch+"/ "+dataDir, false, "hubctl_local_init", vars)
 
 	relPath, err := filepath.Rel(tmpDir, dataDir)
 	require.NoError(t, err)
@@ -129,12 +129,12 @@ func TestHubctlLocal_init(t *testing.T) {
 
 	// init in a directory with files
 	vars["LOCAL_DIR"] = tmpDir
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" local init lakefs://"+repoName+"/"+mainBranch+"/ "+tmpDir, false, "hubctl_local_init", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" local init sg://"+repoName+"/"+mainBranch+"/ "+tmpDir, false, "hubctl_local_init", vars)
 	vars["LIST_DIR"] = "."
 	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" local list "+tmpDir, false, "hubctl_local_list", vars)
 
 	// Try to init twice
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local init lakefs://"+repoName+"/"+mainBranch+"/ "+tmpDir, false, "hubctl_local_init_twice", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local init sg://"+repoName+"/"+mainBranch+"/ "+tmpDir, false, "hubctl_local_init_twice", vars)
 
 	featureBranch := "feature"
 	branchVars := map[string]string{
@@ -143,11 +143,11 @@ func TestHubctlLocal_init(t *testing.T) {
 		"SOURCE_BRANCH": mainBranch,
 		"DEST_BRANCH":   featureBranch,
 	}
-	runCmd(t, Hubctl()+" branch create lakefs://"+repoName+"/"+featureBranch+" --source lakefs://"+repoName+"/"+mainBranch, false, false, branchVars)
+	runCmd(t, Hubctl()+" branch create sg://"+repoName+"/"+featureBranch+" --source sg://"+repoName+"/"+mainBranch, false, false, branchVars)
 
 	// Try to init twice with force
 	vars["REF"] = featureBranch
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" local init lakefs://"+repoName+"/"+featureBranch+"/ "+tmpDir+" --force", false, "hubctl_local_init", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" local init sg://"+repoName+"/"+featureBranch+"/ "+tmpDir+" --force", false, "hubctl_local_init", vars)
 	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" local list "+tmpDir, false, "hubctl_local_list", vars)
 }
 
@@ -167,13 +167,13 @@ func TestHubctlLocal_clone(t *testing.T) {
 
 	// No repo
 	vars["LOCAL_DIR"] = tmpDir
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local clone lakefs://"+repoName+"/"+mainBranch+"/ "+tmpDir, false, "hubctl_local_clone_non_empty", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local clone sg://"+repoName+"/"+mainBranch+"/ "+tmpDir, false, "hubctl_local_clone_non_empty", vars)
 
-	runCmd(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, false, vars)
-	runCmd(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch, false, false, vars)
+	runCmd(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, false, vars)
+	runCmd(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch, false, false, vars)
 
 	// Bad ref
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local init lakefs://"+repoName+"/bad_ref/ "+tmpDir, false, "hubctl_local_commit_not_found", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local init sg://"+repoName+"/bad_ref/ "+tmpDir, false, "hubctl_local_commit_not_found", vars)
 
 	prefix := "images"
 	objects := []string{
@@ -193,7 +193,7 @@ func TestHubctlLocal_clone(t *testing.T) {
 	t.Run("clone object path", func(t *testing.T) {
 		dataDir, err := os.MkdirTemp(tmpDir, "")
 		require.NoError(t, err)
-		vars["PATH"] = "lakefs://" + repoName + "/" + mainBranch + "/" + objects[0]
+		vars["PATH"] = "sg://" + repoName + "/" + mainBranch + "/" + objects[0]
 		RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local clone "+vars["PATH"]+" "+dataDir, false, "hubctl_local_init_is_object", vars)
 	})
 
@@ -204,8 +204,8 @@ func TestHubctlLocal_clone(t *testing.T) {
 		vars["LOCAL_DIR"] = dataDir
 		_, err = uploadContent(context.Background(), vars["REPO"], vars["BRANCH"], vars["PREFIX"], "")
 		require.NoError(t, err)
-		runCmd(t, Hubctl()+" commit lakefs://"+vars["REPO"]+"/"+vars["BRANCH"]+" --allow-empty-message -m \" \"", false, false, vars)
-		RunCmdAndVerifyContainsText(t, Hubctl()+" local clone lakefs://"+repoName+"/"+mainBranch+"/"+vars["PREFIX"]+" "+dataDir, false, "Successfully cloned lakefs://${REPO}/${REF}/${PREFIX} to ${LOCAL_DIR}.", vars)
+		runCmd(t, Hubctl()+" commit sg://"+vars["REPO"]+"/"+vars["BRANCH"]+" --allow-empty-message -m \" \"", false, false, vars)
+		RunCmdAndVerifyContainsText(t, Hubctl()+" local clone sg://"+repoName+"/"+mainBranch+"/"+vars["PREFIX"]+" "+dataDir, false, "Successfully cloned sg://${REPO}/${REF}/${PREFIX} to ${LOCAL_DIR}.", vars)
 
 		relPath, err := filepath.Rel(tmpDir, dataDir)
 		require.NoError(t, err)
@@ -218,7 +218,7 @@ func TestHubctlLocal_clone(t *testing.T) {
 		require.NoError(t, err)
 		vars["LOCAL_DIR"] = dataDir
 		vars["PREFIX"] = prefix + uri.PathSeparator
-		RunCmdAndVerifyContainsText(t, Hubctl()+" local clone lakefs://"+repoName+"/"+mainBranch+"/"+prefix+" "+dataDir, false, "Successfully cloned lakefs://${REPO}/${REF}/${PREFIX} to ${LOCAL_DIR}.", vars)
+		RunCmdAndVerifyContainsText(t, Hubctl()+" local clone sg://"+repoName+"/"+mainBranch+"/"+prefix+" "+dataDir, false, "Successfully cloned sg://${REPO}/${REF}/${PREFIX} to ${LOCAL_DIR}.", vars)
 
 		vars["LIST_DIR"] = "."
 		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" local list "+dataDir, false, "hubctl_local_list", vars)
@@ -231,7 +231,7 @@ func TestHubctlLocal_clone(t *testing.T) {
 
 		// Try to clone twice
 		vars["LOCAL_DIR"] = tmpDir
-		RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local clone lakefs://"+repoName+"/"+mainBranch+"/ "+tmpDir, false, "hubctl_local_clone_non_empty", vars)
+		RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local clone sg://"+repoName+"/"+mainBranch+"/ "+tmpDir, false, "hubctl_local_clone_non_empty", vars)
 	})
 
 	t.Run("clone new path", func(t *testing.T) {
@@ -239,7 +239,7 @@ func TestHubctlLocal_clone(t *testing.T) {
 		require.NoError(t, err)
 		vars["LOCAL_DIR"] = dataDir
 		vars["PREFIX"] = "new_prefix"
-		RunCmdAndVerifyContainsText(t, Hubctl()+" local clone lakefs://"+repoName+"/"+mainBranch+"/"+vars["PREFIX"]+" "+dataDir, false, "Successfully cloned lakefs://${REPO}/${REF}/${PREFIX}/ to ${LOCAL_DIR}.", vars)
+		RunCmdAndVerifyContainsText(t, Hubctl()+" local clone sg://"+repoName+"/"+mainBranch+"/"+vars["PREFIX"]+" "+dataDir, false, "Successfully cloned sg://${REPO}/${REF}/${PREFIX}/ to ${LOCAL_DIR}.", vars)
 		localVerifyDirContents(t, dataDir, []string{})
 
 		// Add new files to path
@@ -274,13 +274,13 @@ func TestHubctlLocal_posix_permissions(t *testing.T) {
 
 	// No repo
 	vars["LOCAL_DIR"] = tmpDir
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local clone lakefs://"+repoName+"/"+mainBranch+"/ "+tmpDir, false, "hubctl_local_clone_non_empty", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local clone sg://"+repoName+"/"+mainBranch+"/ "+tmpDir, false, "hubctl_local_clone_non_empty", vars)
 
-	runCmd(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, false, vars)
-	runCmd(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch, false, false, vars)
+	runCmd(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, false, vars)
+	runCmd(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch, false, false, vars)
 
 	// Bad ref
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local init lakefs://"+repoName+"/bad_ref/ "+tmpDir, false, "hubctl_local_commit_not_found", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local init sg://"+repoName+"/bad_ref/ "+tmpDir, false, "hubctl_local_commit_not_found", vars)
 
 	t.Run("diff with posix permissions", func(t *testing.T) {
 		dataDir, err := os.MkdirTemp(tmpDir, "")
@@ -289,7 +289,7 @@ func TestHubctlLocal_posix_permissions(t *testing.T) {
 		vars["PREFIX"] = "posix-diff"
 
 		hubctl := HubctlWithPosixPerms()
-		RunCmdAndVerifyContainsText(t, hubctl+" local clone lakefs://"+repoName+"/"+mainBranch+"/"+vars["PREFIX"]+" "+dataDir, false, "Successfully cloned lakefs://${REPO}/${REF}/${PREFIX}/ to ${LOCAL_DIR}.", vars)
+		RunCmdAndVerifyContainsText(t, hubctl+" local clone sg://"+repoName+"/"+mainBranch+"/"+vars["PREFIX"]+" "+dataDir, false, "Successfully cloned sg://${REPO}/${REF}/${PREFIX}/ to ${LOCAL_DIR}.", vars)
 		localVerifyDirContents(t, dataDir, []string{})
 
 		// Add new files to path
@@ -324,7 +324,7 @@ func TestHubctlLocal_posix_permissions(t *testing.T) {
 		vars["PREFIX"] = "posix-folder-deletion"
 
 		hubctl := HubctlWithPosixPerms()
-		RunCmdAndVerifyContainsText(t, hubctl+" local clone lakefs://"+repoName+"/"+mainBranch+"/"+vars["PREFIX"]+" "+dataDir, false, "Successfully cloned lakefs://${REPO}/${REF}/${PREFIX}/ to ${LOCAL_DIR}.", vars)
+		RunCmdAndVerifyContainsText(t, hubctl+" local clone sg://"+repoName+"/"+mainBranch+"/"+vars["PREFIX"]+" "+dataDir, false, "Successfully cloned sg://${REPO}/${REF}/${PREFIX}/ to ${LOCAL_DIR}.", vars)
 		localVerifyDirContents(t, dataDir, []string{})
 
 		// upload a new empty folder
@@ -356,7 +356,7 @@ func TestHubctlLocal_posix_permissions(t *testing.T) {
 		vars["FILE_PATH"] = vars["PREFIX"]
 		hubctl := HubctlWithPosixPerms()
 
-		RunCmdAndVerifyContainsText(t, hubctl+" local clone lakefs://"+repoName+"/"+mainBranch+"/"+vars["PREFIX"]+" "+dataDir, false, "Successfully cloned lakefs://${REPO}/${REF}/${PREFIX}/ to ${LOCAL_DIR}.", vars)
+		RunCmdAndVerifyContainsText(t, hubctl+" local clone sg://"+repoName+"/"+mainBranch+"/"+vars["PREFIX"]+" "+dataDir, false, "Successfully cloned sg://${REPO}/${REF}/${PREFIX}/ to ${LOCAL_DIR}.", vars)
 		localVerifyDirContents(t, dataDir, []string{})
 
 		// Add new files to path
@@ -380,7 +380,7 @@ func TestHubctlLocal_posix_permissions(t *testing.T) {
 		dataDir2, err := os.MkdirTemp(tmpDir, "")
 		require.NoError(t, err)
 		vars["LOCAL_DIR"] = dataDir2
-		RunCmdAndVerifyContainsText(t, hubctl+" local clone lakefs://"+repoName+"/"+mainBranch+"/"+vars["PREFIX"]+" "+dataDir2, false, "Successfully cloned lakefs://${REPO}/${REF}/${PREFIX}/ to ${LOCAL_DIR}.", vars)
+		RunCmdAndVerifyContainsText(t, hubctl+" local clone sg://"+repoName+"/"+mainBranch+"/"+vars["PREFIX"]+" "+dataDir2, false, "Successfully cloned sg://${REPO}/${REF}/${PREFIX}/ to ${LOCAL_DIR}.", vars)
 		for _, f := range append(contents, "empty_dir") {
 			p := filepath.Join(dataDir2, strings.TrimPrefix(f, vars["PREFIX"]))
 			_, err = os.Stat(p)
@@ -405,8 +405,8 @@ func TestHubctlLocal_pull(t *testing.T) {
 		"BRANCH":    mainBranch,
 	}
 
-	runCmd(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, false, vars)
-	runCmd(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch, false, false, vars)
+	runCmd(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, false, vars)
+	runCmd(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch, false, false, vars)
 
 	// Not linked
 	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local pull "+tmpDir, false, "hubctl_local_no_index", vars)
@@ -436,8 +436,8 @@ func TestHubctlLocal_pull(t *testing.T) {
 			vars["LOCAL_DIR"] = dataDir
 			vars["BRANCH"] = tt.name
 			vars["REF"] = tt.name
-			runCmd(t, Hubctl()+" branch create lakefs://"+repoName+"/"+vars["BRANCH"]+" --source lakefs://"+repoName+"/"+mainBranch, false, false, vars)
-			RunCmdAndVerifyContainsText(t, Hubctl()+" local clone lakefs://"+repoName+"/"+vars["BRANCH"]+"/"+tt.prefix+" "+dataDir, false, "Successfully cloned lakefs://${REPO}/${REF}${PREFIX}/ to ${LOCAL_DIR}.", vars)
+			runCmd(t, Hubctl()+" branch create sg://"+repoName+"/"+vars["BRANCH"]+" --source sg://"+repoName+"/"+mainBranch, false, false, vars)
+			RunCmdAndVerifyContainsText(t, Hubctl()+" local clone sg://"+repoName+"/"+vars["BRANCH"]+"/"+tt.prefix+" "+dataDir, false, "Successfully cloned sg://${REPO}/${REF}${PREFIX}/ to ${LOCAL_DIR}.", vars)
 
 			// Pull nothing
 			expectedStr := successStr + localGetSummary(local.Tasks{})
@@ -468,9 +468,9 @@ func TestHubctlLocal_pull(t *testing.T) {
 
 			// Modify data
 			vars["FILE_PATH"] = modified[0]
-			runCmd(t, Hubctl()+" fs upload -s files/ro_1k_other lakefs://"+vars["REPO"]+"/"+vars["BRANCH"]+"/"+vars["FILE_PATH"], false, false, vars)
-			runCmd(t, Hubctl()+" fs rm lakefs://"+repoName+"/"+vars["BRANCH"]+"/"+deleted, false, false, vars)
-			runCmd(t, Hubctl()+" commit lakefs://"+vars["REPO"]+"/"+vars["BRANCH"]+" --allow-empty-message -m \" \"", false, false, vars)
+			runCmd(t, Hubctl()+" fs upload -s files/ro_1k_other sg://"+vars["REPO"]+"/"+vars["BRANCH"]+"/"+vars["FILE_PATH"], false, false, vars)
+			runCmd(t, Hubctl()+" fs rm sg://"+repoName+"/"+vars["BRANCH"]+"/"+deleted, false, false, vars)
+			runCmd(t, Hubctl()+" commit sg://"+vars["REPO"]+"/"+vars["BRANCH"]+" --allow-empty-message -m \" \"", false, false, vars)
 			expected = slices.DeleteFunc(expected, func(s string) bool {
 				return s == deleted
 			})
@@ -506,12 +506,12 @@ func TestHubctlLocal_commitProtectedBranch(t *testing.T) {
 		"LOCAL_DIR": dataDir,
 		"FILE":      file,
 	}
-	runCmd(t, Hubctl()+" repo create lakefs://"+vars["REPO"]+" "+vars["STORAGE"], false, false, vars)
-	runCmd(t, Hubctl()+" branch-protect add lakefs://"+vars["REPO"]+"/  '*'", false, false, vars)
+	runCmd(t, Hubctl()+" repo create sg://"+vars["REPO"]+" "+vars["STORAGE"], false, false, vars)
+	runCmd(t, Hubctl()+" branch-protect add sg://"+vars["REPO"]+"/  '*'", false, false, vars)
 	// BranchUpdateMaxInterval - sleep in order to overcome branch update caching
 	time.Sleep(branchProtectTimeout)
 	// Cloning local dir
-	RunCmdAndVerifyContainsText(t, Hubctl()+" local clone lakefs://"+vars["REPO"]+"/"+vars["BRANCH"]+"/ "+vars["LOCAL_DIR"], false, "Successfully cloned lakefs://${REPO}/${REF}/ to ${LOCAL_DIR}.", vars)
+	RunCmdAndVerifyContainsText(t, Hubctl()+" local clone sg://"+vars["REPO"]+"/"+vars["BRANCH"]+"/ "+vars["LOCAL_DIR"], false, "Successfully cloned sg://${REPO}/${REF}/ to ${LOCAL_DIR}.", vars)
 	RunCmdAndVerifyContainsText(t, Hubctl()+" local status "+vars["LOCAL_DIR"], false, "No diff found", vars)
 	// Adding file to local dir
 	fd, err = os.Create(filepath.Join(vars["LOCAL_DIR"], vars["FILE"]))
@@ -541,10 +541,10 @@ func TestHubctlLocal_RmCommitProtectedBranch(t *testing.T) {
 		"LOCAL_DIR": dataDir,
 		"FILE_PATH": file,
 	}
-	runCmd(t, Hubctl()+" repo create lakefs://"+vars["REPO"]+" "+vars["STORAGE"], false, false, vars)
+	runCmd(t, Hubctl()+" repo create sg://"+vars["REPO"]+" "+vars["STORAGE"], false, false, vars)
 
 	// Cloning local dir
-	RunCmdAndVerifyContainsText(t, Hubctl()+" local clone lakefs://"+vars["REPO"]+"/"+vars["BRANCH"]+"/ "+vars["LOCAL_DIR"], false, "Successfully cloned lakefs://${REPO}/${REF}/ to ${LOCAL_DIR}.", vars)
+	RunCmdAndVerifyContainsText(t, Hubctl()+" local clone sg://"+vars["REPO"]+"/"+vars["BRANCH"]+"/ "+vars["LOCAL_DIR"], false, "Successfully cloned sg://${REPO}/${REF}/ to ${LOCAL_DIR}.", vars)
 	RunCmdAndVerifyContainsText(t, Hubctl()+" local status "+vars["LOCAL_DIR"], false, "No diff found", vars)
 
 	// locally add a file and commit
@@ -552,7 +552,7 @@ func TestHubctlLocal_RmCommitProtectedBranch(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, fd.Close())
 	RunCmdAndVerifyContainsText(t, Hubctl()+" local commit "+vars["LOCAL_DIR"]+" -m test", false, "Commit for branch \""+vars["BRANCH"]+"\" completed.", vars)
-	runCmd(t, Hubctl()+" branch-protect add lakefs://"+vars["REPO"]+"/  '*'", false, false, vars)
+	runCmd(t, Hubctl()+" branch-protect add sg://"+vars["REPO"]+"/  '*'", false, false, vars)
 	// BranchUpdateMaxInterval - sleep in order to overcome branch update caching
 	time.Sleep(branchProtectTimeout)
 	// Try delete file from local dir and then commit
@@ -580,8 +580,8 @@ func TestHubctlLocal_commit(t *testing.T) {
 	vars["LOCAL_DIR"] = tmpDir
 	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" local commit -m test "+tmpDir, false, "hubctl_local_no_index", vars)
 
-	runCmd(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, false, vars)
-	runCmd(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch, false, false, vars)
+	runCmd(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, false, vars)
+	runCmd(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch, false, false, vars)
 
 	prefix := "images"
 	objects := []string{
@@ -625,7 +625,6 @@ func TestHubctlLocal_commit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.presign {
-				// Skip due to bug on Azure https://github.com/treeverse/lakeFS/issues/6426
 				requireBlockstoreType(t, block.BlockstoreTypeS3, block.BlockstoreTypeGS)
 			}
 			dataDir, err := os.MkdirTemp(tmpDir, "")
@@ -634,14 +633,14 @@ func TestHubctlLocal_commit(t *testing.T) {
 
 			localCreateTestData(t, vars, append(objects, deleted))
 
-			runCmd(t, Hubctl()+" branch create lakefs://"+repoName+"/"+tt.name+" --source lakefs://"+repoName+"/"+mainBranch, false, false, vars)
+			runCmd(t, Hubctl()+" branch create sg://"+repoName+"/"+tt.name+" --source sg://"+repoName+"/"+mainBranch, false, false, vars)
 
 			vars["LOCAL_DIR"] = dataDir
 			vars["PREFIX"] = ""
 			vars["BRANCH"] = tt.name
 			vars["REF"] = tt.name
 			presign := fmt.Sprintf(" --pre-sign=%v ", tt.presign)
-			RunCmdAndVerifyContainsText(t, Hubctl()+" local clone lakefs://"+repoName+"/"+vars["BRANCH"]+"/"+vars["PREFIX"]+presign+dataDir, false, "Successfully cloned lakefs://${REPO}/${REF}/${PREFIX} to ${LOCAL_DIR}.", vars)
+			RunCmdAndVerifyContainsText(t, Hubctl()+" local clone sg://"+repoName+"/"+vars["BRANCH"]+"/"+vars["PREFIX"]+presign+dataDir, false, "Successfully cloned sg://${REPO}/${REF}/${PREFIX} to ${LOCAL_DIR}.", vars)
 
 			RunCmdAndVerifyContainsText(t, Hubctl()+" local status "+dataDir, false, "No diff found", vars)
 
@@ -687,8 +686,8 @@ func TestHubctlLocal_commit_symlink(t *testing.T) {
 
 	// No repo
 	vars["LOCAL_DIR"] = tmpDir
-	runCmd(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, false, vars)
-	runCmd(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch, false, false, vars)
+	runCmd(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, false, vars)
+	runCmd(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch, false, false, vars)
 
 	tests := []struct {
 		name        string
@@ -712,7 +711,7 @@ func TestHubctlLocal_commit_symlink(t *testing.T) {
 			symlink := filepath.Join(dataDir, "link_file1.txt")
 			require.NoError(t, os.Symlink(file, symlink))
 
-			runCmd(t, Hubctl()+" branch create lakefs://"+repoName+"/"+tt.name+" --source lakefs://"+repoName+"/"+mainBranch, false, false, vars)
+			runCmd(t, Hubctl()+" branch create sg://"+repoName+"/"+tt.name+" --source sg://"+repoName+"/"+mainBranch, false, false, vars)
 
 			vars["LOCAL_DIR"] = dataDir
 			vars["PREFIX"] = ""
@@ -722,7 +721,7 @@ func TestHubctlLocal_commit_symlink(t *testing.T) {
 			if tt.skipSymlink {
 				hubctlCmd = "HUBCTL_LOCAL_SKIP_NON_REGULAR_FILES=true " + hubctlCmd
 			}
-			runCmd(t, hubctlCmd+" local init lakefs://"+repoName+"/"+vars["BRANCH"]+"/"+vars["PREFIX"]+" "+dataDir, false, false, vars)
+			runCmd(t, hubctlCmd+" local init sg://"+repoName+"/"+vars["BRANCH"]+"/"+vars["PREFIX"]+" "+dataDir, false, false, vars)
 			if tt.skipSymlink {
 				RunCmdAndVerifyContainsText(t, hubctlCmd+" local status "+dataDir, false, "local  ║ added  ║ file1.txt", vars)
 			} else {
@@ -761,7 +760,7 @@ func TestHubctlLocal_commit_remote_uncommitted(t *testing.T) {
 		"PREFIX":  "test-data",
 	}
 
-	runCmd(t, fmt.Sprintf("%s repo create lakefs://%s %s", Hubctl(), repoName, storage), false, false, vars)
+	runCmd(t, fmt.Sprintf("%s repo create sg://%s %s", Hubctl(), repoName, storage), false, false, vars)
 
 	testCases := []struct {
 		name              string
@@ -847,17 +846,17 @@ func TestHubctlLocal_commit_remote_uncommitted(t *testing.T) {
 			dataDir, err := os.MkdirTemp(tmpDir, "")
 			require.NoError(t, err)
 
-			runCmd(t, fmt.Sprintf("%s branch create lakefs://%s/%s --source lakefs://%s/%s", Hubctl(), repoName, tc.name, repoName, mainBranch), false, false, vars)
+			runCmd(t, fmt.Sprintf("%s branch create sg://%s/%s --source sg://%s/%s", Hubctl(), repoName, tc.name, repoName, mainBranch), false, false, vars)
 			vars["LOCAL_DIR"] = dataDir
 			vars["BRANCH"] = tc.name
 			vars["REF"] = tc.name
-			RunCmdAndVerifyContainsText(t, fmt.Sprintf("%s local clone lakefs://%s/%s/%s %s", Hubctl(), repoName, vars["BRANCH"], vars["PREFIX"], dataDir), false, "Successfully cloned lakefs://${REPO}/${REF}/${PREFIX}/ to ${LOCAL_DIR}.", vars)
+			RunCmdAndVerifyContainsText(t, fmt.Sprintf("%s local clone sg://%s/%s/%s %s", Hubctl(), repoName, vars["BRANCH"], vars["PREFIX"], dataDir), false, "Successfully cloned sg://${REPO}/${REF}/${PREFIX}/ to ${LOCAL_DIR}.", vars)
 
 			// add remote files
 			if len(tc.uncommittedRemote) > 0 {
 				for _, f := range tc.uncommittedRemote {
 					vars["FILE_PATH"] = f
-					runCmd(t, fmt.Sprintf("%s fs upload -s files/ro_1k lakefs://%s/%s/%s", Hubctl(), vars["REPO"], vars["BRANCH"], vars["FILE_PATH"]), false, false, vars)
+					runCmd(t, fmt.Sprintf("%s fs upload -s files/ro_1k sg://%s/%s/%s", Hubctl(), vars["REPO"], vars["BRANCH"], vars["FILE_PATH"]), false, false, vars)
 
 				}
 			}
@@ -895,8 +894,8 @@ func TestHubctlLocal_interrupted(t *testing.T) {
 		"PREFIX":  "",
 	}
 
-	runCmd(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, false, vars)
-	runCmd(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch, false, false, vars)
+	runCmd(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, false, vars)
+	runCmd(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch, false, false, vars)
 
 	tests := []struct {
 		action          string
@@ -928,13 +927,13 @@ Use "hubctl local pull... --force" to sync with the remote.`,
 			dataDir, err := os.MkdirTemp(tmpDir, "")
 			require.NoError(t, err)
 
-			runCmd(t, Hubctl()+" branch create lakefs://"+repoName+"/"+tt.action+" --source lakefs://"+repoName+"/"+mainBranch, false, false, vars)
+			runCmd(t, Hubctl()+" branch create sg://"+repoName+"/"+tt.action+" --source sg://"+repoName+"/"+mainBranch, false, false, vars)
 
 			vars["LOCAL_DIR"] = dataDir
 			vars["PREFIX"] = ""
 			vars["BRANCH"] = tt.action
 			vars["REF"] = tt.action
-			RunCmdAndVerifyContainsText(t, Hubctl()+" local clone lakefs://"+repoName+"/"+vars["BRANCH"]+"/"+vars["PREFIX"]+" --pre-sign=false "+dataDir, false, "Successfully cloned lakefs://${REPO}/${REF}/${PREFIX} to ${LOCAL_DIR}.", vars)
+			RunCmdAndVerifyContainsText(t, Hubctl()+" local clone sg://"+repoName+"/"+vars["BRANCH"]+"/"+vars["PREFIX"]+" --pre-sign=false "+dataDir, false, "Successfully cloned sg://${REPO}/${REF}/${PREFIX} to ${LOCAL_DIR}.", vars)
 
 			idx, err := local.ReadIndex(dataDir)
 			require.NoError(t, err)

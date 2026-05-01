@@ -113,7 +113,7 @@ func TracingMiddleware(requestIDHeaderName string, fields logging.Fields, traceR
 			startTime := time.Now()
 			responseWriter := newResponseTracingWriter(w, RequestTracingMaxResponseBodySize)
 			r, reqID := RequestID(r)
-			client := GetRequestLakeFSClient(r)
+			client := GetRequestHubClient(r)
 			sourceIP := SourceIP(r)
 
 			// add default fields to context

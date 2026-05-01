@@ -19,7 +19,7 @@ type HookOutputWriter struct {
 
 const (
 	LogOutputExtension  = ".log"
-	LogOutputLocation   = "_lakefs/actions/log"
+	LogOutputLocation   = "_hub/actions/log"
 	runManifestFilename = "run.manifest"
 )
 

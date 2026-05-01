@@ -97,7 +97,6 @@ func nodeFromCommit(commit *graveler.Commit) CommitNode {
 }
 
 // GetGarbageCollectionCommits returns the sets of active commits, according to the repository's garbage collection rules.
-// See https://github.com/treeverse/lakeFS/issues/1932 for more details.
 // Upon completion, the given startingPointIterator is closed.
 func GetGarbageCollectionCommits(ctx context.Context, startingPointIterator *GCStartingPointIterator, commitGetter RepositoryCommitGetter, rules *graveler.GarbageCollectionRules) (map[graveler.CommitID]graveler.MetaRangeID, error) {
 	// From each starting point in the given startingPointIterator, it iterates through its main ancestry.

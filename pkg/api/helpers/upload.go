@@ -82,10 +82,10 @@ func ClientUpload(ctx context.Context, client apigen.ClientWithResponsesInterfac
 		var metaKey string
 		for k, v := range metadata {
 			lowerKey := strings.ToLower(k)
-			if strings.HasPrefix(lowerKey, apiutil.LakeFSMetadataPrefix) {
-				metaKey = apiutil.LakeFSHeaderInternalPrefix + lowerKey[len(apiutil.LakeFSMetadataPrefix):]
+			if strings.HasPrefix(lowerKey, apiutil.HubMetadataPrefix) {
+				metaKey = apiutil.HubHeaderInternalPrefix + lowerKey[len(apiutil.HubMetadataPrefix):]
 			} else {
-				metaKey = apiutil.LakeFSHeaderMetadataPrefix + lowerKey
+				metaKey = apiutil.HubHeaderMetadataPrefix + lowerKey
 			}
 			req.Header.Set(metaKey, v)
 		}

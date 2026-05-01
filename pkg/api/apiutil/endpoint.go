@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-// NormalizeLakeFSEndpoint verify and return the endpoint for the Surogate Hub server
-func NormalizeLakeFSEndpoint(endpoint string) (string, error) {
+// NormalizeHubEndpoint verify and return the endpoint for the Surogate Hub server
+func NormalizeHubEndpoint(endpoint string) (string, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return "", err

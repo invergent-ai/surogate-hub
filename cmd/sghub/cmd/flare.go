@@ -15,11 +15,11 @@ import (
 
 const (
 	flareOutputDirTemplate     = "%s/flare/%s/"
-	flareConfigFileName        = "lakefs-config.yaml"
-	flareDefaultEnvVarFileName = "lakefs-env.txt"
-	flareDefaultZipFileName    = "lakefs-flare.zip"
+	flareConfigFileName        = "sghub-config.yaml"
+	flareDefaultEnvVarFileName = "sghub-env.txt"
+	flareDefaultZipFileName    = "sghub-flare.zip"
 	flareDefaultOutputPath     = "."
-	envVarAppPrefix            = "LAKEFS_"
+	envVarAppPrefix            = "SGHUB_"
 )
 
 var (

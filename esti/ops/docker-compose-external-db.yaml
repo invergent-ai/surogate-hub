@@ -1,28 +1,28 @@
 version: "3"
 services:
-  lakefs:
-    image: "${REPO:-treeverse}/lakefs:${TAG:-dev}"
+  sghub:
+    image: "${REPO:-invergent-ai}/surogate-hub:${TAG:-dev}"
     command: "${COMMAND:-run}"
     ports:
       - "8000:8000"
     volumes:
-      - lakefs-app:/app:ro
+      - sghub-app:/app:ro
     environment:
-      - LAKEFS_AUTH_ENCRYPT_SECRET_KEY=some random secret string
-      - LAKEFS_BLOCKSTORE_TYPE=${LAKEFS_BLOCKSTORE_TYPE:-local}
-      - LAKEFS_BLOCKSTORE_LOCAL_PATH=/home/lakefs
-      - LAKEFS_BLOCKSTORE_LOCAL_IMPORT_ENABLED=true
-      - LAKEFS_BLOCKSTORE_LOCAL_ALLOWED_EXTERNAL_PREFIXES=/tmp
-      - LAKEFS_BLOCKSTORE_S3_CREDENTIALS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - LAKEFS_BLOCKSTORE_S3_CREDENTIALS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - LAKEFS_LOGGING_LEVEL=DEBUG
-      - LAKEFS_STATS_ENABLED=false
-      - LAKEFSACTION_VAR=this_is_actions_var
-      - LAKEFS_DATABASE_TYPE=cosmosdb
-      - LAKEFS_DATABASE_COSMOSDB_ENDPOINT
-      - LAKEFS_DATABASE_COSMOSDB_DATABASE
-      - LAKEFS_DATABASE_COSMOSDB_CONTAINER
-      - LAKEFS_DATABASE_COSMOSDB_KEY
+      - SGHUB_AUTH_ENCRYPT_SECRET_KEY=some random secret string
+      - SGHUB_BLOCKSTORE_TYPE=${SGHUB_BLOCKSTORE_TYPE:-local}
+      - SGHUB_BLOCKSTORE_LOCAL_PATH=/home/sghub
+      - SGHUB_BLOCKSTORE_LOCAL_IMPORT_ENABLED=true
+      - SGHUB_BLOCKSTORE_LOCAL_ALLOWED_EXTERNAL_PREFIXES=/tmp
+      - SGHUB_BLOCKSTORE_S3_CREDENTIALS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - SGHUB_BLOCKSTORE_S3_CREDENTIALS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - SGHUB_LOGGING_LEVEL=DEBUG
+      - SGHUB_STATS_ENABLED=false
+      - SGHUBACTION_VAR=this_is_actions_var
+      - SGHUB_DATABASE_TYPE=cosmosdb
+      - SGHUB_DATABASE_COSMOSDB_ENDPOINT
+      - SGHUB_DATABASE_COSMOSDB_DATABASE
+      - SGHUB_DATABASE_COSMOSDB_CONTAINER
+      - SGHUB_DATABASE_COSMOSDB_KEY
       - AZURE_CLIENT_ID
       - AZURE_CLIENT_SECRET
       - AZURE_TENANT_ID
@@ -30,12 +30,12 @@ services:
   esti:
     image: "golang:1.22.6-alpine3.20"
     links:
-      - lakefs:s3.local.lakefs.io
-      - lakefs:testmultipartupload.s3.local.lakefs.io
-      - lakefs:testmultipartuploadabort.s3.local.lakefs.io
-      - lakefs:testdeleteobjects.s3.local.lakefs.io
-      - lakefs:testmigrate-testpremigratemultipart.s3.local.lakefs.io
-      - lakefs:migrate.s3.local.lakefs.io
+      - sghub:s3.local.sghub.io
+      - sghub:testmultipartupload.s3.local.sghub.io
+      - sghub:testmultipartuploadabort.s3.local.sghub.io
+      - sghub:testdeleteobjects.s3.local.sghub.io
+      - sghub:testmigrate-testpremigratemultipart.s3.local.sghub.io
+      - sghub:migrate.s3.local.sghub.io
     environment:
       - CGO_ENABLED=0
       - AWS_ACCESS_KEY_ID
@@ -44,9 +44,9 @@ services:
       - ESTI_STORAGE_NAMESPACE
       - ESTI_BLOCKSTORE_TYPE
       - ESTI_AWS_ACCESS_KEY_ID
-      - ESTI_SETUP_LAKEFS
+      - ESTI_SETUP_SGHUB
       - ESTI_AWS_SECRET_ACCESS_KEY
-      - ESTI_ENDPOINT_URL=http://lakefs:8000
+      - ESTI_ENDPOINT_URL=http://sghub:8000
       - ESTI_BINARIES_DIR=/app
       - ESTI_GOTEST_FLAGS
       - ESTI_FLAGS
@@ -54,7 +54,7 @@ services:
       - ESTI_FORCE_PATH_STYLE
       - ESTI_AZURE_STORAGE_ACCOUNT
       - ESTI_AZURE_STORAGE_ACCESS_KEY
-    working_dir: /lakefs
+    working_dir: /sghub
     command:
       - /bin/sh
       - -c
@@ -62,14 +62,14 @@ services:
         apk add --no-cache util-linux
         go test -timeout 20m -v $ESTI_GOTEST_FLAGS ./esti --system-tests $ESTI_FLAGS --skip=".*GC"
     volumes:
-      - lakefs-code:/lakefs
-      - lakefs-app:/app:ro
+      - sghub-code:/sghub
+      - sghub-app:/app:ro
 
 volumes:
-  lakefs-code:
+  sghub-code:
     driver: local
     driver_opts:
       o: bind
       type: none
-      device: ${LAKEFS_ROOT:-.}
-  lakefs-app:
+      device: ${SGHUB_ROOT:-.}
+  sghub-app:

@@ -270,7 +270,7 @@ func TestCreatePolicy(t *testing.T) {
 				{
 					Action:   []string{"fs:ReadObject"},
 					Effect:   "allow",
-					Resource: "arn:lakefs:fs:::repository/foo/object/*",
+					Resource: "arn:sghub:fs:::repository/foo/object/*",
 				},
 			},
 		})
@@ -286,7 +286,7 @@ func TestCreatePolicy(t *testing.T) {
 				{
 					Action:   []string{"fsx:ReadObject"},
 					Effect:   "allow",
-					Resource: "arn:lakefs:fs:::repository/foo/object/*",
+					Resource: "arn:sghub:fs:::repository/foo/object/*",
 				},
 			},
 		})

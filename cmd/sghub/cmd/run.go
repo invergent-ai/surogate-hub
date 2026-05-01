@@ -167,7 +167,7 @@ var runCmd = &cobra.Command{
 		// local database lock will make sure that only one instance will run the setup.
 		if (kvParams.Type == local.DriverName || kvParams.Type == mem.DriverName) &&
 			baseCfg.Installation.UserName != "" && baseCfg.Installation.AccessKeyID.SecureValue() != "" && baseCfg.Installation.SecretAccessKey.SecureValue() != "" {
-			setupCreds, err := setupLakeFS(ctx, baseCfg, authMetadataManager, authService, baseCfg.Installation.UserName,
+			setupCreds, err := setupSgHub(ctx, baseCfg, authMetadataManager, authService, baseCfg.Installation.UserName,
 				baseCfg.Installation.AccessKeyID.SecureValue(), baseCfg.Installation.SecretAccessKey.SecureValue())
 			if err != nil {
 				logger.WithError(err).WithField("admin", baseCfg.Installation.UserName).Fatal("Failed to initial setup environment")

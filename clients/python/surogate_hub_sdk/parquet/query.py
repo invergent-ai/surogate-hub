@@ -4,7 +4,7 @@ Two transport modes, auto-selected per instance:
 
 * **Presigned URLs** (preferred) — for remote blockstores (S3/GCS/Azure)
   the hub signs a storage-backend URL and DuckDB's ``httpfs`` range-reads
-  it directly; lakeFS stays out of the hot path.
+  it directly; the hub stays out of the hot path.
 * **fsspec** (automatic fallback) — for backends that can't presign
   (``local`` in dev), we register :class:`~surogate_hub_sdk.fs.SurogateHubFileSystem`
   with the DuckDB connection and hand it ``shub://`` URLs. Every range read

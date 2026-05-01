@@ -171,7 +171,7 @@ type RepositoryData struct {
 	StorageNamespace string                 `protobuf:"bytes,2,opt,name=storage_namespace,json=storageNamespace,proto3" json:"storage_namespace,omitempty"`
 	DefaultBranchId  string                 `protobuf:"bytes,3,opt,name=default_branch_id,json=defaultBranchId,proto3" json:"default_branch_id,omitempty"`
 	CreationDate     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=creation_date,json=creationDate,proto3" json:"creation_date,omitempty"`
-	State            RepositoryState        `protobuf:"varint,5,opt,name=state,proto3,enum=io.treeverse.lakefs.graveler.RepositoryState" json:"state,omitempty"`
+	State            RepositoryState        `protobuf:"varint,5,opt,name=state,proto3,enum=io.invergent.sghub.graveler.RepositoryState" json:"state,omitempty"`
 	InstanceUid      string                 `protobuf:"bytes,6,opt,name=instance_uid,json=instanceUid,proto3" json:"instance_uid,omitempty"`
 	ReadOnly         bool                   `protobuf:"varint,7,opt,name=read_only,json=readOnly,proto3" json:"read_only,omitempty"`
 	StorageId        string                 `protobuf:"bytes,8,opt,name=storage_id,json=storageId,proto3" json:"storage_id,omitempty"`
@@ -570,7 +570,7 @@ type BranchProtectionBlockedActions struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Value []BranchProtectionBlockedAction `protobuf:"varint,1,rep,packed,name=value,proto3,enum=io.treeverse.lakefs.graveler.BranchProtectionBlockedAction" json:"value,omitempty"`
+	Value []BranchProtectionBlockedAction `protobuf:"varint,1,rep,packed,name=value,proto3,enum=io.invergent.sghub.graveler.BranchProtectionBlockedAction" json:"value,omitempty"`
 }
 
 func (x *BranchProtectionBlockedActions) Reset() {
@@ -919,7 +919,7 @@ type PullRequestData struct {
 	unknownFields protoimpl.UnknownFields
 
 	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Status            PullRequestStatus      `protobuf:"varint,2,opt,name=status,proto3,enum=io.treeverse.lakefs.graveler.PullRequestStatus" json:"status,omitempty"`
+	Status            PullRequestStatus      `protobuf:"varint,2,opt,name=status,proto3,enum=io.invergent.sghub.graveler.PullRequestStatus" json:"status,omitempty"`
 	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	Title             string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
 	Author            string                 `protobuf:"bytes,5,opt,name=author,proto3" json:"author,omitempty"`
@@ -1245,42 +1245,42 @@ func file_graveler_graveler_proto_rawDescGZIP() []byte {
 var file_graveler_graveler_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_graveler_graveler_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_graveler_graveler_proto_goTypes = []interface{}{
-	(RepositoryState)(0),                   // 0: io.treeverse.lakefs.graveler.RepositoryState
-	(BranchProtectionBlockedAction)(0),     // 1: io.treeverse.lakefs.graveler.BranchProtectionBlockedAction
-	(PullRequestStatus)(0),                 // 2: io.treeverse.lakefs.graveler.PullRequestStatus
-	(*RepositoryData)(nil),                 // 3: io.treeverse.lakefs.graveler.RepositoryData
-	(*BranchData)(nil),                     // 4: io.treeverse.lakefs.graveler.BranchData
-	(*TagData)(nil),                        // 5: io.treeverse.lakefs.graveler.TagData
-	(*CommitData)(nil),                     // 6: io.treeverse.lakefs.graveler.CommitData
-	(*GarbageCollectionRules)(nil),         // 7: io.treeverse.lakefs.graveler.GarbageCollectionRules
-	(*BranchProtectionBlockedActions)(nil), // 8: io.treeverse.lakefs.graveler.BranchProtectionBlockedActions
-	(*BranchProtectionRules)(nil),          // 9: io.treeverse.lakefs.graveler.BranchProtectionRules
-	(*StagedEntryData)(nil),                // 10: io.treeverse.lakefs.graveler.StagedEntryData
-	(*LinkAddressData)(nil),                // 11: io.treeverse.lakefs.graveler.LinkAddressData
-	(*ImportStatusData)(nil),               // 12: io.treeverse.lakefs.graveler.ImportStatusData
-	(*RepoMetadata)(nil),                   // 13: io.treeverse.lakefs.graveler.RepoMetadata
-	(*PullRequestData)(nil),                // 14: io.treeverse.lakefs.graveler.PullRequestData
-	nil,                                    // 15: io.treeverse.lakefs.graveler.CommitData.MetadataEntry
-	nil,                                    // 16: io.treeverse.lakefs.graveler.GarbageCollectionRules.BranchRetentionDaysEntry
-	nil,                                    // 17: io.treeverse.lakefs.graveler.BranchProtectionRules.BranchPatternToBlockedActionsEntry
-	nil,                                    // 18: io.treeverse.lakefs.graveler.RepoMetadata.MetadataEntry
+	(RepositoryState)(0),                   // 0: io.invergent.sghub.graveler.RepositoryState
+	(BranchProtectionBlockedAction)(0),     // 1: io.invergent.sghub.graveler.BranchProtectionBlockedAction
+	(PullRequestStatus)(0),                 // 2: io.invergent.sghub.graveler.PullRequestStatus
+	(*RepositoryData)(nil),                 // 3: io.invergent.sghub.graveler.RepositoryData
+	(*BranchData)(nil),                     // 4: io.invergent.sghub.graveler.BranchData
+	(*TagData)(nil),                        // 5: io.invergent.sghub.graveler.TagData
+	(*CommitData)(nil),                     // 6: io.invergent.sghub.graveler.CommitData
+	(*GarbageCollectionRules)(nil),         // 7: io.invergent.sghub.graveler.GarbageCollectionRules
+	(*BranchProtectionBlockedActions)(nil), // 8: io.invergent.sghub.graveler.BranchProtectionBlockedActions
+	(*BranchProtectionRules)(nil),          // 9: io.invergent.sghub.graveler.BranchProtectionRules
+	(*StagedEntryData)(nil),                // 10: io.invergent.sghub.graveler.StagedEntryData
+	(*LinkAddressData)(nil),                // 11: io.invergent.sghub.graveler.LinkAddressData
+	(*ImportStatusData)(nil),               // 12: io.invergent.sghub.graveler.ImportStatusData
+	(*RepoMetadata)(nil),                   // 13: io.invergent.sghub.graveler.RepoMetadata
+	(*PullRequestData)(nil),                // 14: io.invergent.sghub.graveler.PullRequestData
+	nil,                                    // 15: io.invergent.sghub.graveler.CommitData.MetadataEntry
+	nil,                                    // 16: io.invergent.sghub.graveler.GarbageCollectionRules.BranchRetentionDaysEntry
+	nil,                                    // 17: io.invergent.sghub.graveler.BranchProtectionRules.BranchPatternToBlockedActionsEntry
+	nil,                                    // 18: io.invergent.sghub.graveler.RepoMetadata.MetadataEntry
 	(*timestamppb.Timestamp)(nil),          // 19: google.protobuf.Timestamp
 }
 var file_graveler_graveler_proto_depIdxs = []int32{
-	19, // 0: io.treeverse.lakefs.graveler.RepositoryData.creation_date:type_name -> google.protobuf.Timestamp
-	0,  // 1: io.treeverse.lakefs.graveler.RepositoryData.state:type_name -> io.treeverse.lakefs.graveler.RepositoryState
-	19, // 2: io.treeverse.lakefs.graveler.CommitData.creation_date:type_name -> google.protobuf.Timestamp
-	15, // 3: io.treeverse.lakefs.graveler.CommitData.metadata:type_name -> io.treeverse.lakefs.graveler.CommitData.MetadataEntry
-	16, // 4: io.treeverse.lakefs.graveler.GarbageCollectionRules.branch_retention_days:type_name -> io.treeverse.lakefs.graveler.GarbageCollectionRules.BranchRetentionDaysEntry
-	1,  // 5: io.treeverse.lakefs.graveler.BranchProtectionBlockedActions.value:type_name -> io.treeverse.lakefs.graveler.BranchProtectionBlockedAction
-	17, // 6: io.treeverse.lakefs.graveler.BranchProtectionRules.branch_pattern_to_blocked_actions:type_name -> io.treeverse.lakefs.graveler.BranchProtectionRules.BranchPatternToBlockedActionsEntry
-	19, // 7: io.treeverse.lakefs.graveler.ImportStatusData.updated_at:type_name -> google.protobuf.Timestamp
-	6,  // 8: io.treeverse.lakefs.graveler.ImportStatusData.commit:type_name -> io.treeverse.lakefs.graveler.CommitData
-	18, // 9: io.treeverse.lakefs.graveler.RepoMetadata.metadata:type_name -> io.treeverse.lakefs.graveler.RepoMetadata.MetadataEntry
-	2,  // 10: io.treeverse.lakefs.graveler.PullRequestData.status:type_name -> io.treeverse.lakefs.graveler.PullRequestStatus
-	19, // 11: io.treeverse.lakefs.graveler.PullRequestData.created_at:type_name -> google.protobuf.Timestamp
-	19, // 12: io.treeverse.lakefs.graveler.PullRequestData.closed_at:type_name -> google.protobuf.Timestamp
-	8,  // 13: io.treeverse.lakefs.graveler.BranchProtectionRules.BranchPatternToBlockedActionsEntry.value:type_name -> io.treeverse.lakefs.graveler.BranchProtectionBlockedActions
+	19, // 0: io.invergent.sghub.graveler.RepositoryData.creation_date:type_name -> google.protobuf.Timestamp
+	0,  // 1: io.invergent.sghub.graveler.RepositoryData.state:type_name -> io.invergent.sghub.graveler.RepositoryState
+	19, // 2: io.invergent.sghub.graveler.CommitData.creation_date:type_name -> google.protobuf.Timestamp
+	15, // 3: io.invergent.sghub.graveler.CommitData.metadata:type_name -> io.invergent.sghub.graveler.CommitData.MetadataEntry
+	16, // 4: io.invergent.sghub.graveler.GarbageCollectionRules.branch_retention_days:type_name -> io.invergent.sghub.graveler.GarbageCollectionRules.BranchRetentionDaysEntry
+	1,  // 5: io.invergent.sghub.graveler.BranchProtectionBlockedActions.value:type_name -> io.invergent.sghub.graveler.BranchProtectionBlockedAction
+	17, // 6: io.invergent.sghub.graveler.BranchProtectionRules.branch_pattern_to_blocked_actions:type_name -> io.invergent.sghub.graveler.BranchProtectionRules.BranchPatternToBlockedActionsEntry
+	19, // 7: io.invergent.sghub.graveler.ImportStatusData.updated_at:type_name -> google.protobuf.Timestamp
+	6,  // 8: io.invergent.sghub.graveler.ImportStatusData.commit:type_name -> io.invergent.sghub.graveler.CommitData
+	18, // 9: io.invergent.sghub.graveler.RepoMetadata.metadata:type_name -> io.invergent.sghub.graveler.RepoMetadata.MetadataEntry
+	2,  // 10: io.invergent.sghub.graveler.PullRequestData.status:type_name -> io.invergent.sghub.graveler.PullRequestStatus
+	19, // 11: io.invergent.sghub.graveler.PullRequestData.created_at:type_name -> google.protobuf.Timestamp
+	19, // 12: io.invergent.sghub.graveler.PullRequestData.closed_at:type_name -> google.protobuf.Timestamp
+	8,  // 13: io.invergent.sghub.graveler.BranchProtectionRules.BranchPatternToBlockedActionsEntry.value:type_name -> io.invergent.sghub.graveler.BranchProtectionBlockedActions
 	14, // [14:14] is the sub-list for method output_type
 	14, // [14:14] is the sub-list for method input_type
 	14, // [14:14] is the sub-list for extension type_name

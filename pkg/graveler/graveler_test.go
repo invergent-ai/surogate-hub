@@ -2260,8 +2260,8 @@ func TestGraveler_PreMergeHook(t *testing.T) {
 	const mergeMessage = "message"
 	mergeMetadata := graveler.Metadata{"key1": "val1"}
 	expectedMergeMetadata := graveler.Metadata{
-		"key1":                   "val1",
-		".lakefs.merge.strategy": "default",
+		"key1":                "val1",
+		".hub.merge.strategy": "default",
 	}
 	tests := []struct {
 		name         string

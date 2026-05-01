@@ -42,7 +42,7 @@ func TestHubctlBasicRepoActions(t *testing.T) {
 		"STORAGE": storage,
 		"BRANCH":  mainBranch,
 	}
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
 
 	// hubctl repo list is expected to show the created repo
 
@@ -62,7 +62,7 @@ func TestHubctlBasicRepoActions(t *testing.T) {
 
 	// Trying to create the same repo again fails and does not change the list
 	newStorage := storage + "/new-storage/"
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+newStorage, false, "hubctl_repo_create_not_unique", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+newStorage, false, "hubctl_repo_create_not_unique", vars)
 
 	// Fails due to the usage of repos for isolation - esti creates repos in parallel and
 	// the output of 'repo list' command cannot be well-defined
@@ -75,7 +75,7 @@ func TestHubctlBasicRepoActions(t *testing.T) {
 	vars["REPO"] = repoName2
 	vars["STORAGE"] = storage2
 	vars["BRANCH"] = notDefaultBranchName
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName2+" "+storage2+" -d "+notDefaultBranchName, true, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName2+" "+storage2+" -d "+notDefaultBranchName, true, "hubctl_repo_create", vars)
 
 	// The generated names are also added to the verification vars map
 
@@ -97,10 +97,10 @@ func TestHubctlBasicRepoActions(t *testing.T) {
 	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" repo delete "+repoName2+" -y", true, "hubctl_repo_delete_malformed_uri.term", vars)
 
 	// Deleting a repo
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo delete lakefs://"+repoName2+" -y", false, "hubctl_repo_delete", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo delete sg://"+repoName2+" -y", false, "hubctl_repo_delete", vars)
 
 	// Trying to delete again
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" repo delete lakefs://"+repoName2+" -y", false, "hubctl_repo_delete_not_found", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" repo delete sg://"+repoName2+" -y", false, "hubctl_repo_delete_not_found", vars)
 
 	// Create repository with sample data
 	repoName3 := generateUniqueRepositoryName()
@@ -110,7 +110,7 @@ func TestHubctlBasicRepoActions(t *testing.T) {
 		"STORAGE": storage3,
 		"BRANCH":  mainBranch,
 	}
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName3+" "+storage3+" --sample-data", false, "hubctl_repo_create_sample", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName3+" "+storage3+" --sample-data", false, "hubctl_repo_create_sample", vars)
 }
 
 func TestHubctlRepoCreateWithStorageID(t *testing.T) {
@@ -122,8 +122,8 @@ func TestHubctlRepoCreateWithStorageID(t *testing.T) {
 		"STORAGE": storage,
 		"BRANCH":  mainBranch,
 	}
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage+" --storage-id storage1", false, "hubctl_repo_create_with_storage_id", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage+" --storage-id \"\"", false, "hubctl_repo_create", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage+" --storage-id storage1", false, "hubctl_repo_create_with_storage_id", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage+" --storage-id \"\"", false, "hubctl_repo_create", vars)
 }
 
 func TestHubctlPreSignUpload(t *testing.T) {
@@ -134,16 +134,16 @@ func TestHubctlPreSignUpload(t *testing.T) {
 		"STORAGE": storage,
 		"BRANCH":  mainBranch,
 	}
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch, false, "hubctl_log_initial", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch, false, "hubctl_log_initial", vars)
 
 	filePath := "ro_1k.1"
 	t.Run("upload from file", func(t *testing.T) {
 		vars["FILE_PATH"] = filePath
-		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+filePath+" --pre-sign", false, "hubctl_fs_upload", vars)
+		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+filePath+" --pre-sign", false, "hubctl_fs_upload", vars)
 	})
 	t.Run("upload from stdin", func(t *testing.T) {
-		RunCmdAndVerifySuccessWithFile(t, "cat files/ro_1k | "+Hubctl()+" fs upload -s - lakefs://"+repoName+"/"+mainBranch+"/"+filePath+" --pre-sign", false, "hubctl_fs_upload", vars)
+		RunCmdAndVerifySuccessWithFile(t, "cat files/ro_1k | "+Hubctl()+" fs upload -s - sg://"+repoName+"/"+mainBranch+"/"+filePath+" --pre-sign", false, "hubctl_fs_upload", vars)
 	})
 }
 
@@ -155,35 +155,35 @@ func TestHubctlCommit(t *testing.T) {
 		"STORAGE": storage,
 		"BRANCH":  mainBranch,
 	}
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch, false, "hubctl_log_404", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch, false, "hubctl_log_initial", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch, false, "hubctl_log_404", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch, false, "hubctl_log_initial", vars)
 
 	filePath := "ro_1k.1"
 	vars["FILE_PATH"] = filePath
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+filePath, false, "hubctl_fs_upload", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch, false, "hubctl_log_initial", vars)
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch, false, "hubctl_commit_no_msg", vars)
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+" -m \" \"", false, "hubctl_commit_no_msg", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+" --allow-empty-message -m \" \"", false, "hubctl_commit_with_empty_msg_flag", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+filePath, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch, false, "hubctl_log_initial", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch, false, "hubctl_commit_no_msg", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+" -m \" \"", false, "hubctl_commit_no_msg", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+" --allow-empty-message -m \" \"", false, "hubctl_commit_with_empty_msg_flag", vars)
 	filePath = "ro_1k.2"
 	vars["FILE_PATH"] = filePath
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+filePath, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+filePath, false, "hubctl_fs_upload", vars)
 	commitMessage := "esti_hubctl:TestCommit"
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch, false, "hubctl_log_with_commit", vars)
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+" -m \"esti_hubctl:should fail\"", false, "hubctl_commit_no_change", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch, false, "hubctl_log_with_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch, false, "hubctl_log_with_commit", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+" -m \"esti_hubctl:should fail\"", false, "hubctl_commit_no_change", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch, false, "hubctl_log_with_commit", vars)
 
 	filePath = "ro_1k.3"
 	vars["FILE_PATH"] = filePath
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+filePath, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+filePath, false, "hubctl_fs_upload", vars)
 	commitMessage = "commit with a very old date"
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+` -m "`+commitMessage+`" --epoch-time-seconds 0`, false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+` -m "`+commitMessage+`" --epoch-time-seconds 0`, false, "hubctl_commit", vars)
 	vars["DATE"] = time.Unix(0, 0).String()
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch+" --amount 1", false, "hubctl_log_with_commit_custom_date", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch+" --amount 1", false, "hubctl_log_with_commit_custom_date", vars)
 
 	// verify the latest commit using 'show commit'
 	ctx := context.Background()
@@ -196,8 +196,8 @@ func TestHubctlCommit(t *testing.T) {
 	}
 	lastCommitID := getBranchResp.JSON200.CommitId
 
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" show commit lakefs://"+repoName+"/"+lastCommitID, false, "hubctl_show_commit", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" show commit lakefs://"+repoName+"/"+lastCommitID+" --show-meta-range-id", false, "hubctl_show_commit_metarange", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" show commit sg://"+repoName+"/"+lastCommitID, false, "hubctl_show_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" show commit sg://"+repoName+"/"+lastCommitID+" --show-meta-range-id", false, "hubctl_show_commit_metarange", vars)
 }
 
 func TestHubctlBranchAndTagValidation(t *testing.T) {
@@ -212,24 +212,24 @@ func TestHubctlBranchAndTagValidation(t *testing.T) {
 		"TAG":     validTagName,
 	}
 	invalidBranchName := "my.invalid.branch"
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
 	vars["BRANCH"] = mainBranch
 	vars["FILE_PATH"] = "a/b/c"
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/a/b/c", false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/a/b/c", false, "hubctl_fs_upload", vars)
 	commitMessage := "another file update on main branch"
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
 
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" branch create lakefs://"+repoName+"/"+invalidBranchName+" --source lakefs://"+repoName+"/"+mainBranch, false, "hubctl_branch_create_invalid", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" tag create lakefs://"+repoName+"/"+validTagName+" lakefs://"+repoName+"/"+mainBranch, false, "hubctl_tag_create", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" branch create sg://"+repoName+"/"+invalidBranchName+" --source sg://"+repoName+"/"+mainBranch, false, "hubctl_branch_create_invalid", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" tag create sg://"+repoName+"/"+validTagName+" sg://"+repoName+"/"+mainBranch, false, "hubctl_tag_create", vars)
 	vars["TAG"] = "tag2"
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" tag create lakefs://"+repoName+"/"+vars["TAG"]+" lakefs://"+repoName+"/"+mainBranch+"~1", false, "hubctl_tag_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" tag create sg://"+repoName+"/"+vars["TAG"]+" sg://"+repoName+"/"+mainBranch+"~1", false, "hubctl_tag_create", vars)
 	vars["TAG"] = "tag3"
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" tag create lakefs://"+repoName+"/"+vars["TAG"]+" lakefs://"+repoName+"/"+mainBranch+"^1", false, "hubctl_tag_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" tag create sg://"+repoName+"/"+vars["TAG"]+" sg://"+repoName+"/"+mainBranch+"^1", false, "hubctl_tag_create", vars)
 	vars["TAG"] = "tag4"
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" tag create lakefs://"+repoName+"/"+vars["TAG"]+" lakefs://"+repoName+"/"+mainBranch+"~", false, "hubctl_tag_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" tag create sg://"+repoName+"/"+vars["TAG"]+" sg://"+repoName+"/"+mainBranch+"~", false, "hubctl_tag_create", vars)
 
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" tag show lakefs://"+repoName+"/"+vars["TAG"], false, "hubctl_tag_show", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" tag show sg://"+repoName+"/"+vars["TAG"], false, "hubctl_tag_show", vars)
 }
 
 func TestHubctlMerge(t *testing.T) {
@@ -243,13 +243,13 @@ func TestHubctlMerge(t *testing.T) {
 	filePath1 := "file1"
 
 	// create repo with 'main' branch
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
 	// upload 'file1' and commit
 	vars["FILE_PATH"] = filePath1
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+filePath1, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+filePath1, false, "hubctl_fs_upload", vars)
 	commitMessage := "first commit to main"
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
 
 	// create new feature branch
 	featureBranch := "feature"
@@ -260,22 +260,22 @@ func TestHubctlMerge(t *testing.T) {
 		"DEST_BRANCH":   featureBranch,
 	}
 
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch create lakefs://"+repoName+"/"+featureBranch+" --source lakefs://"+repoName+"/"+mainBranch, false, "hubctl_branch_create", featureBranchVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch create sg://"+repoName+"/"+featureBranch+" --source sg://"+repoName+"/"+mainBranch, false, "hubctl_branch_create", featureBranchVars)
 
 	// update 'file1' on feature branch and commit
 	vars["FILE_PATH"] = filePath1
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k_other lakefs://"+repoName+"/"+featureBranch+"/"+filePath1, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k_other sg://"+repoName+"/"+featureBranch+"/"+filePath1, false, "hubctl_fs_upload", vars)
 	commitMessage = "file update on feature branch"
 	vars["BRANCH"] = featureBranch
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+featureBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+featureBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
 
 	// update 'file2' on 'main' and commit
 	vars["FILE_PATH"] = filePath2
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k_other lakefs://"+repoName+"/"+featureBranch+"/"+filePath2, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k_other sg://"+repoName+"/"+featureBranch+"/"+filePath2, false, "hubctl_fs_upload", vars)
 	commitMessage = "another file update on main branch"
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+featureBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+featureBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
 
 	cases := []struct {
 		Name   string
@@ -294,7 +294,7 @@ func TestHubctlMerge(t *testing.T) {
 				"DEST_BRANCH":   destBranch,
 			}
 			// create new destBranch from main, before the additions to main.
-			RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch create lakefs://"+repoName+"/"+destBranch+" --source lakefs://"+repoName+"/"+mainBranch, false, "hubctl_branch_create", destBranchVars)
+			RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch create sg://"+repoName+"/"+destBranch+" --source sg://"+repoName+"/"+mainBranch, false, "hubctl_branch_create", destBranchVars)
 
 			commitMessage = "merge commit"
 			vars["MESSAGE"] = commitMessage
@@ -304,13 +304,13 @@ func TestHubctlMerge(t *testing.T) {
 				squash = "--squash"
 			}
 			destBranchVars["SOURCE_BRANCH"] = featureBranch
-			RunCmdAndVerifySuccessWithFile(t, Hubctl()+" merge lakefs://"+repoName+"/"+featureBranch+" lakefs://"+repoName+"/"+destBranch+" -m '"+commitMessage+"' --meta "+meta+" "+squash, false, "hubctl_merge_success", destBranchVars)
+			RunCmdAndVerifySuccessWithFile(t, Hubctl()+" merge sg://"+repoName+"/"+featureBranch+" sg://"+repoName+"/"+destBranch+" -m '"+commitMessage+"' --meta "+meta+" "+squash, false, "hubctl_merge_success", destBranchVars)
 
 			golden := "hubctl_merge_with_commit"
 			if tc.Squash {
 				golden = "hubctl_merge_with_squashed_commit"
 			}
-			RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log --amount 1 lakefs://"+repoName+"/"+destBranch, false, golden, vars)
+			RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log --amount 1 sg://"+repoName+"/"+destBranch, false, golden, vars)
 		})
 	}
 }
@@ -342,64 +342,64 @@ func TestHubctlMergeAndStrategies(t *testing.T) {
 	}
 
 	// create repo with 'main' branch
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
 
 	// upload 'file1' and commit
 	vars["FILE_PATH"] = filePath1
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+filePath1, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+filePath1, false, "hubctl_fs_upload", vars)
 	commitMessage := "first commit to main"
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
 
 	// create new branch 'feature'
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch create lakefs://"+repoName+"/"+featureBranch+" --source lakefs://"+repoName+"/"+mainBranch, false, "hubctl_branch_create", branchVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch create sg://"+repoName+"/"+featureBranch+" --source sg://"+repoName+"/"+mainBranch, false, "hubctl_branch_create", branchVars)
 
 	// update 'file1' on 'main' and commit
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k_other lakefs://"+repoName+"/"+mainBranch+"/"+filePath1, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k_other sg://"+repoName+"/"+mainBranch+"/"+filePath1, false, "hubctl_fs_upload", vars)
 	commitMessage = "file update on main branch"
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
 
 	// upload 'file2' on 'feature', delete 'file1' and commit
 	vars["BRANCH"] = featureBranch
 	vars["FILE_PATH"] = filePath2
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+featureBranch+"/"+filePath2, false, "hubctl_fs_upload", vars)
-	RunCmdAndVerifySuccess(t, Hubctl()+" fs rm lakefs://"+repoName+"/"+featureBranch+"/"+filePath1, false, "", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+featureBranch+"/"+filePath2, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccess(t, Hubctl()+" fs rm sg://"+repoName+"/"+featureBranch+"/"+filePath1, false, "", vars)
 	commitMessage = "delete file on feature branch"
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+featureBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+featureBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
 
 	// try to merge - conflict
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" merge lakefs://"+repoName+"/"+mainBranch+" lakefs://"+repoName+"/"+featureBranch, false, "hubctl_merge_conflict", branchVars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs ls lakefs://"+repoName+"/"+featureBranch+"/", false, "hubctl_fs_ls_1_file", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" merge sg://"+repoName+"/"+mainBranch+" sg://"+repoName+"/"+featureBranch, false, "hubctl_merge_conflict", branchVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs ls sg://"+repoName+"/"+featureBranch+"/", false, "hubctl_fs_ls_1_file", vars)
 
 	// merge with strategy 'source-wins' - updated 'file1' from main is added to 'feature'
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" merge lakefs://"+repoName+"/"+mainBranch+" lakefs://"+repoName+"/"+featureBranch+" --strategy source-wins", false, "hubctl_merge_success", branchVars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs ls lakefs://"+repoName+"/"+featureBranch+"/", false, "hubctl_fs_ls_2_file", lsVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" merge sg://"+repoName+"/"+mainBranch+" sg://"+repoName+"/"+featureBranch+" --strategy source-wins", false, "hubctl_merge_success", branchVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs ls sg://"+repoName+"/"+featureBranch+"/", false, "hubctl_fs_ls_2_file", lsVars)
 
 	// update 'file1' again on 'main' and commit
 	vars["BRANCH"] = mainBranch
 	vars["FILE_PATH"] = filePath1
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+filePath1, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+filePath1, false, "hubctl_fs_upload", vars)
 	commitMessage = "another file update on main branch"
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
 
 	// delete 'file1' on 'feature' again, and commit
 	vars["BRANCH"] = featureBranch
-	RunCmdAndVerifySuccess(t, Hubctl()+" fs rm lakefs://"+repoName+"/"+featureBranch+"/"+filePath1, false, "", vars)
+	RunCmdAndVerifySuccess(t, Hubctl()+" fs rm sg://"+repoName+"/"+featureBranch+"/"+filePath1, false, "", vars)
 	commitMessage = "delete file on feature branch again"
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+featureBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+featureBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
 
 	// try to merge - conflict
 	vars["FILE_PATH"] = filePath2
-	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" merge lakefs://"+repoName+"/"+mainBranch+" lakefs://"+repoName+"/"+featureBranch, false, "hubctl_merge_conflict", branchVars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs ls lakefs://"+repoName+"/"+featureBranch+"/", false, "hubctl_fs_ls_1_file", vars)
+	RunCmdAndVerifyFailureWithFile(t, Hubctl()+" merge sg://"+repoName+"/"+mainBranch+" sg://"+repoName+"/"+featureBranch, false, "hubctl_merge_conflict", branchVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs ls sg://"+repoName+"/"+featureBranch+"/", false, "hubctl_fs_ls_1_file", vars)
 
 	// merge with strategy 'dest-wins' - 'file1' is not added to 'feature'
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" merge lakefs://"+repoName+"/"+mainBranch+" lakefs://"+repoName+"/"+featureBranch+" --strategy dest-wins", false, "hubctl_merge_success", branchVars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs ls lakefs://"+repoName+"/"+featureBranch+"/", false, "hubctl_fs_ls_1_file", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" merge sg://"+repoName+"/"+mainBranch+" sg://"+repoName+"/"+featureBranch+" --strategy dest-wins", false, "hubctl_merge_success", branchVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs ls sg://"+repoName+"/"+featureBranch+"/", false, "hubctl_fs_ls_1_file", vars)
 }
 
 func TestHubctlLogNoMergesWithCommitsAndMerges(t *testing.T) {
@@ -424,33 +424,33 @@ func TestHubctlLogNoMergesWithCommitsAndMerges(t *testing.T) {
 	filePath2 := "file2"
 
 	// create repo with 'main' branch
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
 
 	// upload 'file1' and commit
 	vars["FILE_PATH"] = filePath1
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+filePath1, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+filePath1, false, "hubctl_fs_upload", vars)
 	commitMessage := "first commit to main"
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
 
 	// create new branch 'feature'
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch create lakefs://"+repoName+"/"+featureBranch+" --source lakefs://"+repoName+"/"+mainBranch, false, "hubctl_branch_create", branchVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch create sg://"+repoName+"/"+featureBranch+" --source sg://"+repoName+"/"+mainBranch, false, "hubctl_branch_create", branchVars)
 
 	// upload 'file2' to feature branch and commit
 	branchVars["FILE_PATH"] = filePath2
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+featureBranch+"/"+filePath2, false, "hubctl_fs_upload", branchVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+featureBranch+"/"+filePath2, false, "hubctl_fs_upload", branchVars)
 	commitMessage = "second commit to feature branch"
 	branchVars["MESSAGE"] = commitMessage
 	vars["SECOND_MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+featureBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", branchVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+featureBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", branchVars)
 
 	// merge feature into main
 	branchVars["SOURCE_BRANCH"] = featureBranch
 	branchVars["DEST_BRANCH"] = mainBranch
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" merge lakefs://"+repoName+"/"+featureBranch+" lakefs://"+repoName+"/"+mainBranch, false, "hubctl_merge_success", branchVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" merge sg://"+repoName+"/"+featureBranch+" sg://"+repoName+"/"+mainBranch, false, "hubctl_merge_success", branchVars)
 
 	// log the commits without merges
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch+" --no-merges", false, "hubctl_log_no_merges", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch+" --no-merges", false, "hubctl_log_no_merges", vars)
 }
 
 func TestHubctlLogNoMergesAndAmount(t *testing.T) {
@@ -475,33 +475,33 @@ func TestHubctlLogNoMergesAndAmount(t *testing.T) {
 	filePath2 := "file2"
 
 	// create repo with 'main' branch
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
 
 	// upload 'file1' and commit
 	vars["FILE_PATH"] = filePath1
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+filePath1, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+filePath1, false, "hubctl_fs_upload", vars)
 	commitMessage := "first commit to main"
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
 
 	// create new branch 'feature'
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch create lakefs://"+repoName+"/"+featureBranch+" --source lakefs://"+repoName+"/"+mainBranch, false, "hubctl_branch_create", branchVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch create sg://"+repoName+"/"+featureBranch+" --source sg://"+repoName+"/"+mainBranch, false, "hubctl_branch_create", branchVars)
 
 	// upload 'file2' to feature branch and commit
 	branchVars["FILE_PATH"] = filePath2
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+featureBranch+"/"+filePath2, false, "hubctl_fs_upload", branchVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+featureBranch+"/"+filePath2, false, "hubctl_fs_upload", branchVars)
 	commitMessage = "second commit to feature branch"
 	branchVars["MESSAGE"] = commitMessage
 	vars["SECOND_MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+featureBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", branchVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+featureBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", branchVars)
 
 	// merge feature into main
 	branchVars["SOURCE_BRANCH"] = featureBranch
 	branchVars["DEST_BRANCH"] = mainBranch
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" merge lakefs://"+repoName+"/"+featureBranch+" lakefs://"+repoName+"/"+mainBranch, false, "hubctl_merge_success", branchVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" merge sg://"+repoName+"/"+featureBranch+" sg://"+repoName+"/"+mainBranch, false, "hubctl_merge_success", branchVars)
 
 	// log the commits without merges
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log lakefs://"+repoName+"/"+mainBranch+" --no-merges --amount=2", false, "hubctl_log_no_merges_amount", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" log sg://"+repoName+"/"+mainBranch+" --no-merges --amount=2", false, "hubctl_log_no_merges_amount", vars)
 }
 
 func TestHubctlAnnotate(t *testing.T) {
@@ -514,62 +514,62 @@ func TestHubctlAnnotate(t *testing.T) {
 	}
 
 	// create fresh repo with 'main' branch
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
 
 	path := "aaa/bbb/ccc"
 	vars["FILE_PATH"] = path
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
 	path = "aaa/bbb/ddd"
 	vars["FILE_PATH"] = path
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
 	commitMessage := "commit #1"
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
 	path = "aaa/bbb/eee"
 	vars["FILE_PATH"] = path
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
 	commitMessage = "commit #2"
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
 	path = "aaa/fff/ggg"
 	vars["FILE_PATH"] = path
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
 	path = "aaa/fff/ggh"
 	vars["FILE_PATH"] = path
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
 	path = "aaa/hhh"
 	vars["FILE_PATH"] = path
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
 	path = "iii/jjj"
 	vars["FILE_PATH"] = path
 	commitMessage = "commit #3"
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
 	path = "iii/kkk/lll"
 	vars["FILE_PATH"] = path
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
 	path = "mmm"
 	vars["FILE_PATH"] = path
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+path, false, "hubctl_fs_upload", vars)
 	commitMessage = "commit #4"
 	vars["MESSAGE"] = commitMessage
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+mainBranch+" -m \""+commitMessage+"\"", false, "hubctl_commit", vars)
 
 	delete(vars, "FILE_PATH")
 	delete(vars, "MESSAGE")
 
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate lakefs://"+repoName+"/"+mainBranch+"/", false, "hubctl_annotate_top", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate lakefs://"+repoName+"/"+mainBranch+"/ --recursive", false, "hubctl_annotate_top_recursive", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate sg://"+repoName+"/"+mainBranch+"/", false, "hubctl_annotate_top", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate sg://"+repoName+"/"+mainBranch+"/ --recursive", false, "hubctl_annotate_top_recursive", vars)
 
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate lakefs://"+repoName+"/"+mainBranch+"/a", false, "hubctl_annotate_a", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate lakefs://"+repoName+"/"+mainBranch+"/a --recursive", false, "hubctl_annotate_a_recursive", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate lakefs://"+repoName+"/"+mainBranch+"/aa", false, "hubctl_annotate_a", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate lakefs://"+repoName+"/"+mainBranch+"/aaa", false, "hubctl_annotate_a", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate lakefs://"+repoName+"/"+mainBranch+"/aaa/ --recursive", false, "hubctl_annotate_a_recursive", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate sg://"+repoName+"/"+mainBranch+"/a", false, "hubctl_annotate_a", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate sg://"+repoName+"/"+mainBranch+"/a --recursive", false, "hubctl_annotate_a_recursive", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate sg://"+repoName+"/"+mainBranch+"/aa", false, "hubctl_annotate_a", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate sg://"+repoName+"/"+mainBranch+"/aaa", false, "hubctl_annotate_a", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate sg://"+repoName+"/"+mainBranch+"/aaa/ --recursive", false, "hubctl_annotate_a_recursive", vars)
 
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate lakefs://"+repoName+"/"+mainBranch+"/iii/kkk/l", false, "hubctl_annotate_iiikkklll", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate lakefs://"+repoName+"/"+mainBranch+"/iii/kkk/l --recursive", false, "hubctl_annotate_iiikkklll", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate sg://"+repoName+"/"+mainBranch+"/iii/kkk/l", false, "hubctl_annotate_iiikkklll", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" annotate sg://"+repoName+"/"+mainBranch+"/iii/kkk/l --recursive", false, "hubctl_annotate_iiikkklll", vars)
 }
 
 func TestHubctlAuthUsers(t *testing.T) {
@@ -613,22 +613,22 @@ func TestHubctlFsDownload(t *testing.T) {
 		"STORAGE": storage,
 		"BRANCH":  mainBranch,
 	}
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
 
 	// upload some data
 	const totalObjects = 5
 	for i := 0; i < totalObjects; i++ {
 		vars["FILE_PATH"] = fmt.Sprintf("data/ro/ro_1k.%d", i)
-		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"], false, "hubctl_fs_upload", vars)
+		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"], false, "hubctl_fs_upload", vars)
 	}
 	t.Run("single", func(t *testing.T) {
-		src := "lakefs://" + repoName + "/" + mainBranch + "/data/ro/ro_1k.0"
+		src := "sg://" + repoName + "/" + mainBranch + "/data/ro/ro_1k.0"
 		sanitizedResult := runCmd(t, Hubctl()+" fs download "+src, false, false, map[string]string{})
 		require.Contains(t, sanitizedResult, "download: "+src)
 	})
 
 	t.Run("single_with_dest", func(t *testing.T) {
-		src := "lakefs://" + repoName + "/" + mainBranch + "/data/ro/ro_1k.0"
+		src := "sg://" + repoName + "/" + mainBranch + "/data/ro/ro_1k.0"
 		dest := t.TempDir()
 		sanitizedResult := runCmd(t, Hubctl()+" fs download "+src+" "+dest, false, false, map[string]string{})
 		require.Contains(t, sanitizedResult, "download: "+src)
@@ -646,7 +646,7 @@ func TestHubctlFsDownload(t *testing.T) {
 			require.NoError(t, os.Chdir(currDir))
 		}()
 
-		src := "lakefs://" + repoName + "/" + mainBranch + "/data/ro/ro_1k.0"
+		src := "sg://" + repoName + "/" + mainBranch + "/data/ro/ro_1k.0"
 		sanitizedResult := runCmd(t, Hubctl()+" fs download "+src+" ./", false, false, map[string]string{})
 		require.Contains(t, sanitizedResult, "download: "+src)
 		require.Contains(t, sanitizedResult, dest+"/ro_1k.0")
@@ -654,11 +654,11 @@ func TestHubctlFsDownload(t *testing.T) {
 
 	t.Run("single_with_recursive_flag", func(t *testing.T) {
 		dest := t.TempDir()
-		RunCmdAndVerifyFailure(t, Hubctl()+" fs download lakefs://"+repoName+"/"+mainBranch+"/data/ro/ro_1k.0 "+dest+" --recursive", false, "No objects in path: lakefs://${REPO}/${BRANCH}/data/ro/ro_1k.0/\nError executing command.\n", vars)
+		RunCmdAndVerifyFailure(t, Hubctl()+" fs download sg://"+repoName+"/"+mainBranch+"/data/ro/ro_1k.0 "+dest+" --recursive", false, "No objects in path: sg://${REPO}/${BRANCH}/data/ro/ro_1k.0/\nError executing command.\n", vars)
 	})
 
 	t.Run("directory", func(t *testing.T) {
-		sanitizedResult := runCmd(t, Hubctl()+" fs download --parallelism 1 lakefs://"+repoName+"/"+mainBranch+"/data --recursive", false, false, map[string]string{})
+		sanitizedResult := runCmd(t, Hubctl()+" fs download --parallelism 1 sg://"+repoName+"/"+mainBranch+"/data --recursive", false, false, map[string]string{})
 		require.Contains(t, sanitizedResult, "download ro/ro_1k.0")
 		require.Contains(t, sanitizedResult, "download ro/ro_1k.1")
 		require.Contains(t, sanitizedResult, "download ro/ro_1k.2")
@@ -672,7 +672,7 @@ func TestHubctlFsDownload(t *testing.T) {
 
 	t.Run("directory_with_dest", func(t *testing.T) {
 		dest := t.TempDir()
-		sanitizedResult := runCmd(t, Hubctl()+" fs download --parallelism 1 lakefs://"+repoName+"/"+mainBranch+"/data "+dest+" --recursive", false, false, map[string]string{})
+		sanitizedResult := runCmd(t, Hubctl()+" fs download --parallelism 1 sg://"+repoName+"/"+mainBranch+"/data "+dest+" --recursive", false, false, map[string]string{})
 		require.Contains(t, sanitizedResult, "download ro/ro_1k.0")
 		require.Contains(t, sanitizedResult, "download ro/ro_1k.1")
 		require.Contains(t, sanitizedResult, "download ro/ro_1k.2")
@@ -685,7 +685,7 @@ func TestHubctlFsDownload(t *testing.T) {
 	})
 
 	t.Run("directory_without_recursive", func(t *testing.T) {
-		RunCmdAndVerifyFailure(t, Hubctl()+" fs download --parallelism 1 lakefs://"+repoName+"/"+mainBranch+"/data", false, "download failed: request failed: 404 Not Found\nError executing command.\n", map[string]string{})
+		RunCmdAndVerifyFailure(t, Hubctl()+" fs download --parallelism 1 sg://"+repoName+"/"+mainBranch+"/data", false, "download failed: request failed: 404 Not Found\nError executing command.\n", map[string]string{})
 	})
 }
 
@@ -697,25 +697,25 @@ func TestHubctlFsUpload(t *testing.T) {
 		"STORAGE": storage,
 		"BRANCH":  mainBranch,
 	}
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
 
 	t.Run("single_file", func(t *testing.T) {
 		vars["FILE_PATH"] = "data/ro/ro_1k.0"
-		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload lakefs://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"]+" -s files/ro_1k", false, "hubctl_fs_upload", vars)
+		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload sg://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"]+" -s files/ro_1k", false, "hubctl_fs_upload", vars)
 	})
 	t.Run("single_file_with_separator", func(t *testing.T) {
 		vars["FILE_PATH"] = "data/ro/ro_1k.0_sep/"
-		RunCmdAndVerifyFailure(t, Hubctl()+" fs upload lakefs://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"]+" -s files/ro_1k", false, "target path is not a valid URI\nError executing command.\n", vars)
+		RunCmdAndVerifyFailure(t, Hubctl()+" fs upload sg://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"]+" -s files/ro_1k", false, "target path is not a valid URI\nError executing command.\n", vars)
 	})
 	t.Run("single_file_with_recursive", func(t *testing.T) {
 		vars["FILE_PATH"] = "data/ro/ro_1k.0"
-		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload --recursive -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"]+" -s files/ro_1k", false, "hubctl_fs_upload", vars)
+		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload --recursive -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"]+" -s files/ro_1k", false, "hubctl_fs_upload", vars)
 	})
 	t.Run("dir", func(t *testing.T) {
 		vars["FILE_PATH"] = "data/ro/"
-		sanitizedResult := runCmd(t, Hubctl()+" fs upload --recursive -s files/ lakefs://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"], false, false, vars)
+		sanitizedResult := runCmd(t, Hubctl()+" fs upload --recursive -s files/ sg://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"], false, false, vars)
 
-		require.Contains(t, sanitizedResult, "diff 'local://files/' <--> 'lakefs://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"]+"'...")
+		require.Contains(t, sanitizedResult, "diff 'local://files/' <--> 'sg://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"]+"'...")
 		require.Contains(t, sanitizedResult, "upload ro_1k")
 		require.Contains(t, sanitizedResult, "upload ro_1k_other")
 		require.Contains(t, sanitizedResult, "upload upload_file.txt")
@@ -726,18 +726,18 @@ func TestHubctlFsUpload(t *testing.T) {
 	})
 	t.Run("exist_dir", func(t *testing.T) {
 		vars["FILE_PATH"] = "data/ro/"
-		sanitizedResult := runCmd(t, Hubctl()+" fs upload --recursive -s files/ lakefs://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"], false, false, vars)
-		require.Contains(t, sanitizedResult, "diff 'local://files/' <--> 'lakefs://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"]+"'...")
+		sanitizedResult := runCmd(t, Hubctl()+" fs upload --recursive -s files/ sg://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"], false, false, vars)
+		require.Contains(t, sanitizedResult, "diff 'local://files/' <--> 'sg://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"]+"'...")
 		require.Contains(t, sanitizedResult, "Upload Summary:")
 		require.Contains(t, sanitizedResult, "No changes")
 	})
 	t.Run("dir_without_recursive", func(t *testing.T) {
 		vars["FILE_PATH"] = "data/ro/"
-		RunCmdAndVerifyFailure(t, Hubctl()+" fs upload -s files/ lakefs://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"], false, "target path is not a valid URI\nError executing command.\n", vars)
+		RunCmdAndVerifyFailure(t, Hubctl()+" fs upload -s files/ sg://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"], false, "target path is not a valid URI\nError executing command.\n", vars)
 	})
 	t.Run("dir_without_recursive_to_file", func(t *testing.T) {
 		vars["FILE_PATH"] = "data/ro/1.txt"
-		RunCmdAndVerifyFailureContainsText(t, Hubctl()+" fs upload -s files/ lakefs://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"], false, "read files/: is a directory", vars)
+		RunCmdAndVerifyFailureContainsText(t, Hubctl()+" fs upload -s files/ sg://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"], false, "read files/: is a directory", vars)
 	})
 }
 
@@ -760,13 +760,13 @@ func TestHubctlFsUpload_protectedBranch(t *testing.T) {
 		"STORAGE": storage,
 		"BRANCH":  mainBranch,
 	}
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+vars["REPO"]+" "+vars["STORAGE"], false, "hubctl_repo_create", vars)
-	runCmd(t, Hubctl()+" branch-protect add lakefs://"+vars["REPO"]+"/  '*'", false, false, vars)
-	RunCmdAndVerifyContainsText(t, Hubctl()+" branch-protect list lakefs://"+vars["REPO"]+"/ ", false, "*", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+vars["REPO"]+" "+vars["STORAGE"], false, "hubctl_repo_create", vars)
+	runCmd(t, Hubctl()+" branch-protect add sg://"+vars["REPO"]+"/  '*'", false, false, vars)
+	RunCmdAndVerifyContainsText(t, Hubctl()+" branch-protect list sg://"+vars["REPO"]+"/ ", false, "*", vars)
 	// BranchUpdateMaxInterval - sleep in order to overcome branch update caching
 	time.Sleep(branchProtectTimeout)
 	vars["FILE_PATH"] = "ro_1k.0"
-	RunCmdAndVerifyFailure(t, Hubctl()+" fs upload lakefs://"+vars["REPO"]+"/"+vars["BRANCH"]+"/"+vars["FILE_PATH"]+" -s files/ro_1k", false, "cannot write to protected branch\n403 Forbidden\n", vars)
+	RunCmdAndVerifyFailure(t, Hubctl()+" fs upload sg://"+vars["REPO"]+"/"+vars["BRANCH"]+"/"+vars["FILE_PATH"]+" -s files/ro_1k", false, "cannot write to protected branch\n403 Forbidden\n", vars)
 }
 
 func TestHubctlFsRm_protectedBranch(t *testing.T) {
@@ -778,15 +778,15 @@ func TestHubctlFsRm_protectedBranch(t *testing.T) {
 		"BRANCH":  mainBranch,
 	}
 
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+vars["REPO"]+" "+vars["STORAGE"], false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+vars["REPO"]+" "+vars["STORAGE"], false, "hubctl_repo_create", vars)
 	vars["FILE_PATH"] = "ro_1k.0"
-	runCmd(t, Hubctl()+" fs upload lakefs://"+vars["REPO"]+"/"+vars["BRANCH"]+"/"+vars["FILE_PATH"]+" -s files/ro_1k", false, false, vars)
-	runCmd(t, Hubctl()+" commit lakefs://"+vars["REPO"]+"/"+vars["BRANCH"]+" --allow-empty-message -m \" \"", false, false, vars)
-	runCmd(t, Hubctl()+" branch-protect add lakefs://"+vars["REPO"]+"/  '*'", false, false, vars)
+	runCmd(t, Hubctl()+" fs upload sg://"+vars["REPO"]+"/"+vars["BRANCH"]+"/"+vars["FILE_PATH"]+" -s files/ro_1k", false, false, vars)
+	runCmd(t, Hubctl()+" commit sg://"+vars["REPO"]+"/"+vars["BRANCH"]+" --allow-empty-message -m \" \"", false, false, vars)
+	runCmd(t, Hubctl()+" branch-protect add sg://"+vars["REPO"]+"/  '*'", false, false, vars)
 	// BranchUpdateMaxInterval - sleep in order to overcome branch update caching
 	time.Sleep(branchProtectTimeout)
-	RunCmdAndVerifyContainsText(t, Hubctl()+" branch-protect list lakefs://"+vars["REPO"]+"/ ", false, "*", vars)
-	RunCmdAndVerifyFailure(t, Hubctl()+" fs rm lakefs://"+vars["REPO"]+"/"+vars["BRANCH"]+"/"+vars["FILE_PATH"], false, "cannot write to protected branch\n403 Forbidden\n", vars)
+	RunCmdAndVerifyContainsText(t, Hubctl()+" branch-protect list sg://"+vars["REPO"]+"/ ", false, "*", vars)
+	RunCmdAndVerifyFailure(t, Hubctl()+" fs rm sg://"+vars["REPO"]+"/"+vars["BRANCH"]+"/"+vars["FILE_PATH"], false, "cannot write to protected branch\n403 Forbidden\n", vars)
 }
 
 func TestHubctlFsPresign(t *testing.T) {
@@ -801,17 +801,17 @@ func TestHubctlFsPresign(t *testing.T) {
 		"STORAGE": storage,
 		"BRANCH":  mainBranch,
 	}
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
 
 	// upload some data
 	const totalObjects = 2
 	for i := 0; i < totalObjects; i++ {
 		vars["FILE_PATH"] = fmt.Sprintf("data/ro/ro_1k.%d", i)
-		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"], false, "hubctl_fs_upload", vars)
+		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"], false, "hubctl_fs_upload", vars)
 	}
 
 	goldenFile := "hubctl_fs_presign"
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs presign lakefs://"+repoName+"/"+mainBranch+"/data/ro/ro_1k.0", false, goldenFile, map[string]string{
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs presign sg://"+repoName+"/"+mainBranch+"/data/ro/ro_1k.0", false, goldenFile, map[string]string{
 		"REPO":    repoName,
 		"STORAGE": storage,
 		"BRANCH":  mainBranch,
@@ -828,13 +828,13 @@ func TestHubctlFsStat(t *testing.T) {
 		"STORAGE": storage,
 		"BRANCH":  mainBranch,
 	}
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
 
 	// upload some data
 	const totalObjects = 2
 	for i := 0; i < totalObjects; i++ {
 		vars["FILE_PATH"] = fmt.Sprintf("data/ro/ro_1k.%d", i)
-		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"], false, "hubctl_fs_upload", vars)
+		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"], false, "hubctl_fs_upload", vars)
 	}
 
 	t.Run("default", func(t *testing.T) {
@@ -846,7 +846,7 @@ func TestHubctlFsStat(t *testing.T) {
 				goldenFile = "hubctl_stat_pre_sign_with_expiry"
 			}
 		}
-		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs stat lakefs://"+repoName+"/"+mainBranch+"/data/ro/ro_1k.0", false, goldenFile, map[string]string{
+		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs stat sg://"+repoName+"/"+mainBranch+"/data/ro/ro_1k.0", false, goldenFile, map[string]string{
 			"REPO":    repoName,
 			"STORAGE": storage,
 			"BRANCH":  mainBranch,
@@ -856,7 +856,7 @@ func TestHubctlFsStat(t *testing.T) {
 	})
 
 	t.Run("no_presign", func(t *testing.T) {
-		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs stat --pre-sign=false lakefs://"+repoName+"/"+mainBranch+"/data/ro/ro_1k.0", false, "hubctl_stat_default", map[string]string{
+		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs stat --pre-sign=false sg://"+repoName+"/"+mainBranch+"/data/ro/ro_1k.0", false, "hubctl_stat_default", map[string]string{
 			"REPO":    repoName,
 			"STORAGE": storage,
 			"BRANCH":  mainBranch,
@@ -874,7 +874,7 @@ func TestHubctlFsStat(t *testing.T) {
 		if config.BlockstoreType == "s3" {
 			goldenFile = "hubctl_stat_pre_sign_with_expiry"
 		}
-		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs stat --pre-sign lakefs://"+repoName+"/"+mainBranch+"/data/ro/ro_1k.1", false, goldenFile, map[string]string{
+		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs stat --pre-sign sg://"+repoName+"/"+mainBranch+"/data/ro/ro_1k.1", false, goldenFile, map[string]string{
 			"REPO":    repoName,
 			"STORAGE": storage,
 			"BRANCH":  mainBranch,
@@ -899,10 +899,10 @@ func TestHubctlImport(t *testing.T) {
 	}
 
 	const from = "s3://hubctl-ingest-test-data"
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" import --no-progress --from "+from+" --to lakefs://"+repoName+"/"+mainBranch+"/to/", false, "hubctl_import", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" import --no-progress --from "+from+" --to lakefs://"+repoName+"/"+mainBranch+"/too/ --message \"import too\"", false, "hubctl_import_with_message", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" import --no-progress --from "+from+" --to lakefs://"+repoName+"/"+mainBranch+"/another/import/ --merge", false, "hubctl_import_and_merge", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" import --no-progress --from "+from+" --to sg://"+repoName+"/"+mainBranch+"/to/", false, "hubctl_import", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" import --no-progress --from "+from+" --to sg://"+repoName+"/"+mainBranch+"/too/ --message \"import too\"", false, "hubctl_import_with_message", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" import --no-progress --from "+from+" --to sg://"+repoName+"/"+mainBranch+"/another/import/ --merge", false, "hubctl_import_and_merge", vars)
 }
 
 func TestHubctlCherryPick(t *testing.T) {
@@ -913,7 +913,7 @@ func TestHubctlCherryPick(t *testing.T) {
 		"STORAGE": storage,
 		"BRANCH":  mainBranch,
 	}
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
 
 	branch1 := "branch1"
 	branch2 := "branch2"
@@ -922,47 +922,47 @@ func TestHubctlCherryPick(t *testing.T) {
 		"SOURCE_BRANCH": mainBranch,
 		"DEST_BRANCH":   "branch1",
 	}
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch create lakefs://"+repoName+"/"+branch1+" --source lakefs://"+repoName+"/"+mainBranch, false, "hubctl_branch_create", branchVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch create sg://"+repoName+"/"+branch1+" --source sg://"+repoName+"/"+mainBranch, false, "hubctl_branch_create", branchVars)
 	branchVars["DEST_BRANCH"] = "branch2"
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch create lakefs://"+repoName+"/"+branch2+" --source lakefs://"+repoName+"/"+mainBranch, false, "hubctl_branch_create", branchVars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch create sg://"+repoName+"/"+branch2+" --source sg://"+repoName+"/"+mainBranch, false, "hubctl_branch_create", branchVars)
 
 	// upload some data
 	vars["BRANCH"] = branch1
 	for i := 1; i <= 3; i++ {
 		vars["FILE_PATH"] = fmt.Sprintf("data/%d", i)
 		commitMessage := fmt.Sprintf("commit %d", i)
-		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+branch1+"/"+vars["FILE_PATH"], false, "hubctl_fs_upload", vars)
+		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+branch1+"/"+vars["FILE_PATH"], false, "hubctl_fs_upload", vars)
 
 		commitVars := map[string]string{
 			"REPO":    repoName,
 			"BRANCH":  branch1,
 			"MESSAGE": commitMessage,
 		}
-		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+branch1+` -m "`+commitMessage+`" --epoch-time-seconds 0`, false, "hubctl_commit", commitVars)
+		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+branch1+` -m "`+commitMessage+`" --epoch-time-seconds 0`, false, "hubctl_commit", commitVars)
 	}
 
 	vars["BRANCH"] = branch2
 	for i := 3; i <= 5; i++ {
 		vars["FILE_PATH"] = fmt.Sprintf("data/%d", i)
 		commitMessage := fmt.Sprintf("commit %d", i)
-		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k_other lakefs://"+repoName+"/"+branch2+"/"+vars["FILE_PATH"], false, "hubctl_fs_upload", vars)
+		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" fs upload -s files/ro_1k_other sg://"+repoName+"/"+branch2+"/"+vars["FILE_PATH"], false, "hubctl_fs_upload", vars)
 
 		commitVars := map[string]string{
 			"REPO":    repoName,
 			"BRANCH":  branch2,
 			"MESSAGE": commitMessage,
 		}
-		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit lakefs://"+repoName+"/"+branch2+` -m "`+commitMessage+`" --epoch-time-seconds 0`, false, "hubctl_commit", commitVars)
+		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" commit sg://"+repoName+"/"+branch2+` -m "`+commitMessage+`" --epoch-time-seconds 0`, false, "hubctl_commit", commitVars)
 	}
 
 	t.Run("success", func(t *testing.T) {
-		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" cherry-pick lakefs://"+repoName+"/"+branch1+" lakefs://"+repoName+"/"+mainBranch, false, "hubctl_cherry_pick", map[string]string{
+		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" cherry-pick sg://"+repoName+"/"+branch1+" sg://"+repoName+"/"+mainBranch, false, "hubctl_cherry_pick", map[string]string{
 			"REPO":    repoName,
 			"BRANCH":  mainBranch,
 			"MESSAGE": "commit 3",
 		})
 
-		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" cherry-pick lakefs://"+repoName+"/"+branch2+"~1"+" lakefs://"+repoName+"/"+mainBranch, false, "hubctl_cherry_pick", map[string]string{
+		RunCmdAndVerifySuccessWithFile(t, Hubctl()+" cherry-pick sg://"+repoName+"/"+branch2+"~1"+" sg://"+repoName+"/"+mainBranch, false, "hubctl_cherry_pick", map[string]string{
 			"REPO":    repoName,
 			"BRANCH":  mainBranch,
 			"MESSAGE": "commit 4",
@@ -970,8 +970,8 @@ func TestHubctlCherryPick(t *testing.T) {
 	})
 
 	t.Run("conflict", func(t *testing.T) {
-		RunCmdAndVerifyFailure(t, Hubctl()+" cherry-pick lakefs://"+repoName+"/"+branch1+" lakefs://"+repoName+"/"+branch2, false,
-			fmt.Sprintf("Branch: lakefs://%s/%s\nupdate branch: conflict found\n409 Conflict\n", repoName, branch2), nil)
+		RunCmdAndVerifyFailure(t, Hubctl()+" cherry-pick sg://"+repoName+"/"+branch1+" sg://"+repoName+"/"+branch2, false,
+			fmt.Sprintf("Branch: sg://%s/%s\nupdate branch: conflict found\n409 Conflict\n", repoName, branch2), nil)
 	})
 }
 
@@ -985,20 +985,20 @@ func TestHubctlBisect(t *testing.T) {
 	}
 
 	r := strings.NewReplacer("{hubctl}", Hubctl(), "{repo}", repoName, "{storage}", storage, "{branch}", "main")
-	runCmd(t, r.Replace("{hubctl} repo create lakefs://{repo} {storage}"), false, false, nil)
+	runCmd(t, r.Replace("{hubctl} repo create sg://{repo} {storage}"), false, false, nil)
 
 	// generate to test data
 	for i := 0; i < 5; i++ {
 		obj := fmt.Sprintf("file%d", i)
-		runCmd(t, r.Replace("{hubctl} fs upload -s files/ro_1k lakefs://{repo}/{branch}/")+obj, false, false, nil)
+		runCmd(t, r.Replace("{hubctl} fs upload -s files/ro_1k sg://{repo}/{branch}/")+obj, false, false, nil)
 		commit := fmt.Sprintf("commit%d", i)
-		runCmd(t, r.Replace("{hubctl} commit lakefs://{repo}/{branch} -m ")+commit, false, false, nil)
+		runCmd(t, r.Replace("{hubctl} commit sg://{repo}/{branch} -m ")+commit, false, false, nil)
 	}
 	RunCmdAndVerifyFailureWithFile(t, r.Replace("{hubctl} bisect good"), false,
 		"hubctl_bisect_good_invalid", vars)
 	RunCmdAndVerifyFailureWithFile(t, r.Replace("{hubctl} bisect bad"), false,
 		"hubctl_bisect_bad_invalid", vars)
-	RunCmdAndVerifySuccessWithFile(t, r.Replace("{hubctl} bisect start lakefs://{repo}/{branch} lakefs://{repo}/{branch}~5"), false,
+	RunCmdAndVerifySuccessWithFile(t, r.Replace("{hubctl} bisect start sg://{repo}/{branch} sg://{repo}/{branch}~5"), false,
 		"hubctl_bisect_start", vars)
 	RunCmdAndVerifySuccessWithFile(t, r.Replace("{hubctl} bisect view"), false,
 		"hubctl_bisect_view1", vars)
@@ -1026,7 +1026,7 @@ func TestHubctlUsage(t *testing.T) {
 	}
 
 	r := strings.NewReplacer("{hubctl}", Hubctl(), "{repo}", repoName, "{storage}", storage, "{branch}", "main")
-	runCmd(t, r.Replace("{hubctl} repo create lakefs://{repo} {storage}"), false, false, nil)
+	runCmd(t, r.Replace("{hubctl} repo create sg://{repo} {storage}"), false, false, nil)
 	runCmd(t, r.Replace("{hubctl} repo list"), false, false, nil)
 	RunCmdAndVerifyFailureWithFile(t, r.Replace("{hubctl} usage summary"), false, "hubctl_usage_summary", vars)
 }
@@ -1039,10 +1039,10 @@ func TestHubctlBranchProtection(t *testing.T) {
 		"STORAGE": storage,
 		"BRANCH":  mainBranch,
 	}
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
 
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch-protect add lakefs://"+repoName+" "+mainBranch, false, "hubctl_empty", vars)
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch-protect list lakefs://"+repoName, false, "hubctl_branch_protection_list.term", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch-protect add sg://"+repoName+" "+mainBranch, false, "hubctl_empty", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" branch-protect list sg://"+repoName, false, "hubctl_branch_protection_list.term", vars)
 }
 
 // TestHubctlAbuse runs a series of abuse commands to test the functionality of hubctl abuse (not in order to test how Surogate Hub handles abuse)
@@ -1054,14 +1054,14 @@ func TestHubctlAbuse(t *testing.T) {
 		"STORAGE": storage,
 		"BRANCH":  mainBranch,
 	}
-	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create lakefs://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
+	RunCmdAndVerifySuccessWithFile(t, Hubctl()+" repo create sg://"+repoName+" "+storage, false, "hubctl_repo_create", vars)
 
 	fromFile := ""
 	const totalObjects = 5
 	for i := 0; i < totalObjects; i++ {
 		vars["FILE_PATH"] = fmt.Sprintf("data/ro/ro_1k.%d", i)
 		fromFile = fromFile + vars["FILE_PATH"] + "\n"
-		runCmd(t, Hubctl()+" fs upload -s files/ro_1k lakefs://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"], false, false, vars)
+		runCmd(t, Hubctl()+" fs upload -s files/ro_1k sg://"+repoName+"/"+mainBranch+"/"+vars["FILE_PATH"], false, false, vars)
 	}
 	f, err := os.CreateTemp("", "abuse-read")
 	require.NoError(t, err)
@@ -1115,8 +1115,8 @@ func TestHubctlAbuse(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.Cmd, func(t *testing.T) {
-			lakefsURI := "lakefs://" + repoName + "/" + mainBranch
-			RunCmdAndVerifyContainsText(t, fmt.Sprintf("%s abuse %s %s --amount %d %s", Hubctl(), tt.Cmd, lakefsURI, tt.Amount, tt.AdditionalArgs), false, "errors: 0", map[string]string{})
+			hubURI := "sg://" + repoName + "/" + mainBranch
+			RunCmdAndVerifyContainsText(t, fmt.Sprintf("%s abuse %s %s --amount %d %s", Hubctl(), tt.Cmd, hubURI, tt.Amount, tt.AdditionalArgs), false, "errors: 0", map[string]string{})
 		})
 	}
 }

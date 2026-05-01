@@ -179,12 +179,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push lakefs image
+      - name: Build & push sghub image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
-          target: lakefs
+          target: sghub
           platforms: linux/amd64
           push: true
           build-args: |

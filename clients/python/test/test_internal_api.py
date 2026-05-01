@@ -74,8 +74,8 @@ class TestInternalApi(unittest.TestCase):
         """
         pass
 
-    def test_get_lake_fs_version(self) -> None:
-        """Test case for get_lake_fs_version
+    def test_get_hub_version(self) -> None:
+        """Test case for get_hub_version
 
         """
         pass

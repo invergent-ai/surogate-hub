@@ -5,7 +5,7 @@ import "github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
 const (
 	// DefaultDirectoryPermissions Octal representation of default folder permissions
 	DefaultDirectoryPermissions = 0o040777
-	ClientMtimeMetadataKey      = apiutil.LakeFSMetadataPrefix + "client-mtime"
+	ClientMtimeMetadataKey      = apiutil.HubMetadataPrefix + "client-mtime"
 )
 
 type SyncFlags struct {

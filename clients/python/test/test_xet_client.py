@@ -96,10 +96,10 @@ class FakeObjectsApi:
         )
 
 
-class FakeLakeFSClient:
+class FakeHubClient:
     def __init__(self):
         configuration = Configuration(
-            host="http://lakefs.example/api/v1",
+            host="http://sghub.example/api/v1",
             username="access",
             password="secret",
         )
@@ -109,26 +109,26 @@ class FakeLakeFSClient:
 
 
 class TestXETClient(unittest.TestCase):
-    def test_lakefs_client_accepts_default_pool_threads_argument(self):
-        from surogate_hub_sdk.client import LakeFSClient
+    def test_hub_client_accepts_default_pool_threads_argument(self):
+        from surogate_hub_sdk.client import HubClient
 
         configuration = Configuration(
-            host="http://lakefs.example/api/v1",
+            host="http://sghub.example/api/v1",
             username="access",
             password="secret",
         )
 
-        client = LakeFSClient(configuration=configuration)
+        client = HubClient(configuration=configuration)
 
-        self.assertEqual(client._api.configuration.host, "http://lakefs.example/api/v1")
+        self.assertEqual(client._api.configuration.host, "http://sghub.example/api/v1")
 
     def test_upload_file_uploads_to_hf_xet_and_links_physical_address(self):
         from surogate_hub_sdk.xet import XETClient
 
         hf_xet = FakeHfXet()
-        lakefs = FakeLakeFSClient()
+        sghub = FakeHubClient()
         client = XETClient(
-            lakefs,
+            sghub,
             hf_xet_module=hf_xet,
             token_info=("token", 4102444800),
             token_refresher=lambda: ("token", 4102444800),
@@ -145,9 +145,9 @@ class TestXETClient(unittest.TestCase):
         )
 
         self.assertEqual(result.file_hash, "file-hash")
-        self.assertEqual(hf_xet.upload_calls[0]["endpoint"], "http://lakefs.example/xet")
+        self.assertEqual(hf_xet.upload_calls[0]["endpoint"], "http://sghub.example/xet")
         self.assertEqual(hf_xet.upload_calls[0]["file_paths"], ["/tmp/model.bin"])
-        link = lakefs.staging_api.calls[0]
+        link = sghub.staging_api.calls[0]
         self.assertEqual(link["repository"], "repo")
         self.assertEqual(link["branch"], "main")
         self.assertEqual(link["path"], "models/model.bin")
@@ -162,9 +162,9 @@ class TestXETClient(unittest.TestCase):
         from surogate_hub_sdk.xet import XETClient
 
         hf_xet = FakeHfXet()
-        lakefs = FakeLakeFSClient()
+        sghub = FakeHubClient()
         client = XETClient(
-            lakefs,
+            sghub,
             hf_xet_module=hf_xet,
             token_info=("token", 4102444800),
             token_refresher=lambda: ("token", 4102444800),
@@ -173,13 +173,13 @@ class TestXETClient(unittest.TestCase):
         result = client.download_file("repo", "main", "models/model.bin", "/tmp/out.bin")
 
         self.assertEqual(result, "/tmp/out.bin")
-        self.assertEqual(lakefs.objects_api.calls[0], {
+        self.assertEqual(sghub.objects_api.calls[0], {
             "repository": "repo",
             "ref": "main",
             "path": "models/model.bin",
         })
         call = hf_xet.download_calls[0]
-        self.assertEqual(call["endpoint"], "http://lakefs.example/xet")
+        self.assertEqual(call["endpoint"], "http://sghub.example/xet")
         self.assertEqual(call["files"][0].destination_path, "/tmp/out.bin")
         self.assertEqual(call["files"][0].hash, "file-hash")
         self.assertEqual(call["files"][0].file_size, 123)

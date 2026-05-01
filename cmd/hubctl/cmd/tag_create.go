@@ -13,7 +13,7 @@ const tagCreateRequiredArgs = 2
 var tagCreateCmd = &cobra.Command{
 	Use:     "create <tag URI> <commit URI>",
 	Short:   "Create a new tag in a repository",
-	Example: "hubctl tag create lakefs://example-repo/example-tag lakefs://example-repo/2397cc9a9d04c20a4e5739b42c1dd3d8ba655c0b3a3b974850895a13d8bf9917",
+	Example: "hubctl tag create sg://example-repo/example-tag sg://example-repo/2397cc9a9d04c20a4e5739b42c1dd3d8ba655c0b3a3b974850895a13d8bf9917",
 	Args:    cobra.ExactArgs(tagCreateRequiredArgs),
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) >= tagCreateRequiredArgs {

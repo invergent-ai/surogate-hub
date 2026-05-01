@@ -284,15 +284,15 @@ func file_actions_actions_proto_rawDescGZIP() []byte {
 
 var file_actions_actions_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_actions_actions_proto_goTypes = []interface{}{
-	(*RunResultData)(nil),         // 0: io.treeverse.lakefs.actions.RunResultData
-	(*TaskResultData)(nil),        // 1: io.treeverse.lakefs.actions.TaskResultData
+	(*RunResultData)(nil),         // 0: io.invergent.sghub.actions.RunResultData
+	(*TaskResultData)(nil),        // 1: io.invergent.sghub.actions.TaskResultData
 	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
 }
 var file_actions_actions_proto_depIdxs = []int32{
-	2, // 0: io.treeverse.lakefs.actions.RunResultData.start_time:type_name -> google.protobuf.Timestamp
-	2, // 1: io.treeverse.lakefs.actions.RunResultData.end_time:type_name -> google.protobuf.Timestamp
-	2, // 2: io.treeverse.lakefs.actions.TaskResultData.start_time:type_name -> google.protobuf.Timestamp
-	2, // 3: io.treeverse.lakefs.actions.TaskResultData.end_time:type_name -> google.protobuf.Timestamp
+	2, // 0: io.invergent.sghub.actions.RunResultData.start_time:type_name -> google.protobuf.Timestamp
+	2, // 1: io.invergent.sghub.actions.RunResultData.end_time:type_name -> google.protobuf.Timestamp
+	2, // 2: io.invergent.sghub.actions.TaskResultData.start_time:type_name -> google.protobuf.Timestamp
+	2, // 3: io.invergent.sghub.actions.TaskResultData.end_time:type_name -> google.protobuf.Timestamp
 	4, // [4:4] is the sub-list for method output_type
 	4, // [4:4] is the sub-list for method input_type
 	4, // [4:4] is the sub-list for extension type_name

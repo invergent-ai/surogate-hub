@@ -227,11 +227,11 @@ func inDockerMetadata() string {
 }
 
 func getInstrumentationMetadata() string {
-	lakefsAccessKeyID := viper.GetString("installation.access_key_id")
+	hubAccessKeyID := viper.GetString("installation.access_key_id")
 	switch {
-	case strings.HasSuffix(lakefsAccessKeyID, "LKFSSAMPLES"):
+	case strings.HasSuffix(hubAccessKeyID, "LKFSSAMPLES"):
 		return InstrumentationSamplesRepo
-	case strings.HasSuffix(lakefsAccessKeyID, "QUICKSTART"):
+	case strings.HasSuffix(hubAccessKeyID, "QUICKSTART"):
 		return InstrumentationQuickstart
 	default:
 		return InstrumentationRun
@@ -240,8 +240,8 @@ func getInstrumentationMetadata() string {
 
 func (m *KVMetadataManager) GetMetadata(ctx context.Context) (map[string]string, error) {
 	metadata := make(map[string]string)
-	metadata["lakefs_version"] = m.version
-	metadata["lakefs_kv_type"] = m.kvType
+	metadata["hub_version"] = m.version
+	metadata["hub_kv_type"] = m.kvType
 	metadata["golang_version"] = runtime.Version()
 	metadata["architecture"] = runtime.GOARCH
 	metadata["os"] = runtime.GOOS

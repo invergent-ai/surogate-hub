@@ -393,8 +393,7 @@ func (s *Store) Scan(ctx context.Context, partitionKey []byte, options kv.ScanOp
 		limit:        int(firstScanLimit),
 	}
 
-	// Setting the limit just for the first scan to avoid issues like
-	// https://github.com/treeverse/lakeFS/issues/7864
+	// Setting the limit just for the first scan to avoid issues
 	it.runQuery(it.limit)
 	if it.err != nil {
 		err := it.err

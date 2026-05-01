@@ -584,7 +584,7 @@ func setupTest(t *testing.T) (*mock.MockOutputWriter, *gomock.Controller, *httpt
 			}
 
 			require.NoError(t, json.Unmarshal(data, &req))
-			require.True(t, strings.HasPrefix(req.DagRunID, "lakeFS_hook_"+expectedID))
+			require.True(t, strings.HasPrefix(req.DagRunID, "hub_hook_"+expectedID))
 
 			if withConf {
 				require.Equal(t, req.Conf["some"], "additional_conf")

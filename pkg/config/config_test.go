@@ -86,9 +86,9 @@ func pushEnv(key, value string) func() {
 
 func TestConfig_EnvironmentVariables(t *testing.T) {
 	const dbString = "not://a/database"
-	defer pushEnv("LAKEFS_DATABASE_POSTGRES_CONNECTION_STRING", dbString)()
+	defer pushEnv("SGHUB_DATABASE_POSTGRES_CONNECTION_STRING", dbString)()
 
-	viper.SetEnvPrefix("LAKEFS")
+	viper.SetEnvPrefix("SGHUB")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_")) // support nested config
 	// read in environment variables
 	viper.AutomaticEnv()
@@ -153,7 +153,7 @@ func TestConfig_BuildBlockAdapter(t *testing.T) {
 }
 
 func TestConfig_JSONLogger(t *testing.T) {
-	logfile := "/tmp/lakefs_json_logger_test.log"
+	logfile := "/tmp/hub_json_logger_test.log"
 	_ = os.Remove(logfile)
 	_, err := newConfigFromFile("testdata/valid_json_logger_config.yaml")
 	testutil.Must(t, err)

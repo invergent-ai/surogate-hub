@@ -37,8 +37,6 @@ var (
 	svc         *s3.Client
 	server      *webhookServer
 
-	metaClientJarPath  string
-	sparkImageTag      string
 	repositoriesToKeep arrayFlags
 	groupsToKeep       arrayFlags
 	usersToKeep        arrayFlags
@@ -218,7 +216,7 @@ func deleteAllPolicies(ctx context.Context, client apigen.ClientWithResponsesInt
 
 func TestMain(m *testing.M) {
 	systemTests := flag.Bool("system-tests", false, "Run system tests")
-	useLocalCredentials := flag.Bool("use-local-credentials", false, "Generate local API key during `lakefs setup'")
+	useLocalCredentials := flag.Bool("use-local-credentials", false, "Generate local API key during `sghub setup'")
 	adminAccessKeyID := flag.String("admin-access-key-id", DefaultAdminAccessKeyID, "Surogate Hub Admin access key ID")
 	adminSecretAccessKey := flag.String("admin-secret-access-key", DefaultAdminSecretAccessKey, "Surogate Hub Admin secret access key")
 	cleanupEnv := flag.Bool("cleanup-env-pre-run", false, "Clean repositories, groups, users and polices before running esti tests")
@@ -226,8 +224,6 @@ func TestMain(m *testing.M) {
 	flag.Var(&groupsToKeep, "group-to-keep", "Groups to keep in case of pre-run cleanup")
 	flag.Var(&usersToKeep, "user-to-keep", "Users to keep in case of pre-run cleanup")
 	flag.Var(&policiesToKeep, "policy-to-keep", "Policies to keep in case of pre-run cleanup")
-	flag.StringVar(&metaClientJarPath, "metaclient-jar", "", "Location of the Surogate Hub metadata client jar")
-	flag.StringVar(&sparkImageTag, "spark-image-tag", "", "Tag of Bitnami Spark image")
 	flag.Parse()
 
 	if !*systemTests {
@@ -246,8 +242,8 @@ func TestMain(m *testing.M) {
 
 	logger, client, svc, endpointURL = testutil.SetupTestingEnv(&params)
 
-	setupLakeFS := viper.GetBool("setup_lakefs")
-	if !setupLakeFS && *cleanupEnv {
+	setupSgHub := viper.GetBool("setup_sghub")
+	if !setupSgHub && *cleanupEnv {
 		logger.WithFields(logging.Fields{
 			"repositories": repositoriesToKeep,
 			"groups":       groupsToKeep,

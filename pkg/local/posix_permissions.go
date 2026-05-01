@@ -15,7 +15,7 @@ import (
 const (
 	// DefaultFilePermissions Octal representation of default file permissions
 	DefaultFilePermissions      = 0o100666
-	POSIXPermissionsMetadataKey = apiutil.LakeFSMetadataPrefix + "posix-permissions"
+	POSIXPermissionsMetadataKey = apiutil.HubMetadataPrefix + "posix-permissions"
 )
 
 var (

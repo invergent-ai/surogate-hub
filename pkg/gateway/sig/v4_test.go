@@ -312,7 +312,7 @@ func TestUnsignedPayload(t *testing.T) {
 		testID     = "AKIAIOSFODNN7EXAMPLE"
 		testSecret = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 	)
-	req, err := http.NewRequest(http.MethodHead, "https://repo1.s3.dev.lakefs.io/imdb-spark/collections/shows/title.basics.tsv.gz", nil)
+	req, err := http.NewRequest(http.MethodHead, "https://repo1.s3.dev.sghub.io/imdb-spark/collections/shows/title.basics.tsv.gz", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -320,7 +320,7 @@ func TestUnsignedPayload(t *testing.T) {
 		"X-Forwarded-For":       []string{"10.20.1.90"},
 		"X-Forwarded-Proto":     []string{"https"},
 		"X-Forwarded-Port":      []string{"443"},
-		"Host":                  []string{"repo1.s3.dev.lakefs.io"},
+		"Host":                  []string{"repo1.s3.dev.sghub.io"},
 		"X-Amzn-Trace-UploadId": []string{"Root=1-5eb036bc-dd84b3a2115db68a77b1c068"},
 		"amz-sdk-invocation-id": []string{"a8288d69-e8fa-219d-856b-b58b53b6fd5b"},
 		"amz-sdk-retry":         []string{"0/0/500"},

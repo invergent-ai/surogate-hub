@@ -9,7 +9,7 @@ The following guide explains how to set up and execute the system tests infrastr
 
 A couple of prerequisites before we start:
 
-* Go over our [contributing](https://docs.lakefs.io/contributing.html) page and make sure you have a working Surogate Hub environment.
+* Make sure you have a working Surogate Hub environment.
 * [Docker](https://www.docker.com/)
 * [Curl](https://curl.se/)
 
@@ -19,7 +19,7 @@ A couple of prerequisites before we start:
 
 Under _**esti/scripts**_ you will find the following
 
-1. **lakefs.yaml**
+1. **hub.yaml**
    1. Contains the Surogate Hub configuration required for local test execution
    2. We use local storage type to run the tests
    3. The data will be stored under the filesystem's _/tmp_ folder (can be configured to any folder with the required permissions)
@@ -35,7 +35,7 @@ To run Surogate Hub for testing simply execute the following command in a shell 
 ```shell
    esti/scripts/runner.sh -r sghub
 ```
-The Surogate Hub server will run in the console and logs will be piped to both stdout and in a temporary file in the form of lakefs_<XXX>.log
+The Surogate Hub server will run in the console and logs will be piped to both stdout and in a temporary file in the form of hub_<XXX>.log
 
 ### Executing tests
 
@@ -43,7 +43,7 @@ To run all the tests under the system tests folder, execute the following comman
 ```shell
    esti/scripts/runner.sh -r test
 ```
-The tests will run, with the output piped to both stdout and in a temporary file in the form of lakefs_tests_<XXX>.log
+The tests will run, with the output piped to both stdout and in a temporary file in the form of hub_tests_<XXX>.log
 
 The system test infrastructure allows additional flags and parameters to be passed for execution.
 For example to run a specific test (by regex) we can use:
@@ -63,7 +63,7 @@ Notes:
    1. Tests that validate creation of access key id and secret access key will not test this functionality
    2. This will require stopping and re-running the Surogate Hub server on each test execution
 2. To run tests on an already existing Surogate Hub instance (after initial setup has occurred):
-   1. Modify the ESTI_SETUP_LAKEFS environment variable from 'true' to 'false'
+   1. Modify the ESTI_SETUP_SGHUB environment variable from 'true' to 'false'
    2. Use cautiously as some test preconditions will cause tests to fail on existing Surogate Hub environments
 
 ---
@@ -80,7 +80,6 @@ To debug the tests and server code we must create run configurations for both Su
    1. Add basic environment variables from the _set_env_vars.sh_ script's Surogate Hub section
    2. Add additional / modify environment variables as needed
    
-   ![](img/lakefs_config.png)
 3. Create a before launch, external tool to load the postgres docker image
    ![](img/postgres.png)
 4. Press 'Apply', make sure the configuration is saved (it is not grayed out on the left side menu) and press 'OK'
@@ -99,9 +98,5 @@ To debug the tests and server code we must create run configurations for both Su
    ![](img/esti_config.png)
 3. Press 'Apply', make sure the configuration is saved (it is not grayed out on the left side menu) and press 'OK'
 4. Try to execute the target (either by run / debug) and verify tests are running
-
----
-
-Don't know where to start? Experiencing difficulties? Reach out on the #dev channel on [our Slack](https://lakefs.io/slack), and we will help you get started.
 
 ---

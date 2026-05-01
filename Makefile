@@ -35,7 +35,7 @@ GOTEST_PARALLELISM=4
 SGHUB_BINARY_NAME=sghub
 HUBCTL_BINARY_NAME=hubctl
 
-DOCKER_IMAGE=lakefs
+DOCKER_IMAGE=sghub
 DOCKER_TAG=$(VERSION)
 
 ifndef PACKAGE_VERSION
@@ -58,7 +58,7 @@ clean:
 	@rm -rf \
 		$(HUBCTL_BINARY_NAME) \
 		$(SGHUB_BINARY_NAME) \
-		pkg/api/apigen/lakefs.gen.go \
+		pkg/api/apigen/sghub.gen.go \
 		pkg/auth/*.gen.go
 
 check-licenses: check-licenses-go-mod
@@ -170,7 +170,7 @@ system-tests: # Run system tests locally
 	./esti/scripts/runner.sh -r all
 
 build-docker: build ## Build Docker image file (Docker required)
-	$(DOCKER) build --target lakefs -t ghcr.io/invergent-ai/$(DOCKER_IMAGE):$(DOCKER_TAG) -t ghcr.io/invergent-ai/$(DOCKER_IMAGE):latest .
+	$(DOCKER) build --target sghub -t ghcr.io/invergent-ai/$(DOCKER_IMAGE):$(DOCKER_TAG) -t ghcr.io/invergent-ai/$(DOCKER_IMAGE):latest .
 
 gofmt:  ## gofmt code formating
 	@echo Running go formating with the following command:

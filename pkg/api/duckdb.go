@@ -15,21 +15,21 @@ import (
 	"github.com/invergent-ai/surogate-hub/pkg/uri"
 )
 
-var lakeFsRegex = regexp.MustCompile(`'lakefs://([^/]+)/([^/]+)(/(.*))?'`)
+var hubRegex = regexp.MustCompile(`'sg://([^/]+)/([^/]+)(/(.*))?'`)
 
 func transformSqlQuery(query string, ctx context.Context, c *Controller, w http.ResponseWriter, r *http.Request) (string, error) {
-	lakeFsUri := lakeFsRegex.FindString(query)
-	if lakeFsUri == "" {
+	hubUri := hubRegex.FindString(query)
+	if hubUri == "" {
 		return query, nil
 	}
 
-	if strings.Index(lakeFsUri, "'") == 0 {
-		lakeFsUri = lakeFsUri[1:]
+	if strings.Index(hubUri, "'") == 0 {
+		hubUri = hubUri[1:]
 	}
-	if strings.LastIndex(lakeFsUri, "'") == len(lakeFsUri)-1 {
-		lakeFsUri = lakeFsUri[0 : len(lakeFsUri)-1]
+	if strings.LastIndex(hubUri, "'") == len(hubUri)-1 {
+		hubUri = hubUri[0 : len(hubUri)-1]
 	}
-	parsed, err := uri.Parse(lakeFsUri)
+	parsed, err := uri.Parse(hubUri)
 	if err != nil {
 		writeError(w, r, http.StatusBadRequest, "invalid Surogate Hub URI")
 		return "", err
@@ -64,7 +64,7 @@ func transformSqlQuery(query string, ctx context.Context, c *Controller, w http.
 
 	if qk.GetStorageType() == block.StorageTypeLocal {
 		localKey := qk.(local.QualifiedKey)
-		query = strings.Replace(query, lakeFsUri, fmt.Sprintf("file:%s/%s/%s", localKey.GetPath(), parsed.Repository, localKey.GetKey()), 1)
+		query = strings.Replace(query, hubUri, fmt.Sprintf("file:%s/%s/%s", localKey.GetPath(), parsed.Repository, localKey.GetKey()), 1)
 	} else if qk.GetStorageType() == block.StorageTypeS3 {
 		//s3Key := qk.(block.QualifiedKey)
 		writeError(w, r, http.StatusBadRequest, "S3 namespace not supported for SQL queries")

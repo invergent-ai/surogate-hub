@@ -219,7 +219,7 @@ func MetadataFor(path, ref string) (map[string]string, error) {
 				Project: parsed.Project,
 				Ref:     ref,
 			})
-			kv[fmt.Sprintf("::lakefs::%s::url[url:ui]", parsed.Server)] = out.String()
+			kv[fmt.Sprintf("::sghub::%s::url[url:ui]", parsed.Server)] = out.String()
 		}
 	}
 	return kv, nil

@@ -128,10 +128,10 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 func xetStorageNamespace(cfg config.Config, blockAdapter block.Adapter) string {
 	if storage := cfg.StorageConfig().GetStorageByID(config.SingleBlockstoreID); storage != nil {
 		if prefix := storage.GetDefaultNamespacePrefix(); prefix != nil && *prefix != "" {
-			return strings.TrimRight(*prefix, "/") + "/_lakefs_xet"
+			return strings.TrimRight(*prefix, "/") + "/_hub_xet"
 		}
 	}
-	return blockAdapter.BlockstoreType() + "://_lakefs_xet"
+	return blockAdapter.BlockstoreType() + "://_hub_xet"
 }
 
 func xetReconstructionCapabilityChecker(cat *catalog.Catalog, authService auth.Service, registry *xetstore.Registry, scanBatchSize int) xetcas.ReconstructionCapabilityChecker {

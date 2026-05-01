@@ -16,7 +16,7 @@ description: Surogate Hub comes with its own native CLI client. Here you can see
 parent: Reference
 redirect_from:
   - /reference/commands.html
-  - /quickstart/lakefs_cli.html
+  - /quickstart/hub_cli.html
 ---
 
 {% comment %}
@@ -68,8 +68,8 @@ Here is an example:
 docker run --rm --pull always \
           -e HUBCTL_CREDENTIALS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE \
           -e HUBCTL_CREDENTIALS_SECRET_ACCESS_KEY=xxxxx
-          -e HUBCTL_SERVER_ENDPOINT_URL=https://host.us-east-2.lakefscloud.io/ \
-          --entrypoint hubctl treeverse/lakefs \
+          -e HUBCTL_SERVER_ENDPOINT_URL=https://host.us-east-2.sghubcloud.io/ \
+          --entrypoint hubctl invergent-ai/surogate-hub \
           repo list
 ` + "```" + `
 
@@ -112,7 +112,7 @@ func printOptions(buf *bytes.Buffer, cmd *cobra.Command) error {
 	if cmd == rootCmd {
 		buf.WriteString("**note:** The `base-uri` option can be controlled with the `HUBCTL_BASE_URI` environment variable.\n{: .note .note-warning }\n\n")
 		buf.WriteString("#### Example usage\n{:.no_toc}\n\n")
-		buf.WriteString("```shell\n$ export HUBCTL_BASE_URI=\"lakefs://my-repo/my-branch\"\n# Once set, use relative lakefs uri's:\n$ hubctl fs ls /path\n```")
+		buf.WriteString("```shell\n$ export HUBCTL_BASE_URI=\"sg://my-repo/my-branch\"\n# Once set, use relative sg URI's:\n$ hubctl fs ls /path\n```")
 	}
 	return nil
 }

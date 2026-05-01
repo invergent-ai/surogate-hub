@@ -59,7 +59,7 @@ func TestAuthMiddleware(t *testing.T) {
 		}
 		authClient, err := apigen.NewClientWithResponses(apiEndpoint, apigen.WithRequestEditorFn(authProvider.Intercept))
 		if err != nil {
-			t.Fatal("failed to create lakefs api client:", err)
+			t.Fatal("failed to create hub api client:", err)
 		}
 		resp, err := authClient.ListRepositoriesWithResponse(ctx, &apigen.ListRepositoriesParams{})
 		if err != nil {
@@ -79,7 +79,7 @@ func TestAuthMiddleware(t *testing.T) {
 		}
 		authClient, err := apigen.NewClientWithResponses(apiEndpoint, apigen.WithRequestEditorFn(authProvider.Intercept))
 		if err != nil {
-			t.Fatal("failed to create lakefs api client:", err)
+			t.Fatal("failed to create hub api client:", err)
 		}
 		resp, err := authClient.ListRepositoriesWithResponse(ctx, &apigen.ListRepositoriesParams{})
 		if err != nil {
@@ -108,7 +108,7 @@ func TestAuthMiddleware(t *testing.T) {
 		}
 		authClient, err := apigen.NewClientWithResponses(apiEndpoint, apigen.WithRequestEditorFn(authProvider.Intercept))
 		if err != nil {
-			t.Fatal("failed to create lakefs api client:", err)
+			t.Fatal("failed to create hub api client:", err)
 		}
 		resp, err := authClient.ListRepositoriesWithResponse(ctx, &apigen.ListRepositoriesParams{})
 		if err != nil {
@@ -134,7 +134,7 @@ func TestAuthMiddleware(t *testing.T) {
 		}
 		authClient, err := apigen.NewClientWithResponses(apiEndpoint, apigen.WithRequestEditorFn(authProvider.Intercept))
 		if err != nil {
-			t.Fatal("failed to create lakefs api client:", err)
+			t.Fatal("failed to create hub api client:", err)
 		}
 		resp, err := authClient.ListRepositoriesWithResponse(ctx, &apigen.ListRepositoriesParams{})
 		if err != nil {

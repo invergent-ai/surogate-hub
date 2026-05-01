@@ -1,2 +1,2 @@
-Repository: lakefs://${REPO}
+Repository: sg://${REPO}
 Repository '${REPO}' deleted

@@ -12,7 +12,7 @@ import (
 var branchCreateCmd = &cobra.Command{
 	Use:               "create <branch URI> -s <source ref URI>",
 	Short:             "Create a new branch in a repository",
-	Example:           "hubctl branch create lakefs://example-repo/new-branch -s lakefs://example-repo/main",
+	Example:           "hubctl branch create sg://example-repo/new-branch -s sg://example-repo/main",
 	Args:              cobra.ExactArgs(1),
 	ValidArgsFunction: ValidArgsRepository,
 	Run: func(cmd *cobra.Command, args []string) {

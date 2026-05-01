@@ -321,6 +321,6 @@ func setDefaultContentType(w http.ResponseWriter, req *http.Request) {
 func unsupportedOperationHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		o := &operations.Operation{}
-		_ = o.EncodeError(w, req, nil, gatewayerrors.ERRLakeFSNotSupported.ToAPIErr())
+		_ = o.EncodeError(w, req, nil, gatewayerrors.ERRHubNotSupported.ToAPIErr())
 	})
 }

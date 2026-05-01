@@ -18,7 +18,7 @@ func testHTTPGetPage(t *testing.T, handler http.Handler, url string) *httptest.R
 }
 
 func TestNewS3GatewayEndpointErrorHandler_GatewayError(t *testing.T) {
-	handler := NewS3GatewayEndpointErrorHandler([]string{"s3.lakefs.dev"})
+	handler := NewS3GatewayEndpointErrorHandler([]string{"s3.sghub.dev"})
 	rr := httptest.NewRecorder()
 	req, err := http.NewRequest(http.MethodGet, "/", nil)
 	if err != nil {
@@ -42,7 +42,7 @@ func TestNewS3GatewayEndpointErrorHandler_GatewayError(t *testing.T) {
 	if err != nil {
 		t.Fatal("Message unmarshal failed:", err)
 	}
-	const expectedErrorCode = "ERRLakeFSWrongEndpoint"
+	const expectedErrorCode = "ERRHubWrongEndpoint"
 	if errMsg.Code != expectedErrorCode {
 		t.Fatalf("Invalid XML Code '%s', expected '%s' - response body '%s'",
 			errMsg.Code, expectedErrorCode, rr.Body.String())

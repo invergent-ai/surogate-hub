@@ -203,7 +203,7 @@ func branchExists(ctx context.Context, client *apigen.ClientWithResponses, repos
 func init() {
 	importCmd.Flags().String("from", "", "prefix to read from (e.g. \"s3://bucket/sub/path/\"). must not be in a storage namespace")
 	_ = importCmd.MarkFlagRequired("from")
-	importCmd.Flags().String("to", "", "Surogate Hub path to load objects into (e.g. \"lakefs://repo/branch/sub/path/\")")
+	importCmd.Flags().String("to", "", "Surogate Hub path to load objects into (e.g. \"sg://repo/branch/sub/path/\")")
 	_ = importCmd.MarkFlagRequired("to")
 	importCmd.Flags().Bool("merge", false, "merge imported branch into target branch")
 	_ = importCmd.Flags().MarkDeprecated("merge", "import is done directly into target branch")

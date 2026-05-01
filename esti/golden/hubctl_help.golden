@@ -15,7 +15,7 @@ Available Commands:
   completion      Generate completion script
   config          Create/update local Surogate Hub configuration
   diff            Show changes between two commits, or the currently uncommitted changes
-  doctor          Run a basic diagnosis of the LakeFS configuration
+  doctor          Run a basic diagnosis of the hub configuration
   fs              View and manipulate objects
   gc              Manage the garbage collection policy
   help            Help about any command

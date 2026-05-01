@@ -38,7 +38,7 @@ with open('README.md') as f:
     # replace relative links with links to the docs:
     doc_version = '.'.join(f'v{VERSION}'.split('.')[:2])
     long_description = re.sub(r'(\[[*a-zA-Z_]*]\()docs/([A-Za-z0-9]*)\.md',
-                       rf'\1https://pydocs-sdk.lakefs.io/{doc_version}/docs/\2.html',
+                       rf'\1https://pydocs-sdk.sghub.io/{doc_version}/docs/\2.html',
                        f.read())
 
 setup(

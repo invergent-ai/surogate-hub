@@ -46,7 +46,7 @@ RUN python3 -m venv /opt/stats-worker-venv \
         /src/clients/python \
         /src/stats-worker
 
-FROM $IMAGE_REPO:$IMAGE_TAG AS lakefs
+FROM $IMAGE_REPO:$IMAGE_TAG AS sghub
 ARG ADD_PACKAGES IMAGE_PACKAGES UPDATE_PACKAGES
 LABEL org.opencontainers.image.source=https://github.com/invergent-ai/surogate-hub
 WORKDIR /app
@@ -54,15 +54,15 @@ ENV PATH=/app:$PATH
 RUN $UPDATE_PACKAGES \
     && $ADD_PACKAGES $IMAGE_PACKAGES python3 \
     && rm -rf /var/lib/apt/lists/*
-RUN addgroup --system lakefs && adduser --system --ingroup lakefs lakefs
+RUN addgroup --system sghub && adduser --system --ingroup sghub sghub
 COPY --from=build-sghub /build/sghub /build/hubctl /app/
 COPY ./scripts/wait-for /app/
 COPY --from=build-stats-worker /opt/stats-worker-venv /opt/stats-worker-venv
 RUN printf '#!/bin/sh\nexec /opt/stats-worker-venv/bin/python -m surogate_hub_worker "$@"\n' \
         > /app/stats-worker \
     && chmod +x /app/stats-worker
-USER lakefs
-WORKDIR /home/lakefs
+USER sghub
+WORKDIR /home/sghub
 EXPOSE 8000/tcp
 ENTRYPOINT ["/app/sghub"]
 CMD ["run"]

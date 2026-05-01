@@ -1,6 +1,6 @@
 local pathlib = require("path")
 local json = require("encoding/json")
-local utils = require("lakefs/catalogexport/internal")
+local utils = require("sghub/catalogexport/internal")
 local strings = require("strings")
 
 
@@ -42,7 +42,7 @@ local function generate_physical_address(path)
     return "s3://" .. path
 end
 
-package.loaded["lakefs/catalogexport/table_extractor"] = {
+package.loaded["sghub/catalogexport/table_extractor"] = {
     get_table_descriptor = function(_, _, _, table_src_path)
         local t_name_yaml = pathlib.parse(table_src_path)
         local t_name_yaml_base = t_name_yaml["base_name"]
@@ -55,7 +55,7 @@ package.loaded["lakefs/catalogexport/table_extractor"] = {
     end
 }
 
-package.loaded.lakefs = {
+package.loaded.sghub = {
     stat_object = function(_, _, path)
         local parsed_path = pathlib.parse(path)
         local table_path_base = parsed_path["parent"]
@@ -73,7 +73,7 @@ package.loaded.lakefs = {
     end
 }
 
-local delta_export = require("lakefs/catalogexport/delta_exporter")
+local delta_export = require("sghub/catalogexport/delta_exporter")
 
 local function mock_delta_client(table_logs_content)
     return {
@@ -121,7 +121,7 @@ local function assert_metadata(delta_table_details, table_paths)
     end
 end
 
-local function assert_lakefs_stats(table_names, content_paths)
+local function assert_hub_stats(table_names, content_paths)
     for _, table_path in ipairs(table_names) do
         local table = test_data.table_to_objects[table_path]
         if not table then
@@ -205,7 +205,7 @@ local delta_table_details = delta_export.export_delta_log(
 )
 
 -- Test results
-assert_lakefs_stats(test_table_names, data_paths)
+assert_hub_stats(test_table_names, data_paths)
 assert_physical_address(delta_table_details, test_table_names)
 assert_delta_log_content(delta_table_details, test_data.table_expected_log)
 assert_metadata(delta_table_details, test_table_names)

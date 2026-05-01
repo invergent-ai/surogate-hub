@@ -14,14 +14,14 @@ const (
 	ParentNumberFlagName = "parent-number"
 )
 
-// hubctl branch revert lakefs://myrepo/main commitId
+// hubctl branch revert sg://myrepo/main commitId
 var branchRevertCmd = &cobra.Command{
 	Use:   "revert <branch URI> <commit ref to revert> [<more commits>...]",
 	Short: "Given a commit, record a new commit to reverse the effect of this commit",
 	Long:  "The commits will be reverted in left-to-right order",
-	Example: `hubctl branch revert lakefs://example-repo/example-branch commitA
+	Example: `hubctl branch revert sg://example-repo/example-branch commitA
 	          Revert the changes done by commitA in example-branch
-		      branch revert lakefs://example-repo/example-branch HEAD~1 HEAD~2 HEAD~3
+		      branch revert sg://example-repo/example-branch HEAD~1 HEAD~2 HEAD~3
 		      Revert the changes done by the second last commit to the fourth last commit in example-branch`,
 	Args: cobra.MinimumNArgs(branchRevertCmdArgs),
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {

@@ -33,7 +33,7 @@ func arnParseField(arn *Arn, field string, fieldIndex int) error {
 			return ErrInvalidArn
 		}
 	case fieldIndexPartition:
-		if field != "lakefs" {
+		if field != "sghub" {
 			return ErrInvalidArn
 		}
 		arn.Partition = field

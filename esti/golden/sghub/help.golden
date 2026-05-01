@@ -14,7 +14,7 @@ Available Commands:
   superuser   Create additional user with admin credentials
 
 Flags:
-  -c, --config string    config file (default is $HOME/.lakefs.yaml)
+  -c, --config string    config file (default is $HOME/.sghub.yaml)
   -h, --help             help for sghub
       --local-settings   Use Surogate Hub local default configuration
       --quickstart       Use Surogate Hub quickstart configuration

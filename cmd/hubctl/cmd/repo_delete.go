@@ -9,7 +9,7 @@ import (
 )
 
 // repoDeleteCmd represents the delete repo command
-// hubctl delete lakefs://myrepo
+// hubctl delete sg://myrepo
 var repoDeleteCmd = &cobra.Command{
 	Use:               "delete <repository URI>",
 	Short:             "Delete existing repository",

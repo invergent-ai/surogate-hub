@@ -278,5 +278,5 @@ func parseXETPhysicalAddress(address string) (string, bool) {
 }
 
 func gatewayXETStorageNamespace(adapter block.Adapter) string {
-	return adapter.BlockstoreType() + "://_lakefs_xet"
+	return adapter.BlockstoreType() + "://_hub_xet"
 }

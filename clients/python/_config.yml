@@ -7,8 +7,8 @@ exclude:
   - build
   - build-package.sh
   - dist
-  - lakefs_sdk
-  - lakefs_sdk.egg-info
+  - surogate_hub_sdk
+  - surogate_hub_sdk.egg-info
   - requirements.txt
   - setup.cfg
   - setup.py

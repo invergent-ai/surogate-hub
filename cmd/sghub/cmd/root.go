@@ -47,7 +47,7 @@ var initOnce sync.Once
 
 //nolint:gochecknoinits
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.lakefs.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.sghub.yaml)")
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.PersistentFlags().Bool(config.UseLocalConfiguration, false, "Use Surogate Hub local default configuration")
 	rootCmd.PersistentFlags().Bool(config.QuickstartConfiguration, false, "Use Surogate Hub quickstart configuration")
@@ -130,11 +130,11 @@ func initConfig(log logging.Logger) {
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("config")
 		viper.AddConfigPath(".")
-		viper.AddConfigPath(path.Join(getHomeDir(), ".lakefs"))
-		viper.AddConfigPath("/etc/lakefs")
+		viper.AddConfigPath(path.Join(getHomeDir(), ".sghub"))
+		viper.AddConfigPath("/etc/sghub")
 	}
 
-	viper.SetEnvPrefix("LAKEFS")
+	viper.SetEnvPrefix("SGHUB")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_")) // support nested config
 	// read in environment variables
 	viper.AutomaticEnv()
@@ -146,10 +146,10 @@ func initConfig(log logging.Logger) {
 	if err != nil && !errors.As(err, &errFileNotFound) {
 		log.WithError(err).Fatal("Failed to find a config file")
 	}
-	// fallback - try to load the previous supported $HOME/.lakefs.yaml
+	// fallback - try to load the previous supported $HOME/.sghub.yaml
 	//   if err is set it will be file-not-found based on the previous check
 	if err != nil {
-		fallbackCfgFile := path.Join(getHomeDir(), ".lakefs.yaml")
+		fallbackCfgFile := path.Join(getHomeDir(), ".sghub.yaml")
 		if cfgFile != fallbackCfgFile {
 			viper.SetConfigFile(fallbackCfgFile)
 			log = log.WithField("file", viper.ConfigFileUsed()) // should be called after SetConfigFile

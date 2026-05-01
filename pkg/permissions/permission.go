@@ -1,8 +1,8 @@
 package permissions
 
 const (
-	fsArnPrefix   = "arn:lakefs:fs:::"
-	authArnPrefix = "arn:lakefs:auth:::"
+	fsArnPrefix   = "arn:sghub:fs:::"
+	authArnPrefix = "arn:sghub:auth:::"
 
 	All = "*"
 )

@@ -75,7 +75,7 @@ var setupCmd = &cobra.Command{
 		cloudMetadataProvider := stats.BuildMetadataProvider(logger, cfg)
 		metadata := stats.NewMetadata(ctx, logger, cfg.Blockstore.Type, metadataManager, cloudMetadataProvider)
 
-		credentials, err := setupLakeFS(ctx, cfg, metadataManager, authService, userName, accessKeyID, secretAccessKey)
+		credentials, err := setupSgHub(ctx, cfg, metadataManager, authService, userName, accessKeyID, secretAccessKey)
 		if err != nil {
 			fmt.Printf("Setup failed: %s\n", err)
 			os.Exit(1)
@@ -101,7 +101,7 @@ var setupCmd = &cobra.Command{
 	},
 }
 
-func setupLakeFS(ctx context.Context, cfg *config.BaseConfig, metadataManager auth.MetadataManager, authService auth.Service, userName string, accessKeyID string, secretAccessKey string) (*model.Credential, error) {
+func setupSgHub(ctx context.Context, cfg *config.BaseConfig, metadataManager auth.MetadataManager, authService auth.Service, userName string, accessKeyID string, secretAccessKey string) (*model.Credential, error) {
 	initialized, err := metadataManager.IsInitialized(ctx)
 	if err != nil || initialized {
 		// return on error or if already initialized

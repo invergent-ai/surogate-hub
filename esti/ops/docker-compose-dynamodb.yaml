@@ -1,32 +1,32 @@
 version: "3"
 services:
-  lakefs:
-    image: "${REPO:-treeverse}/lakefs:${TAG:-dev}"
+  sghub:
+    image: "${REPO:-invergent-ai}/surogate-hub:${TAG:-dev}"
     command: "${COMMAND:-run}"
     ports:
       - "8000:8000"
     depends_on:
       - "dynamodb"
     volumes:
-      - lakefs-app:/app:ro
+      - sghub-app:/app:ro
     environment:
-      - LAKEFS_AUTH_ENCRYPT_SECRET_KEY=some random secret string
-      - LAKEFS_BLOCKSTORE_TYPE=${LAKEFS_BLOCKSTORE_TYPE:-local}
-      - LAKEFS_BLOCKSTORE_LOCAL_PATH=/home/lakefs
-      - LAKEFS_BLOCKSTORE_LOCAL_IMPORT_ENABLED=true
-      - LAKEFS_BLOCKSTORE_LOCAL_ALLOWED_EXTERNAL_PREFIXES=/tmp
-      - LAKEFS_BLOCKSTORE_S3_CREDENTIALS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - LAKEFS_BLOCKSTORE_S3_CREDENTIALS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - LAKEFS_LOGGING_LEVEL=DEBUG
-      - LAKEFS_BLOCKSTORE_GS_CREDENTIALS_JSON
-      - LAKEFS_STATS_ENABLED
-      - LAKEFS_DATABASE_DYNAMODB_ENDPOINT=http://dynamodb:8000
-      - LAKEFSACTION_VAR=this_is_actions_var
-      - LAKEFS_DATABASE_TYPE=dynamodb
-      - LAKEFS_DATABASE_KV_ENABLED=true
-      - LAKEFS_DATABASE_DYNAMODB_AWS_REGION=us-east-1
-      - LAKEFS_DATABASE_DYNAMODB_AWS_ACCESS_KEY_ID=AKIAIO5FODNN7EXAMPLE
-      - LAKEFS_DATABASE_DYNAMODB_AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K3MDENG/bPxRfiCYEXAMPLEKEY
+      - SGHUB_AUTH_ENCRYPT_SECRET_KEY=some random secret string
+      - SGHUB_BLOCKSTORE_TYPE=${SGHUB_BLOCKSTORE_TYPE:-local}
+      - SGHUB_BLOCKSTORE_LOCAL_PATH=/home/sghub
+      - SGHUB_BLOCKSTORE_LOCAL_IMPORT_ENABLED=true
+      - SGHUB_BLOCKSTORE_LOCAL_ALLOWED_EXTERNAL_PREFIXES=/tmp
+      - SGHUB_BLOCKSTORE_S3_CREDENTIALS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - SGHUB_BLOCKSTORE_S3_CREDENTIALS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - SGHUB_LOGGING_LEVEL=DEBUG
+      - SGHUB_BLOCKSTORE_GS_CREDENTIALS_JSON
+      - SGHUB_STATS_ENABLED
+      - SGHUB_DATABASE_DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - SGHUBACTION_VAR=this_is_actions_var
+      - SGHUB_DATABASE_TYPE=dynamodb
+      - SGHUB_DATABASE_KV_ENABLED=true
+      - SGHUB_DATABASE_DYNAMODB_AWS_REGION=us-east-1
+      - SGHUB_DATABASE_DYNAMODB_AWS_ACCESS_KEY_ID=AKIAIO5FODNN7EXAMPLE
+      - SGHUB_DATABASE_DYNAMODB_AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K3MDENG/bPxRfiCYEXAMPLEKEY
     entrypoint: ["/app/sghub", "run"]
   dynamodb:
     image: "amazon/dynamodb-local:1.18.0"
@@ -35,12 +35,12 @@ services:
   esti:
     image: "golang:1.22.6-alpine3.20"
     links:
-      - lakefs:s3.local.lakefs.io
-      - lakefs:testmultipartupload.s3.local.lakefs.io
-      - lakefs:testmultipartuploadabort.s3.local.lakefs.io
-      - lakefs:testdeleteobjects.s3.local.lakefs.io
-      - lakefs:testmigrate-testpremigratemultipart.s3.local.lakefs.io
-      - lakefs:migrate.s3.local.lakefs.io
+      - sghub:s3.local.sghub.io
+      - sghub:testmultipartupload.s3.local.sghub.io
+      - sghub:testmultipartuploadabort.s3.local.sghub.io
+      - sghub:testdeleteobjects.s3.local.sghub.io
+      - sghub:testmigrate-testpremigratemultipart.s3.local.sghub.io
+      - sghub:migrate.s3.local.sghub.io
     environment:
       - CGO_ENABLED=0
       - AWS_ACCESS_KEY_ID
@@ -49,16 +49,16 @@ services:
       - ESTI_STORAGE_NAMESPACE
       - ESTI_BLOCKSTORE_TYPE
       - ESTI_AWS_ACCESS_KEY_ID
-      - ESTI_SETUP_LAKEFS
+      - ESTI_SETUP_SGHUB
       - ESTI_AWS_SECRET_ACCESS_KEY
-      - ESTI_ENDPOINT_URL=http://lakefs:8000
+      - ESTI_ENDPOINT_URL=http://sghub:8000
       - ESTI_BINARIES_DIR=/app
       - ESTI_DATABASE_KV_ENABLED
       - ESTI_KV_MIGRATION=${ESTI_KV_MIGRATION:-none}
       - ESTI_POST_MIGRATE
       - ESTI_GOTEST_FLAGS
       - ESTI_FLAGS
-    working_dir: /lakefs
+    working_dir: /sghub
     command:
       - /bin/sh
       - -c
@@ -66,14 +66,14 @@ services:
         apk add --no-cache util-linux
         go test -v $ESTI_GOTEST_FLAGS ./esti --system-tests $ESTI_FLAGS --skip=".*GC"
     volumes:
-      - lakefs-code:/lakefs
-      - lakefs-app:/app:ro
+      - sghub-code:/sghub
+      - sghub-app:/app:ro
 
 volumes:
-  lakefs-code:
+  sghub-code:
     driver: local
     driver_opts:
       o: bind
       type: none
-      device: ${LAKEFS_ROOT:-.}
-  lakefs-app:
+      device: ${SGHUB_ROOT:-.}
+  sghub-app:

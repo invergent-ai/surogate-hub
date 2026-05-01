@@ -14,7 +14,7 @@ class TestXetObjectsApi(unittest.TestCase):
         from surogate_hub_sdk.xet_objects_api import XetObjectsApi
 
         configuration = Configuration(
-            host="http://lakefs.example/api/v1",
+            host="http://sghub.example/api/v1",
             username="access",
             password="secret",
         )
@@ -28,17 +28,17 @@ class TestXetObjectsApi(unittest.TestCase):
         api._staging_api = FakeStagingApi()
         return api
 
-    def test_lakefs_client_uses_xet_objects_api_by_default(self):
-        from surogate_hub_sdk.client import LakeFSClient
+    def test_hub_client_uses_xet_objects_api_by_default(self):
+        from surogate_hub_sdk.client import HubClient
         from surogate_hub_sdk.xet_objects_api import XetObjectsApi
 
         configuration = Configuration(
-            host="http://lakefs.example/api/v1",
+            host="http://sghub.example/api/v1",
             username="access",
             password="secret",
         )
 
-        client = LakeFSClient(configuration=configuration)
+        client = HubClient(configuration=configuration)
 
         self.assertIsInstance(client.objects_api, XetObjectsApi)
 
@@ -53,7 +53,7 @@ class TestXetObjectsApi(unittest.TestCase):
         result = api.upload_object("repo", "main", "models/model.bin", content=local_path)
 
         self.assertEqual(hf_xet.upload_calls[0]["file_paths"], [local_path])
-        self.assertEqual(hf_xet.upload_calls[0]["endpoint"], "http://lakefs.example/xet")
+        self.assertEqual(hf_xet.upload_calls[0]["endpoint"], "http://sghub.example/xet")
         link = api._staging_api.calls[0]
         self.assertEqual(link["repository"], "repo")
         self.assertEqual(link["branch"], "main")
@@ -97,7 +97,7 @@ class TestXetObjectsApi(unittest.TestCase):
 
         self.assertEqual(data, b"downloaded model")
         call = hf_xet.download_calls[0]
-        self.assertEqual(call["endpoint"], "http://lakefs.example/xet")
+        self.assertEqual(call["endpoint"], "http://sghub.example/xet")
         self.assertEqual(call["files"][0].hash, "file-hash")
         self.assertEqual(call["files"][0].file_size, 16)
 

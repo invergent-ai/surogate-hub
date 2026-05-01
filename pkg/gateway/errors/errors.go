@@ -170,9 +170,9 @@ const (
 	// S3 extended errors.
 	ErrContentSHA256Mismatch
 
-	// Lakefs errors
-	ERRLakeFSNotSupported
-	ERRLakeFSWrongEndpoint
+	// hub errors
+	ERRHubNotSupported
+	ERRHubWrongEndpoint
 	ErrWriteToProtectedBranch
 	ErrReadOnlyRepository
 )
@@ -757,14 +757,14 @@ var Codes = errorCodeMap{
 		HTTPStatusCode: http.StatusNotFound,
 	},
 
-	// LakeFS errors
-	ERRLakeFSNotSupported: {
-		Code:           "ERRLakeFSNotSupported",
-		Description:    "This operation is not supported in LakeFS",
+	// Hub errors
+	ERRHubNotSupported: {
+		Code:           "ERRHubNotSupported",
+		Description:    "This operation is not supported by Surogate Hub",
 		HTTPStatusCode: http.StatusMethodNotAllowed,
 	},
-	ERRLakeFSWrongEndpoint: {
-		Code:           "ERRLakeFSWrongEndpoint",
+	ERRHubWrongEndpoint: {
+		Code:           "ERRHubWrongEndpoint",
 		Description:    "S3 request received in UI handler, did you forget to set your s3 gateway domain name?",
 		HTTPStatusCode: http.StatusNotFound,
 	},

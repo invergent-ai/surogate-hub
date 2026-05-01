@@ -227,8 +227,7 @@ func TestFindMergeBase(t *testing.T) {
 			//   \     /   /
 			//    `---b---d
 			//
-			// Verifying the fix introduced with https://github.com/treeverse/lakeFS/pull/2968. The following commits tree
-			// will generate multiple accesses to commit 'b' as it is a parent commit for both 'd' and 'c' and per BFS algo,
+			// The following commits tree will generate multiple accesses to commit 'b' as it is a parent commit for both 'd' and 'c' and per BFS algo,
 			// it will be reached via both paths before ROOT is reached from L.
 			// The above-mentioned fix eliminates that
 			Left:  "l",

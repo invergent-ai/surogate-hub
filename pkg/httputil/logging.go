@@ -78,7 +78,7 @@ func DefaultLoggingMiddleware(requestIDHeaderName string, fields logging.Fields,
 			startTime := time.Now()
 			writer := &ResponseRecordingWriter{Writer: w, StatusCode: http.StatusOK}
 			r, reqID := RequestID(r)
-			client := GetRequestLakeFSClient(r)
+			client := GetRequestHubClient(r)
 			sourceIP := SourceIP(r)
 
 			// add default fields to context

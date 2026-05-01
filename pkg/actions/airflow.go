@@ -134,7 +134,7 @@ func (a *Airflow) Run(ctx context.Context, record graveler.HookRecord, buf *byte
 	}
 	a.DAGConf["surogate_hub_event"] = json.RawMessage(eventData)
 
-	dagRunID := fmt.Sprintf("lakeFS_hook_%s_%s", a.ID, record.RunID)
+	dagRunID := fmt.Sprintf("hub_hook_%s_%s", a.ID, record.RunID)
 	body, err := json.Marshal(DagRunReq{
 		DagRunID: dagRunID,
 		Conf:     a.DAGConf,

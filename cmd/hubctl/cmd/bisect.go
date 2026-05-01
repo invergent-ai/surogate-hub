@@ -75,20 +75,20 @@ func (b *Bisect) PrintStatus() {
 	case b.BadCommit == "" && b.GoodCommit == "":
 		fmt.Println("Missing both good and bad commits")
 	case b.GoodCommit == "":
-		fmt.Printf("Bad commit lakefs://%s/%s, waiting for good commit\n", b.Repository, b.BadCommit)
+		fmt.Printf("Bad commit sg://%s/%s, waiting for good commit\n", b.Repository, b.BadCommit)
 	case b.BadCommit == "":
-		fmt.Printf("Good commit lakefs://%s/%s, waiting for bad commit\n", b.Repository, b.GoodCommit)
+		fmt.Printf("Good commit sg://%s/%s, waiting for bad commit\n", b.Repository, b.GoodCommit)
 	case commitCount == 0:
 		fmt.Println("No commits found")
 	case commitCount == 1:
 		commit := b.Commits[0]
-		fmt.Printf("Found commit lakefs://%s/%s %s\n", b.Repository, commit.Id, commit.Message)
+		fmt.Printf("Found commit sg://%s/%s %s\n", b.Repository, commit.Id, commit.Message)
 	default:
 		steps := math.Log2(float64(commitCount))
 		h := (commitCount >> 1) - 1
 		fmt.Printf("Bisecting: %d commits left to test after this (roughly %d steps)\n", h, int(steps))
 		commit := b.Commits[h]
-		fmt.Printf("Current commit lakefs://%s/%s %s\n", b.Repository, commit.Id, commit.Message)
+		fmt.Printf("Current commit sg://%s/%s %s\n", b.Repository, commit.Id, commit.Message)
 	}
 }
 

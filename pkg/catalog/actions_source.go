@@ -11,7 +11,7 @@ import (
 	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
-const repositoryLocation = "_lakefs_actions/"
+const repositoryLocation = "_hub_actions/"
 
 type ActionsSource struct {
 	catalog *Catalog

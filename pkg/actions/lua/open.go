@@ -52,7 +52,7 @@ func Open(l *lua.State, ctx context.Context, cfg OpenSafeConfig) {
 	gcloud.Open(l, ctx)
 	azure.Open(l, ctx)
 	url.Open(l)
-	formats.Open(l, ctx, cfg.LakeFSAddr)
+	formats.Open(l, ctx, cfg.HubAddr)
 	databricks.Open(l, ctx)
 	if cfg.NetHTTPEnabled {
 		http.Open(l)

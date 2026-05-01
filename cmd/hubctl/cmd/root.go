@@ -16,7 +16,7 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
 	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
-	lakefsconfig "github.com/invergent-ai/surogate-hub/pkg/config"
+	hubconfig "github.com/invergent-ai/surogate-hub/pkg/config"
 	"github.com/invergent-ai/surogate-hub/pkg/git"
 	giterror "github.com/invergent-ai/surogate-hub/pkg/git/errors"
 	"github.com/invergent-ai/surogate-hub/pkg/local"
@@ -35,20 +35,20 @@ import (
 const (
 	DefaultMaxIdleConnsPerHost = 100
 	// version templates
-	getLakeFSVersionErrorTemplate = `{{ "Failed getting Surogate Hub server version:" | red }} {{ . }}
+	getHubVersionErrorTemplate = `{{ "Failed getting Surogate Hub server version:" | red }} {{ . }}
 `
 	getLatestVersionErrorTemplate = `{{ "Failed getting latest hubctl version:" | red }} {{ . }}
 `
 	versionTemplate = `hubctl version: {{.HubctlVersion }}
-{{- if .LakeFSVersion }}
-Surogate Hub version: {{.LakeFSVersion}}
+{{- if .SgHubVersion }}
+Surogate Hub version: {{.SgHubVersion}}
 {{- end }}
 {{- if .UpgradeURL }}{{ "\n" }}{{ end -}}
 {{- if .HubctlLatestVersion }}
 {{ "hubctl out of date!" | yellow }} (Available: {{ .HubctlLatestVersion }})
 {{- end }}
-{{- if .LakeFSLatestVersion }}
-{{ "Surogate Hub out of date!" | yellow }} (Available: {{ .LakeFSLatestVersion }})
+{{- if .SgHubLatestVersion }}
+{{ "Surogate Hub out of date!" | yellow }} (Available: {{ .SgHubLatestVersion }})
 {{- end }}
 {{- if .UpgradeURL }}
 Get the latest release {{ .UpgradeURL|blue }}
@@ -67,8 +67,8 @@ type RetriesCfg struct {
 // When editing, make sure *all* fields have a `mapstructure:"..."` tag, to simplify future refactoring.
 type Configuration struct {
 	Credentials struct {
-		AccessKeyID     lakefsconfig.OnlyString `mapstructure:"access_key_id"`
-		SecretAccessKey lakefsconfig.OnlyString `mapstructure:"secret_access_key"`
+		AccessKeyID     hubconfig.OnlyString `mapstructure:"access_key_id"`
+		SecretAccessKey hubconfig.OnlyString `mapstructure:"secret_access_key"`
 	} `mapstructure:"credentials"`
 	Network struct {
 		HTTP2 struct {
@@ -76,8 +76,8 @@ type Configuration struct {
 		} `mapstructure:"http2"`
 	} `mapstructure:"network"`
 	Server struct {
-		EndpointURL lakefsconfig.OnlyString `mapstructure:"endpoint_url"`
-		Retries     RetriesCfg              `mapstructure:"retries"`
+		EndpointURL hubconfig.OnlyString `mapstructure:"endpoint_url"`
+		Retries     RetriesCfg           `mapstructure:"retries"`
 	} `mapstructure:"server"`
 	Options struct {
 		Parallelism int `mapstructure:"parallelism"`
@@ -100,9 +100,9 @@ type Configuration struct {
 
 type versionInfo struct {
 	HubctlVersion       string
-	LakeFSVersion       string
+	SgHubVersion        string
 	HubctlLatestVersion string
-	LakeFSLatestVersion string
+	SgHubLatestVersion  string
 	UpgradeURL          string
 }
 
@@ -112,11 +112,11 @@ var (
 	cfg     *Configuration
 
 	// baseURI default value is set by the environment variable HUBCTL_BASE_URI and
-	// override by flag 'base-url'. The baseURI is used as a prefix when we parse lakefs address (repo, ref or path).
-	// The prefix is used only when the address we parse is not a full address (starts with 'lakefs://' scheme).
+	// override by flag 'base-url'. The baseURI is used as a prefix when we parse the hub address (repo, ref or path).
+	// The prefix is used only when the address we parse is not a full address (starts with 'sg://' scheme).
 	// Examples:
-	//   `--base-uri lakefs:// repo1` will resolve to repository `lakefs://repo1`
-	//   `--base-uri lakefs://repo1 /main/file.md` will resolve to path `lakefs://repo1/main/file.md`
+	//   `--base-uri sg:// repo1` will resolve to repository `sg://repo1`
+	//   `--base-uri sg://repo1 /main/file.md` will resolve to path `sg://repo1/main/file.md`
 	baseURI string
 
 	// logLevel logging level (default is off)
@@ -145,7 +145,7 @@ const (
 	defaultSyncPresign = true
 	defaultNoProgress  = false
 
-	myRepoExample   = "lakefs://my-repo"
+	myRepoExample   = "sg://my-repo"
 	myBucketExample = "s3://my-bucket"
 	myBranchExample = "my-branch"
 	myRunIDExample  = "20230719152411arS0z6I"
@@ -353,16 +353,16 @@ var rootCmd = &cobra.Command{
 
 		resp, err := client.GetConfigWithResponse(cmd.Context())
 		if err != nil {
-			WriteIfVerbose(getLakeFSVersionErrorTemplate, err)
+			WriteIfVerbose(getHubVersionErrorTemplate, err)
 		} else if resp.JSON200 == nil {
-			WriteIfVerbose(getLakeFSVersionErrorTemplate, resp.Status())
+			WriteIfVerbose(getHubVersionErrorTemplate, resp.Status())
 		} else {
-			lakefsVersion := resp.JSON200
-			info.LakeFSVersion = swag.StringValue(lakefsVersion.VersionConfig.Version)
-			if swag.BoolValue(lakefsVersion.VersionConfig.UpgradeRecommended) {
-				info.LakeFSLatestVersion = swag.StringValue(lakefsVersion.VersionConfig.LatestVersion)
+			sghubVersion := resp.JSON200
+			info.SgHubVersion = swag.StringValue(sghubVersion.VersionConfig.Version)
+			if swag.BoolValue(sghubVersion.VersionConfig.UpgradeRecommended) {
+				info.SgHubLatestVersion = swag.StringValue(sghubVersion.VersionConfig.LatestVersion)
 			}
-			upgradeURL := swag.StringValue(lakefsVersion.VersionConfig.UpgradeUrl)
+			upgradeURL := swag.StringValue(sghubVersion.VersionConfig.UpgradeUrl)
 			if upgradeURL != "" {
 				info.UpgradeURL = upgradeURL
 			}
@@ -416,9 +416,9 @@ func preRunCmd(cmd *cobra.Command) {
 		Debug("loaded configuration from file")
 	err = viper.UnmarshalExact(&cfg, viper.DecodeHook(
 		mapstructure.ComposeDecodeHookFunc(
-			lakefsconfig.DecodeOnlyString,
+			hubconfig.DecodeOnlyString,
 			mapstructure.StringToTimeDurationHookFunc(),
-			lakefsconfig.DecodeStringToMap(),
+			hubconfig.DecodeStringToMap(),
 		)))
 	if err != nil {
 		DieFmt("error unmarshal configuration: %v", err)
@@ -497,7 +497,7 @@ func getClient() *apigen.ClientWithResponses {
 		DieErr(err)
 	}
 
-	serverEndpoint, err := apiutil.NormalizeLakeFSEndpoint(cfg.Server.EndpointURL.String())
+	serverEndpoint, err := apiutil.NormalizeHubEndpoint(cfg.Server.EndpointURL.String())
 	if err != nil {
 		DieErr(err)
 	}
@@ -574,7 +574,7 @@ func initConfig() {
 	// Inform viper of all expected fields.
 	// Otherwise, it fails to deserialize from the environment.
 	var conf Configuration
-	keys := lakefsconfig.GetStructKeys(reflect.TypeOf(conf), "mapstructure", "squash")
+	keys := hubconfig.GetStructKeys(reflect.TypeOf(conf), "mapstructure", "squash")
 	for _, key := range keys {
 		viper.SetDefault(key, nil)
 	}

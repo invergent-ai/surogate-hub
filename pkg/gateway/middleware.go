@@ -112,7 +112,7 @@ func stripPort(host string) string {
 func EnrichWithOperation(sc *ServerContext, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		ctx := req.Context()
-		client := httputil.GetRequestLakeFSClient(req)
+		client := httputil.GetRequestHubClient(req)
 		o := &operations.Operation{
 			Region:            sc.region,
 			FQDN:              getBareDomain(stripPort(req.Host), sc.bareDomains),

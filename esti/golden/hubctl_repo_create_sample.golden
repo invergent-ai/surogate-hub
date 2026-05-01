@@ -1,4 +1,4 @@
-Repository: lakefs://${REPO}
+Repository: sg://${REPO}
 Repository '${REPO}' created:
 storage namespace: ${STORAGE}
 default branch: ${BRANCH}

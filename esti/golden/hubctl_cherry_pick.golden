@@ -1,4 +1,4 @@
-Branch: lakefs://${REPO}/${BRANCH}
+Branch: sg://${REPO}/${BRANCH}
 Commit for branch "${BRANCH}" completed.
 
 ID: <COMMIT_ID>

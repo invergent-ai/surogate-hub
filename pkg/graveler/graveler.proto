@@ -3,7 +3,7 @@ option go_package = "github.com/invergent-ai/surogate-hub/graveler";
 
 import "google/protobuf/timestamp.proto";
 
-package io.treeverse.lakefs.graveler;
+package ai.invergent.shub.graveler;
 
 enum RepositoryState {
   ACTIVE = 0;

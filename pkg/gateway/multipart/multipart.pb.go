@@ -160,13 +160,13 @@ func file_gateway_multipart_multipart_proto_rawDescGZIP() []byte {
 
 var file_gateway_multipart_multipart_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_gateway_multipart_multipart_proto_goTypes = []interface{}{
-	(*UploadData)(nil),            // 0: io.treeverse.lakefs.multipart.UploadData
-	nil,                           // 1: io.treeverse.lakefs.multipart.UploadData.MetadataEntry
+	(*UploadData)(nil),            // 0: io.invergent.sghub.multipart.UploadData
+	nil,                           // 1: io.invergent.sghub.multipart.UploadData.MetadataEntry
 	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
 }
 var file_gateway_multipart_multipart_proto_depIdxs = []int32{
-	2, // 0: io.treeverse.lakefs.multipart.UploadData.creation_date:type_name -> google.protobuf.Timestamp
-	1, // 1: io.treeverse.lakefs.multipart.UploadData.metadata:type_name -> io.treeverse.lakefs.multipart.UploadData.MetadataEntry
+	2, // 0: io.invergent.sghub.multipart.UploadData.creation_date:type_name -> google.protobuf.Timestamp
+	1, // 1: io.invergent.sghub.multipart.UploadData.metadata:type_name -> io.invergent.sghub.multipart.UploadData.MetadataEntry
 	2, // [2:2] is the sub-list for method output_type
 	2, // [2:2] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name

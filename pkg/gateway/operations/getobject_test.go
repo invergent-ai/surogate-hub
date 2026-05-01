@@ -48,7 +48,7 @@ func TestGetObjectXETPhysicalAddressRange(t *testing.T) {
 		SizeBytes: uint64(len(chunk)),
 	}})
 	require.NoError(t, err)
-	xorbStore := xetcas.NewXorbStore(c.BlockAdapter, "mem://_lakefs_xet")
+	xorbStore := xetcas.NewXorbStore(c.BlockAdapter, "mem://_hub_xet")
 	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
 	require.NoError(t, err)
 	_, err = xetstore.NewRegistry(c.KVStore).RegisterShard(ctx, xetstore.RegisterShardParams{

@@ -121,7 +121,7 @@ func MakeHeader(m map[string]string) http.Header {
 const (
 	keyID     = "AKIAIOSFODNN7EXAMPLE"
 	secretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-	domain    = "s3.lakefs.test"
+	domain    = "s3.sghub.test"
 	location  = "lu-alpha-1"
 )
 

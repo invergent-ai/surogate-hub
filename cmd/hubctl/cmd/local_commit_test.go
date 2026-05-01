@@ -32,7 +32,7 @@ func getTestClient(t *testing.T, endpoint string) *apigen.ClientWithResponses {
 	basicAuthProvider, err := securityprovider.NewSecurityProviderBasicAuth(defaultAdminAccessKeyID, defaultAdminSecretAccessKey)
 	require.NoError(t, err)
 
-	serverEndpoint, err := apiutil.NormalizeLakeFSEndpoint(endpoint)
+	serverEndpoint, err := apiutil.NormalizeHubEndpoint(endpoint)
 	require.NoError(t, err)
 
 	client, err := apigen.NewClientWithResponses(
@@ -52,7 +52,7 @@ func TestUncommittedOutsideOfPrefix(t *testing.T) {
 		Ref:        "test",
 	}
 	idx := &local.Index{
-		PathURI:         fmt.Sprintf("lakefs://test/test/%s", prefix),
+		PathURI:         fmt.Sprintf("sg://test/test/%s", prefix),
 		ActiveOperation: "",
 	}
 

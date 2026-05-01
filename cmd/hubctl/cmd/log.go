@@ -84,7 +84,7 @@ var logCmd = &cobra.Command{
 	Use:               "log <branch URI>",
 	Short:             "Show log of commits",
 	Long:              "Show log of commits for a given branch",
-	Example:           "hubctl log --dot lakefs://example-repository/main | dot -Tsvg > graph.svg",
+	Example:           "hubctl log --dot sg://example-repository/main | dot -Tsvg > graph.svg",
 	Args:              cobra.ExactArgs(1),
 	ValidArgsFunction: ValidArgsRepository,
 	Run: func(cmd *cobra.Command, args []string) {

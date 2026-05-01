@@ -77,7 +77,7 @@ var analyzingMessageTemplate = `{{ .Message }}
 // doctorCmd represents the doctor command
 var doctorCmd = &cobra.Command{
 	Use:   "doctor",
-	Short: "Run a basic diagnosis of the LakeFS configuration",
+	Short: "Run a basic diagnosis of the hub configuration",
 	Run: func(cmd *cobra.Command, args []string) {
 		err := ListRepositoriesAndAnalyze(cmd.Context())
 		if err == nil {

@@ -11,7 +11,7 @@ import (
 
 func TestListXorbsFromWalkerParsesXETXorbKeys(t *testing.T) {
 	ctx := context.Background()
-	storageURI, err := url.Parse("mem://_lakefs_xet")
+	storageURI, err := url.Parse("mem://_hub_xet")
 	require.NoError(t, err)
 	walker := &fakeWalker{entries: []block.ObjectStoreEntry{
 		{RelativeKey: "xet/xorbs/default/xorb-a"},

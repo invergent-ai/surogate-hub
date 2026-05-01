@@ -7,10 +7,11 @@
 package kv
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -96,7 +97,7 @@ func file_kv_secondary_index_proto_rawDescGZIP() []byte {
 
 var file_kv_secondary_index_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_kv_secondary_index_proto_goTypes = []interface{}{
-	(*SecondaryIndex)(nil), // 0: io.treeverse.lakefs.kv.SecondaryIndex
+	(*SecondaryIndex)(nil), // 0: io.invergent.sghub.kv.SecondaryIndex
 }
 var file_kv_secondary_index_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type

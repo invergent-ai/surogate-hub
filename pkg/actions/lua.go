@@ -16,7 +16,7 @@ import (
 
 	lualibs "github.com/invergent-ai/surogate-hub/pkg/actions/lua"
 	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/hook"
-	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/lakefs"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/sghub"
 	luautil "github.com/invergent-ai/surogate-hub/pkg/actions/lua/util"
 	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
 	"github.com/invergent-ai/surogate-hub/pkg/auth"
@@ -73,7 +73,7 @@ func injectHookContext(l *lua.State, ctx context.Context, user *model.User, endp
 	l.SetGlobal("username")
 	luautil.DeepPush(l, args)
 	l.SetGlobal("args")
-	lakefs.OpenClient(l, ctx, user, endpoint)
+	sghub.OpenClient(l, ctx, user, endpoint)
 }
 
 type loggingBuffer struct {
@@ -111,7 +111,7 @@ func (h *LuaHook) Run(ctx context.Context, record graveler.HookRecord, buf *byte
 	l := lua.NewState()
 	osc := lualibs.OpenSafeConfig{
 		NetHTTPEnabled: h.Config.Lua.NetHTTPEnabled,
-		LakeFSAddr:     h.serverAddress,
+		HubAddr:        h.serverAddress,
 	}
 	lualibs.OpenSafe(l, ctx, osc, &loggingBuffer{buf: buf, ctx: ctx})
 	injectHookContext(l, ctx, user, h.Endpoint, h.Args)
@@ -171,7 +171,7 @@ func LuaRun(l *lua.State, code, name string) error {
 }
 
 func (h *LuaHook) collectMetrics(l *lua.State) {
-	const packagePrefix = "lakefs/"
+	const packagePrefix = "sghub/"
 	l.Field(lua.RegistryIndex, "_LOADED")
 	l.PushNil()
 	for l.Next(-2) {

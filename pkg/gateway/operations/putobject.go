@@ -97,7 +97,6 @@ func handleCopy(w http.ResponseWriter, req *http.Request, o *PathOperation, copy
 		o.Log(req).WithError(err).Error("could not parse copy source path")
 		// This is a solution to avoid misleading error messages in gateway. This is a pinpoint fix for the copy object
 		// API, since we decided not to change the entire gateway error handling in order to avoid breaking changes.
-		// See: https://github.com/treeverse/lakeFS/issues/7452
 		apiErr := gatewayErrors.Codes.ToAPIErrWithInternalError(gatewayErrors.ErrInvalidCopySource, err)
 		_ = o.EncodeError(w, req, err, apiErr)
 		return
@@ -295,7 +294,7 @@ func (controller *PutObject) Handle(w http.ResponseWriter, req *http.Request, o 
 
 	if query.Has("tagging") {
 		o.Log(req).Debug("put-object-tagging isn't supported yet")
-		o.EncodeError(w, req, nil, gatewayErrors.Codes.ToAPIErr(gatewayErrors.ERRLakeFSNotSupported))
+		o.EncodeError(w, req, nil, gatewayErrors.Codes.ToAPIErr(gatewayErrors.ERRHubNotSupported))
 		return
 	}
 

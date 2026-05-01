@@ -141,7 +141,7 @@ func sanitize(output string, vars map[string]string) string {
 	if _, ok := vars["DATE"]; !ok {
 		s = normalizeProgramTimestamp(s)
 	}
-	s = normalizeEndpoint(s, vars["LAKEFS_ENDPOINT"])
+	s = normalizeEndpoint(s, vars["SGHUB_ENDPOINT"])
 	s = normalizePreSignURL(s)                       // should be after storage and endpoint to enable non pre-sign url on azure
 	s = normalizeRandomObjectKey(s, vars["STORAGE"]) // should be after pre-sign on azure in order not to break the pre-sign url
 	s = normalizeCommitID(s)
@@ -248,6 +248,10 @@ func normalizeRandomObjectKey(output string, objectPrefix string) string {
 	objectPrefix = strings.TrimPrefix(objectPrefix, "/")
 	for _, match := range rePhysicalAddress.FindAllString(output, -1) {
 		output = strings.Replace(output, objectPrefix+match, objectPrefix+"/<OBJECT_KEY>", 1)
+		if namespace, ok := strings.CutPrefix(objectPrefix, "local://"); ok {
+			reLocalPhysicalAddress := regexp.MustCompile(`local://\S*` + regexp.QuoteMeta(namespace+match))
+			output = reLocalPhysicalAddress.ReplaceAllString(output, objectPrefix+"/<OBJECT_KEY>")
+		}
 	}
 	return output
 }

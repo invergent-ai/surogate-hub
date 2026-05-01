@@ -898,7 +898,7 @@ func createPrepareUncommittedTestScenario(t *testing.T, repositoryID string, num
 			GetUncommittedLocation(gomock.Any(), gomock.Any()).
 			MinTimes(1).
 			DoAndReturn(func(runID string, sn graveler.StorageNamespace) (string, error) {
-				return fmt.Sprintf("%s/retention/gc/uncommitted/%s/uncommitted/", "_lakefs", runID), nil
+				return fmt.Sprintf("%s/retention/gc/uncommitted/%s/uncommitted/", "_hub", runID), nil
 			})
 	}
 

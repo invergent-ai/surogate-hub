@@ -286,7 +286,7 @@ func TestSyncManager_upload(t *testing.T) {
 				case strings.HasSuffix(r.URL.Path, "/objects"):
 					// Check Chown
 					perm := local.POSIXPermissions{}
-					data := []byte(r.Header.Get(apiutil.LakeFSHeaderInternalPrefix + "POSIX-permissions"))
+					data := []byte(r.Header.Get(apiutil.HubHeaderInternalPrefix + "POSIX-permissions"))
 					if len(data) > 0 {
 						require.NoError(t, json.Unmarshal(data, &perm))
 					} else {
@@ -299,7 +299,7 @@ func TestSyncManager_upload(t *testing.T) {
 					require.Equal(t, expectedPerm, perm)
 
 					// Check Mtime
-					require.Equal(t, fmt.Sprintf("%d", tt.Mtime), r.Header.Get(apiutil.LakeFSHeaderInternalPrefix+"client-mtime"))
+					require.Equal(t, fmt.Sprintf("%d", tt.Mtime), r.Header.Get(apiutil.HubHeaderInternalPrefix+"client-mtime"))
 				default:
 					t.Fatal("Unexpected request")
 				}
@@ -342,7 +342,7 @@ func getTestClient(t *testing.T, endpoint string) *apigen.ClientWithResponses {
 		Transport: transport,
 	}
 
-	serverEndpoint, err := apiutil.NormalizeLakeFSEndpoint(endpoint)
+	serverEndpoint, err := apiutil.NormalizeHubEndpoint(endpoint)
 	require.NoError(t, err)
 
 	client, err := apigen.NewClientWithResponses(

@@ -176,11 +176,11 @@ func TestParseURL(t *testing.T) {
 		ExpectedUrl *git.URL
 	}{
 		{
-			Url: "git@github.com:treeverse/lakeFS.git",
+			Url: "git@github.com:invergent-ai/surogate-hub.git",
 			ExpectedUrl: &git.URL{
 				Server:  "github.com",
-				Owner:   "treeverse",
-				Project: "lakeFS",
+				Owner:   "invergent-ai",
+				Project: "surogate-hub",
 			},
 		},
 		{
@@ -192,11 +192,11 @@ func TestParseURL(t *testing.T) {
 			},
 		},
 		{
-			Url: "https://github.com/treeverse/lakeFS2.git",
+			Url: "https://github.com/invergent-ai/surogate-hub2.git",
 			ExpectedUrl: &git.URL{
 				Server:  "github.com",
-				Owner:   "treeverse",
-				Project: "lakeFS2",
+				Owner:   "invergent-ai",
+				Project: "surogate-hub2",
 			},
 		},
 		{

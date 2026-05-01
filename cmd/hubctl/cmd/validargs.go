@@ -19,7 +19,7 @@ func ValidArgsRepository(cmd *cobra.Command, args []string, toComplete string) (
 
 func validRepositoryToComplete(ctx context.Context, toComplete string) ([]string, cobra.ShellCompDirective) {
 	// do not suggest in case we are passed the repository part
-	uriPrefix := uri.LakeFSSchema + uri.LakeFSSchemaSeparator
+	uriPrefix := uri.SgHubSchema + uri.SgHubSchemaSeparator
 	if strings.HasPrefix(toComplete, uriPrefix) && strings.Contains(toComplete[len(uriPrefix):], uri.PathSeparator) {
 		return nil, cobra.ShellCompDirectiveNoFileComp | cobra.ShellCompDirectiveNoSpace
 	}

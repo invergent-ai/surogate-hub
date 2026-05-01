@@ -2,11 +2,11 @@ package httputil
 
 import "net/http"
 
-// GetRequestLakeFSClient get Surogate Hub client identifier from request.
+// GetRequestHubClient get Surogate Hub client identifier from request.
 //
-//	It extracts the data from X-Lakefs-Client header and fallback to the user-agent
-func GetRequestLakeFSClient(r *http.Request) string {
-	id := r.Header.Get("X-Lakefs-Client")
+//	It extracts the data from X-SgHub-Client header and fallback to the user-agent
+func GetRequestHubClient(r *http.Request) string {
+	id := r.Header.Get("X-SgHub-Client")
 	if id == "" {
 		id = r.UserAgent()
 	}

@@ -61,7 +61,7 @@ const (
 	defaultSTSTTLSeconds = 3600
 	maxSTSTTLSeconds     = 3600 * 12
 
-	lakeFSPrefix = "symlinks"
+	hubPrefix = "symlinks"
 
 	actionStatusCompleted = "completed"
 	actionStatusFailed    = "failed"
@@ -2071,7 +2071,7 @@ func (c *Controller) CreateRepository(w http.ResponseWriter, r *http.Request, bo
 
 	if swag.BoolValue(params.Bare) {
 		// create a bare repository. This is useful in conjunction with refs-restore to create a copy
-		// of another repository by e.g. copying the _lakefs/ directory and restoring its refs
+		// of another repository by e.g. copying the _hub/ directory and restoring its refs
 		repo, err := c.Catalog.CreateBareRepository(ctx, body.Name, storageID, storageNamespace, defaultBranch, swag.BoolValue(body.ReadOnly))
 		if c.handleAPIError(ctx, w, r, err) {
 			return
@@ -2199,7 +2199,7 @@ func (c *Controller) ensureStorageNamespace(ctx context.Context, storageID, stor
 
 	if s, err := c.BlockAdapter.Get(ctx, obj); err == nil {
 		_ = s.Close()
-		return fmt.Errorf("found lakeFS objects in the storage (%s:%s) key(%s): %w",
+		return fmt.Errorf("found hub objects in the storage (%s:%s) key(%s): %w",
 			storageID, storageNamespace, obj.Identifier, ErrStorageNamespaceInUse)
 	} else if !errors.Is(err, block.ErrDataNotFound) {
 		return err
@@ -3391,7 +3391,7 @@ func (c *Controller) UploadObject(w http.ResponseWriter, r *http.Request, reposi
 	} else {
 		entryBuilder.AddressType(catalog.AddressTypeFull)
 	}
-	meta := extractLakeFSMetadata(r.Header)
+	meta := extractHubMetadata(r.Header)
 	if len(meta) > 0 {
 		entryBuilder.Metadata(meta)
 	}
@@ -4315,7 +4315,7 @@ func (c *Controller) CreateSymlinkFile(w http.ResponseWriter, r *http.Request, r
 			return
 		}
 	}
-	metaLocation := fmt.Sprintf("%s/%s", repo.StorageNamespace, lakeFSPrefix)
+	metaLocation := fmt.Sprintf("%s/%s", repo.StorageNamespace, hubPrefix)
 	response := apigen.StorageURI{
 		Location: metaLocation,
 	}
@@ -4323,7 +4323,7 @@ func (c *Controller) CreateSymlinkFile(w http.ResponseWriter, r *http.Request, r
 }
 
 func writeSymlink(ctx context.Context, repo *catalog.Repository, branch, path string, addresses []string, adapter block.Adapter) error {
-	address := fmt.Sprintf("%s/%s/%s/%s/symlink.txt", lakeFSPrefix, repo.Name, branch, path)
+	address := fmt.Sprintf("%s/%s/%s/%s/symlink.txt", hubPrefix, repo.Name, branch, path)
 	data := strings.Join(addresses, "\n")
 	_, err := adapter.Put(ctx, block.ObjectPointer{
 		StorageID:        repo.StorageID,
@@ -5188,7 +5188,7 @@ func (c *Controller) GetSetupState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if savedState == auth.SetupStateNotInitialized {
-		c.Collector.CollectEvent(stats.Event{Class: "global", Name: "preinit", Client: httputil.GetRequestLakeFSClient(r)})
+		c.Collector.CollectEvent(stats.Event{Class: "global", Name: "preinit", Client: httputil.GetRequestHubClient(r)})
 	}
 
 	response := apigen.SetupState{
@@ -5260,7 +5260,7 @@ func (c *Controller) Setup(w http.ResponseWriter, r *http.Request, body apigen.S
 	meta := stats.NewMetadata(ctx, c.Logger, c.BlockAdapter.BlockstoreType(), c.MetadataManager, c.CloudMetadataProvider)
 	c.Collector.SetInstallationID(meta.InstallationID)
 	c.Collector.CollectMetadata(meta)
-	c.Collector.CollectEvent(stats.Event{Class: "global", Name: "init", UserID: body.Username, Client: httputil.GetRequestLakeFSClient(r)})
+	c.Collector.CollectEvent(stats.Event{Class: "global", Name: "init", UserID: body.Username, Client: httputil.GetRequestHubClient(r)})
 
 	response := apigen.CredentialsWithSecret{
 		AccessKeyId:     cred.AccessKeyID,
@@ -5332,7 +5332,7 @@ func (c *Controller) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) GetLakeFSVersion(w http.ResponseWriter, r *http.Request) {
+func (c *Controller) GetHubVersion(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	_, err := auth.GetUser(ctx)
 	if err != nil {
@@ -5418,7 +5418,7 @@ func (c *Controller) PostStatsEvents(w http.ResponseWriter, r *http.Request, bod
 		}
 	}
 
-	client := httputil.GetRequestLakeFSClient(r)
+	client := httputil.GetRequestHubClient(r)
 	for _, statsEv := range body.Events {
 		ev := stats.Event{
 			Class:  statsEv.Class,
@@ -5747,7 +5747,7 @@ func resolvePathList(objects, prefixes *[]string) []catalog.PathRecord {
 }
 
 func (c *Controller) LogAction(ctx context.Context, action string, r *http.Request, repository, ref, sourceRef string) {
-	client := httputil.GetRequestLakeFSClient(r)
+	client := httputil.GetRequestHubClient(r)
 	ev := stats.Event{
 		Class:      "api_server",
 		Name:       action,
@@ -5868,16 +5868,16 @@ func encodeGCUncommittedMark(mark *catalog.GCUncommittedMark) (*string, error) {
 	return &token, nil
 }
 
-func extractLakeFSMetadata(header http.Header) map[string]string {
+func extractHubMetadata(header http.Header) map[string]string {
 	meta := make(map[string]string)
 	for k, v := range header {
 		lowerKey := strings.ToLower(k)
 		metaKey := ""
 		switch {
-		case strings.HasPrefix(lowerKey, apiutil.LakeFSHeaderMetadataPrefix):
-			metaKey = lowerKey[len(apiutil.LakeFSHeaderMetadataPrefix):]
-		case strings.HasPrefix(lowerKey, apiutil.LakeFSHeaderInternalPrefix):
-			metaKey = apiutil.LakeFSMetadataPrefix + lowerKey[len(apiutil.LakeFSHeaderInternalPrefix):]
+		case strings.HasPrefix(lowerKey, apiutil.HubHeaderMetadataPrefix):
+			metaKey = lowerKey[len(apiutil.HubHeaderMetadataPrefix):]
+		case strings.HasPrefix(lowerKey, apiutil.HubHeaderInternalPrefix):
+			metaKey = apiutil.HubMetadataPrefix + lowerKey[len(apiutil.HubHeaderInternalPrefix):]
 		default:
 			continue
 		}

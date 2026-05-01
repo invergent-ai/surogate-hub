@@ -15,7 +15,6 @@ esti/
 examples/
 hubctl
 sghub
-lakefs
 pkg/gateway/testdata/
 target/
 test/

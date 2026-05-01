@@ -218,7 +218,7 @@ func setupClientByEndpoint(t testing.TB, endpointURL string, accessKeyID, secret
 	}
 	clt, err := apigen.NewClientWithResponses(endpointURL+apiutil.BaseURL, opts...)
 	if err != nil {
-		t.Fatal("failed to create lakefs api client:", err)
+		t.Fatal("failed to create hub api client:", err)
 	}
 	return clt
 }
@@ -357,7 +357,7 @@ func TestServeXETReconstructionRequiresLiveLogicalContext(t *testing.T) {
 		SizeBytes: uint64(len(chunk)),
 	}})
 	require.NoError(t, err)
-	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_lakefs_xet")
+	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_hub_xet")
 	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
 	require.NoError(t, err)
 	_, err = xetstore.NewRegistry(deps.catalog.KVStore).RegisterShard(ctx, xetstore.RegisterShardParams{
@@ -431,7 +431,7 @@ func TestServeXETReconstructionUsesFileRefFallback(t *testing.T) {
 		SizeBytes: uint64(len(chunk)),
 	}})
 	require.NoError(t, err)
-	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_lakefs_xet")
+	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_hub_xet")
 	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
 	require.NoError(t, err)
 	registry := xetstore.NewRegistry(deps.catalog.KVStore)
@@ -506,7 +506,7 @@ func TestInvalidRoute(t *testing.T) {
 	ctx := context.Background()
 	resp, err := clt.ListRepositoriesWithResponse(ctx, &apigen.ListRepositoriesParams{})
 	if err != nil {
-		t.Fatalf("failed to get lakefs server version")
+		t.Fatalf("failed to get hub server version")
 	}
 	if resp.JSONDefault == nil {
 		t.Fatalf("client api call expected default error, got nil")

@@ -2,6 +2,7 @@ import warnings
 
 from urllib3.util import parse_url, Url
 from surogate_hub_sdk import ApiClient
+from surogate_hub_sdk.xet_objects_api import XetObjectsApi
 from surogate_hub_sdk.api import actions_api
 from surogate_hub_sdk.api import auth_api
 from surogate_hub_sdk.api import branches_api
@@ -19,7 +20,6 @@ from surogate_hub_sdk.api import refs_api
 from surogate_hub_sdk.api import repositories_api
 from surogate_hub_sdk.api import staging_api
 from surogate_hub_sdk.api import tags_api
-from surogate_hub_sdk.xet_objects_api import XetObjectsApi
 
 
 class _WrappedApiClient(ApiClient):
@@ -55,14 +55,14 @@ class _WrappedApiClient(ApiClient):
 
         return super().files_parameters(files_to_read) + params
 
-class LakeFSClient:
+class HubClient:
     def __init__(self, configuration=None, header_name=None, header_value=None, cookie=None, pool_threads=1):
         # use default configuration if none is provided
         if configuration is None:
           configuration = Configuration.get_default()
 
         configuration.verify_ssl = False
-        configuration = LakeFSClient._ensure_endpoint(configuration)
+        configuration = HubClient._ensure_endpoint(configuration)
         self._api = _WrappedApiClient(configuration=configuration, header_name=header_name,
                                           header_value=header_value, cookie=cookie)
         self.actions_api = actions_api.ActionsApi(self._api)
@@ -76,16 +76,17 @@ class LakeFSClient:
         self.import_api = import_api.ImportApi(self._api)
         self.internal_api = internal_api.InternalApi(self._api)
         self.metadata_api = metadata_api.MetadataApi(self._api)
-        self.objects_api = XetObjectsApi(self._api)
+        self.objects_api = objects_api.ObjectsApi(self._api)
         self.pulls_api = pulls_api.PullsApi(self._api)
         self.refs_api = refs_api.RefsApi(self._api)
         self.repositories_api = repositories_api.RepositoriesApi(self._api)
         self.staging_api = staging_api.StagingApi(self._api)
         self.tags_api = tags_api.TagsApi(self._api)
+        self.objects_api = XetObjectsApi(self._api)
 
     @staticmethod
     def _ensure_endpoint(configuration):
-        """Normalize lakefs connection endpoint found in configuration's host"""
+        """Normalize hub connection endpoint found in configuration's host"""
         if not configuration or not configuration.host:
             return configuration
         try:

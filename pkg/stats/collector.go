@@ -57,7 +57,7 @@ func (e Event) ClearExtended() Event {
 	e.Ref = ""
 	e.SourceRef = ""
 	e.UserID = ""
-	if !strings.HasPrefix(e.Client, "lakefs-") {
+	if !strings.HasPrefix(e.Client, "sghub-") {
 		e.Client = ""
 	}
 	return e

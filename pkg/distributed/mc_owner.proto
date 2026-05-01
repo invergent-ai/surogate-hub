@@ -3,7 +3,7 @@ option go_package = "github.com/invergent-ai/surogate-hub/distributed";
 
 import "google/protobuf/timestamp.proto";
 
-package io.treeverse.lakefs.kv;
+package ai.invergent.shub.kv;
 
 // message data model for mostly-correct ownership
 message MostlyCorrectOwnership {

@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	DBName                    = "lakefs_db"
+	DBName                    = "hub_db"
 	DBContainerTimeoutSeconds = 60 * 30 // 30 minutes
 
 	EnvKeyUseBlockAdapter = "USE_BLOCK_ADAPTER" // pragma: allowlist secret
@@ -56,8 +56,8 @@ func GetDBInstance(pool *dockertest.Pool) (string, func()) {
 
 	// run new instance and connect
 	resource, err := pool.Run("postgres", "11", []string{
-		"POSTGRES_USER=lakefs",
-		"POSTGRES_PASSWORD=lakefs",
+		"POSTGRES_USER=sghub",
+		"POSTGRES_PASSWORD=sghub",
 		fmt.Sprintf("POSTGRES_DB=%s", DBName),
 	})
 	if err != nil {
@@ -100,8 +100,8 @@ func GetDBInstance(pool *dockertest.Pool) (string, func()) {
 func formatPostgresResourceURI(resource *dockertest.Resource) string {
 	dbParams := map[string]string{
 		"POSTGRES_DB":       DBName,
-		"POSTGRES_USER":     "lakefs",
-		"POSTGRES_PASSWORD": "lakefs",
+		"POSTGRES_USER":     "sghub",
+		"POSTGRES_PASSWORD": "sghub",
 		"POSTGRES_PORT":     resource.GetPort("5432/tcp"),
 	}
 	env := resource.Container.Config.Env

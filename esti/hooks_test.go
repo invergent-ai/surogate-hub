@@ -457,7 +457,7 @@ func parseAndUploadActions(t *testing.T, ctx context.Context, repo, branch strin
 		require.NoError(t, err)
 
 		action := doc.String()
-		resp, err := uploadContent(ctx, repo, branch, "_lakefs_actions/"+ent, action)
+		resp, err := uploadContent(ctx, repo, branch, "_hub_actions/"+ent, action)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, resp.StatusCode())
 	}

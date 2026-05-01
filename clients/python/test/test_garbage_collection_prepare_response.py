@@ -37,15 +37,15 @@ class TestGarbageCollectionPrepareResponse(unittest.TestCase):
         if include_optional:
             return GarbageCollectionPrepareResponse(
                 run_id = '64eaa103-d726-4a33-bcb8-7c0b4abfe09e',
-                gc_commits_location = 's3://my-storage-namespace/_lakefs/retention/commits',
-                gc_addresses_location = 's3://my-storage-namespace/_lakefs/retention/addresses',
+                gc_commits_location = 's3://my-storage-namespace/_sghub/retention/commits',
+                gc_addresses_location = 's3://my-storage-namespace/_sghub/retention/addresses',
                 gc_commits_presigned_url = ''
             )
         else:
             return GarbageCollectionPrepareResponse(
                 run_id = '64eaa103-d726-4a33-bcb8-7c0b4abfe09e',
-                gc_commits_location = 's3://my-storage-namespace/_lakefs/retention/commits',
-                gc_addresses_location = 's3://my-storage-namespace/_lakefs/retention/addresses',
+                gc_commits_location = 's3://my-storage-namespace/_sghub/retention/commits',
+                gc_addresses_location = 's3://my-storage-namespace/_sghub/retention/addresses',
         )
         """
 

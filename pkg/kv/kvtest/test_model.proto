@@ -3,7 +3,7 @@ option go_package = "github.com/invergent-ai/surogate-hub/pkg/kv/kvtest";
 
 import "google/protobuf/timestamp.proto";
 
-package io.treeverse.lakefs.kvtest;
+package ai.invergent.shub.kvtest;
 
 message TestModel {
     bytes name = 1;
