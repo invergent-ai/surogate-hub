@@ -69,10 +69,22 @@ func runShellCommand(t *testing.T, command string, isTerminal bool) ([]byte, err
 	t.Logf("Run shell command '%s'", command)
 	// Assuming linux. Not sure if this is correct
 	cmd := exec.Command("/bin/sh", "-c", command)
-	cmd.Env = append(os.Environ(),
+	cmd.Env = append(commandEnv(),
 		"HUBCTL_INTERACTIVE="+strconv.FormatBool(isTerminal),
 	)
 	return cmd.CombinedOutput()
+}
+
+func commandEnv() []string {
+	env := os.Environ()
+	filtered := env[:0]
+	for _, entry := range env {
+		if strings.HasPrefix(entry, "NO_COLOR=") {
+			continue
+		}
+		filtered = append(filtered, entry)
+	}
+	return filtered
 }
 
 // expandVariables receives a string with (possibly) variables in the form of {VAR_NAME}, and

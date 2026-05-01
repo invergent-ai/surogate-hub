@@ -2119,9 +2119,11 @@ func (c *Controller) CreateRepository(w http.ResponseWriter, r *http.Request, bo
 		BranchRetentionDays:  make(map[string]int32),
 	}
 	rules.BranchRetentionDays[newRepo.DefaultBranch] = int32(0)
-	err = c.Catalog.SetGarbageCollectionRules(ctx, newRepo.Name, rules)
-	if c.handleAPIError(ctx, w, r, err) {
-		return
+	if !newRepo.ReadOnly {
+		err = c.Catalog.SetGarbageCollectionRules(ctx, newRepo.Name, rules)
+		if c.handleAPIError(ctx, w, r, err) {
+			return
+		}
 	}
 
 	response := apigen.Repository{

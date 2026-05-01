@@ -153,7 +153,7 @@ func TestConfig_BuildBlockAdapter(t *testing.T) {
 }
 
 func TestConfig_JSONLogger(t *testing.T) {
-	logfile := "/tmp/hub_json_logger_test.log"
+	logfile := "/tmp/sghub_json_logger_test.log"
 	_ = os.Remove(logfile)
 	_, err := newConfigFromFile("testdata/valid_json_logger_config.yaml")
 	testutil.Must(t, err)

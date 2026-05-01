@@ -6,8 +6,6 @@ GOBINPATH=$(shell $(GOCMD) env GOPATH)/bin
 UID_GID := $(shell id -u):$(shell id -g)
 
 # https://openapi-generator.tech
-OPENAPI_LEGACY_GENERATOR_IMAGE=openapitools/openapi-generator-cli:v5.3.0
-OPENAPI_LEGACY_GENERATOR=$(DOCKER) run --user $(UID_GID) --rm -v $(shell pwd):/mnt $(OPENAPI_LEGACY_GENERATOR_IMAGE)
 OPENAPI_GENERATOR_IMAGE=treeverse/openapi-generator-cli:v7.0.1.1
 OPENAPI_GENERATOR=$(DOCKER) run --user $(UID_GID) --rm -v $(shell pwd):/mnt $(OPENAPI_GENERATOR_IMAGE)
 PY_OPENAPI_GENERATOR_IMAGE=openapitools/openapi-generator-cli:v7.20.0
@@ -51,7 +49,13 @@ GIT_REF=$(shell git rev-parse --short HEAD --)
 REVISION=$(GIT_REF)$(DIRTY)
 export REVISION
 
-.PHONY: all clean esti lint test gen help
+.PHONY: all clean check-licenses check-licenses-go-mod tools
+.PHONY: clients client-python sdk-python client-java
+.PHONY: package package-python package-python-sdk
+.PHONY: gen gen-api gen-code gen-proto build build-go build-docker
+.PHONY: lint gofmt validate-fmt test test-go run-test fast-test test-html system-tests
+.PHONY: validate-proto validate-mockgen validate-permissions-gen validate-wrapper validate-wrapgen-testcode
+.PHONY: validate-client-python validate-python-sdk validate-client-java checks-validator help
 all: build
 
 clean:
@@ -112,10 +116,9 @@ client-java: api/swagger.yml api/java-gen-ignore  ## Generate SDK for Java (and 
 		--additional-properties disallowAdditionalPropertiesIfNotPresent=false,useSingleRequestParameter=true,hideGenerationTimestamp=true,artifactVersion=$(PACKAGE_VERSION),parentArtifactId=surogate-hub-parent,parentGroupId=org.surogate.hub,parentVersion=0,groupId=org.surogate.hub,artifactId='sdk',artifactDescription='Surogate Hub OpenAPI Java client',artifactUrl=https://github.com/invergent-ai/surogate-hub,apiPackage=org.surogate.hub.clients.sdk,modelPackage=org.surogate.hub.clients.sdk.model,mainPackage=org.surogate.hub.clients.sdk,developerEmail=contact@invergent.ai,developerName='Invergent Surogate Hub dev',developerOrganization='invergent.ai',developerOrganizationUrl='https://invergent.ai',licenseName=apache2,licenseUrl=http://www.apache.org/licenses/ \
 		-o /mnt/clients/java
 
-.PHONY: clients client-python sdk-python client-java
 clients: client-python client-java
 
-package-python: package-python-client package-python-sdk
+package-python: package-python-sdk
 
 package-python-sdk: sdk-python
 	$(DOCKER) run --user $(UID_GID) --rm -v $(shell pwd):/mnt -e HOME=/tmp/ -w /mnt/clients/python $(PYTHON_IMAGE) /bin/bash -c \
@@ -123,11 +126,9 @@ package-python-sdk: sdk-python
 
 package: package-python
 
-.PHONY: gen-api
 gen-api: docs/assets/js/swagger.yml ## Run the swagger code generator
 	$(GOGENERATE) ./pkg/api/apigen ./pkg/auth ./pkg/authentication
 
-.PHONY: gen-code
 gen-code: gen-api ## Run the generator for inline commands
 	$(GOGENERATE) \
 		./pkg/auth/acl \
@@ -187,7 +188,6 @@ validate-fmt:  ## Validate go format
 		echo Your code formatting is according to gofmt standards; \
 	fi
 
-.PHONY: validate-proto
 validate-proto: gen-proto  ## build proto and check if diff found
 	git diff --quiet -- pkg/actions/actions.pb.go || (echo "Modification verification failed! pkg/actions/actions.pb.go"; false)
 	git diff --quiet -- pkg/auth/model/model.pb.go || (echo "Modification verification failed! pkg/auth/model/model.pb.go"; false)
@@ -199,7 +199,6 @@ validate-proto: gen-proto  ## build proto and check if diff found
 	git diff --quiet -- pkg/kv/secondary_index.pb.go || (echo "Modification verification failed! pkg/kv/secondary_index.pb.go"; false)
 	git diff --quiet -- pkg/kv/kvtest/test_model.pb.go || (echo "Modification verification failed! pkg/kv/kvtest/test_model.pb.go"; false)
 
-.PHONY: validate-mockgen
 validate-mockgen: gen-code
 	git diff --quiet -- pkg/actions/mock/mock_actions.go || (echo "Modification verification failed! pkg/actions/mock/mock_actions.go"; false)
 	git diff --quiet -- pkg/auth/mock/mock_auth_client.go || (echo "Modification verification failed! pkg/auth/mock/mock_auth_client.go"; false)
@@ -211,23 +210,17 @@ validate-mockgen: gen-code
 	git diff --quiet -- pkg/kv/mock/store.go || (echo "Modification verification failed! pkg/kv/mock/store.go"; false)
 	git diff --quiet -- pkg/pyramid/mock/pyramid.go || (echo "Modification verification failed! pkg/pyramid/mock/pyramid.go"; false)
 
-.PHONY: validate-permissions-gen
 validate-permissions-gen: gen-code
 	git diff --quiet -- pkg/permissions/actions.gen.go || (echo "Modification verification failed!  pkg/permissions/actions.gen.go"; false)
 
-.PHONY: validate-wrapper
 validate-wrapper: gen-code
 	git diff --quiet -- pkg/auth/service_wrapper.gen.go || (echo "Modification verification failed! pkg/auth/service_wrapper.gen.go"; false)
 	git diff --quiet -- pkg/auth/service_inviter_wrapper.gen.go || (echo "Modification verification failed! pkg/auth/service_inviter_wrapper.gen.go"; false)
 
-.PHONY: validate-wrapgen-testcode
 validate-wrapgen-testcode: gen-code
 	git diff --quiet -- ./tools/wrapgen/testcode || (echo "Modification verification failed! tools/wrapgen/testcode"; false)
 
-validate-client-python: validate-python-sdk-legacy validate-python-sdk
-
-validate-python-sdk-legacy:
-	git diff --quiet -- clients/python-legacy || (echo "Modification verification failed! python client"; false)
+validate-client-python: validate-python-sdk
 
 validate-python-sdk:
 	git diff --quiet -- clients/python || (echo "Modification verification failed! python client"; false)
@@ -237,7 +230,7 @@ validate-client-java:
 
 # Run all validation/linting steps
 checks-validator: lint validate-fmt validate-proto \
-	validate-client-python validate-client-java validate-reference \
+	validate-client-python validate-client-java \
 	validate-mockgen \
 	validate-permissions-gen \
 	validate-wrapper validate-wrapgen-testcode
@@ -250,6 +243,3 @@ help:  ## Show Help menu
 
 # helpers
 gen: gen-api gen-code clients
-
-validate-clients-untracked-files:
-	scripts/verify_clients_untracked_files.sh
