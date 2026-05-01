@@ -3,9 +3,9 @@ package operations
 import (
 	"net/http"
 
-	"github.com/treeverse/lakefs/pkg/gateway/errors"
-	"github.com/treeverse/lakefs/pkg/gateway/serde"
-	"github.com/treeverse/lakefs/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/serde"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
 )
 
 type ListBuckets struct{}

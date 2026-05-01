@@ -9,12 +9,12 @@ hooks:
       script: |
         local aws = require("aws")
         local formats = require("formats")
-        local delta_exporter = require("lakefs/catalogexport/delta_exporter")
+        local delta_exporter = require("sghub/catalogexport/delta_exporter")
         local json = require("encoding/json")
         
-        local table_descriptors_path = "_lakefs_tables"
+        local table_descriptors_path = "_hub_tables"
         local sc = aws.s3_client(args.aws.access_key_id, args.aws.secret_access_key, args.aws.region)
-        local delta_client = formats.delta_client(args.lakefs.access_key_id, args.lakefs.secret_access_key, args.aws.region)
+        local delta_client = formats.delta_client(args.sghub.access_key_id, args.sghub.secret_access_key, args.aws.region)
         local delta_table_details = delta_exporter.export_delta_log(action, args.table_names, sc.put_object, delta_client, table_descriptors_path)
 
         for t, details in pairs(delta_table_details) do
@@ -39,8 +39,8 @@ hooks:
           access_key_id: "{{ .AWSAccessKeyID }}"
           secret_access_key: "{{ .AWSSecretAccessKey }}"
           region: "{{ .AWSRegion }}"
-        lakefs: # provide credentials of a user that has access to the script and Delta Table
-          access_key_id: "{{ .LakeFSAccessKeyID }}"
-          secret_access_key: "{{ .LakeFSSecretAccessKey }}"
+        sghub: # provide credentials of a user that has access to the script and Delta Table
+          access_key_id: "{{ .HubAccessKeyID }}"
+          secret_access_key: "{{ .HubSecretAccessKey }}"
         table_names:
           - test-table

@@ -30,27 +30,27 @@ import (
 	"github.com/go-test/deep"
 	"github.com/golang-jwt/jwt"
 	"github.com/hashicorp/go-multierror"
+	"github.com/invergent-ai/surogate-hub/pkg/api"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/httputil"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/stats"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
+	"github.com/invergent-ai/surogate-hub/pkg/upload"
+	xetcas "github.com/invergent-ai/surogate-hub/pkg/xet/cas"
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 	nanoid "github.com/matoous/go-nanoid/v2"
 	"github.com/rs/xid"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/api"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
-	"github.com/treeverse/lakefs/pkg/auth"
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/catalog"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/httputil"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/permissions"
-	"github.com/treeverse/lakefs/pkg/stats"
-	"github.com/treeverse/lakefs/pkg/testutil"
-	"github.com/treeverse/lakefs/pkg/upload"
-	xetcas "github.com/treeverse/lakefs/pkg/xet/cas"
-	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 	"golang.org/x/exp/slices"
 )
 
@@ -193,7 +193,7 @@ func TestController_LinkXETPhysicalAddressCrashAfterGravelerWrite(t *testing.T) 
 		SizeBytes: uint64(len(chunk)),
 	}})
 	require.NoError(t, err)
-	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_lakefs_xet")
+	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_hub_xet")
 	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
 	require.NoError(t, err)
 	registry := xetstore.NewRegistry(deps.catalog.KVStore)
@@ -270,7 +270,7 @@ func TestController_GetObjectXETPhysicalAddressRange(t *testing.T) {
 		SizeBytes: uint64(len(chunk)),
 	}})
 	require.NoError(t, err)
-	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_lakefs_xet")
+	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_hub_xet")
 	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
 	require.NoError(t, err)
 	_, err = xetstore.NewRegistry(deps.catalog.KVStore).RegisterShard(ctx, xetstore.RegisterShardParams{
@@ -3611,7 +3611,7 @@ func TestController_CreatePolicyHandler(t *testing.T) {
 				{
 					Action:   []string{"fs:ReadObject"},
 					Effect:   "allow",
-					Resource: "arn:lakefs:fs:::repository/foo/object/*",
+					Resource: "arn:sghub:fs:::repository/foo/object/*",
 				},
 			},
 		})
@@ -3626,7 +3626,7 @@ func TestController_CreatePolicyHandler(t *testing.T) {
 				{
 					Action:   []string{"fsx:ReadObject"},
 					Effect:   "allow",
-					Resource: "arn:lakefs:fs:::repository/foo/object/*",
+					Resource: "arn:sghub:fs:::repository/foo/object/*",
 				},
 			},
 		})
@@ -3644,7 +3644,7 @@ func TestController_CreatePolicyHandler(t *testing.T) {
 				{
 					Action:   []string{"fs:ReadObject"},
 					Effect:   "Allow",
-					Resource: "arn:lakefs:fs:::repository/foo/object/*",
+					Resource: "arn:sghub:fs:::repository/foo/object/*",
 				},
 			},
 		})
@@ -3663,7 +3663,7 @@ func TestController_CreatePolicyHandler(t *testing.T) {
 				{
 					Action:   []string{"fs:ReadObject"},
 					Effect:   "Allow",
-					Resource: "arn:lakefs:fs:repository/foo/object/*",
+					Resource: "arn:sghub:fs:repository/foo/object/*",
 				},
 			},
 		})
@@ -3735,7 +3735,7 @@ func TestController_ConfigHandlers(t *testing.T) {
 	})
 }
 
-func TestController_SetupLakeFSHandler(t *testing.T) {
+func TestController_SetupHubHandler(t *testing.T) {
 	const validAccessKeyID = "AKIAIOSFODNN7EXAMPLE"
 	cases := []struct {
 		name               string
@@ -3948,7 +3948,7 @@ func TestController_ListRepositoryRuns(t *testing.T) {
 	var b bytes.Buffer
 	testutil.MustDo(t, "execute action template", listRepositoryRunsActionTemplate.Execute(&b, httpServer))
 	actionContent := b.String()
-	uploadResp, err := uploadObjectHelper(t, ctx, clt, "_lakefs_actions/pre_commit.yaml", strings.NewReader(actionContent), repo, "main")
+	uploadResp, err := uploadObjectHelper(t, ctx, clt, "_hub_actions/pre_commit.yaml", strings.NewReader(actionContent), repo, "main")
 	verifyResponseOK(t, uploadResp, err)
 	// commit
 	respCommit, err := clt.CommitWithResponse(ctx, repo, "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
@@ -5004,7 +5004,7 @@ func TestController_PrepareGarbageCollectionCommitted(t *testing.T) {
 func TestController_ClientDisconnect(t *testing.T) {
 	handler, deps := setupHandler(t)
 
-	// setup lakefs
+	// setup the hub
 	server := setupServer(t, handler)
 	clt := setupClientByEndpoint(t, server.URL, "", "")
 	cred := createDefaultAdminUser(t, clt)
@@ -5918,7 +5918,7 @@ func TestCheckPermissions_UnpermittedRequests(t *testing.T) {
 				Type: permissions.NodeTypeNode,
 				Permission: permissions.Permission{
 					Action:   "fs:DeleteRepository",
-					Resource: "arn:lakefs:fs:::repository/repo1",
+					Resource: "arn:sghub:fs:::repository/repo1",
 				},
 			},
 			username: "user1",
@@ -5927,7 +5927,7 @@ func TestCheckPermissions_UnpermittedRequests(t *testing.T) {
 					Statement: []model.Statement{
 						{
 							Action:   []string{"fs:DeleteRepository"},
-							Resource: "arn:lakefs:fs:::repository/repo1",
+							Resource: "arn:sghub:fs:::repository/repo1",
 							Effect:   model.StatementEffectDeny,
 						},
 					},
@@ -5941,7 +5941,7 @@ func TestCheckPermissions_UnpermittedRequests(t *testing.T) {
 				Type: permissions.NodeTypeNode,
 				Permission: permissions.Permission{
 					Action:   "fs:DeleteRepository",
-					Resource: "arn:lakefs:fs:::repository/repo1",
+					Resource: "arn:sghub:fs:::repository/repo1",
 				},
 			},
 			username: "user1",
@@ -5950,7 +5950,7 @@ func TestCheckPermissions_UnpermittedRequests(t *testing.T) {
 					Statement: []model.Statement{
 						{
 							Action:   []string{"fs:DeleteRepository", "fs:CreateRepository"},
-							Resource: "arn:lakefs:fs:::repository/repo1",
+							Resource: "arn:sghub:fs:::repository/repo1",
 							Effect:   model.StatementEffectDeny,
 						},
 					},
@@ -5963,7 +5963,7 @@ func TestCheckPermissions_UnpermittedRequests(t *testing.T) {
 				Type: permissions.NodeTypeNode,
 				Permission: permissions.Permission{
 					Action:   "fs:ReadRepository",
-					Resource: "arn:lakefs:fs:::repository/repo1",
+					Resource: "arn:sghub:fs:::repository/repo1",
 				},
 			},
 			username: "user1",
@@ -5972,7 +5972,7 @@ func TestCheckPermissions_UnpermittedRequests(t *testing.T) {
 					Statement: []model.Statement{
 						{
 							Action:   []string{"fs:DeleteRepository"},
-							Resource: "arn:lakefs:fs:::repository/repo1",
+							Resource: "arn:sghub:fs:::repository/repo1",
 							Effect:   model.StatementEffectDeny,
 						},
 					},

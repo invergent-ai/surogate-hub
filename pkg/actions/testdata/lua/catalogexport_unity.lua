@@ -89,7 +89,7 @@ local test_cases = {
 
 -- Loads a mock table (descriptor) extractor
 local function load_table_descriptor(tables)
-    package.loaded["lakefs/catalogexport/table_extractor"] = {
+    package.loaded["sghub/catalogexport/table_extractor"] = {
         get_table_descriptor = function(_, _, _, table_src_path)
             local examined_tables = {}
             for name, t in pairs(tables) do
@@ -133,9 +133,9 @@ end
 ---------- Begin tests ----------
 ---------------------------------
 for _, test in ipairs(test_cases) do
-    package.loaded["lakefs/catalogexport/unity_exporter"] = nil
+    package.loaded["sghub/catalogexport/unity_exporter"] = nil
     load_table_descriptor(test.tables)
-    local unity_export = require("lakefs/catalogexport/unity_exporter")
+    local unity_export = require("sghub/catalogexport/unity_exporter")
     local err = test.error
     local schema_failure = test.schema_failure
     local test_tables = test.tables
@@ -146,7 +146,7 @@ for _, test in ipairs(test_cases) do
 
     local db = db_client(schema_failure, test_tables)
     -- Run test:
-    local s, resp = pcall(unity_export.register_tables, action, "_lakefs_tables", table_paths, db, "id")
+    local s, resp = pcall(unity_export.register_tables, action, "_hub_tables", table_paths, db, "id")
     if err ~= nil then
         if s ~= false then -- the status is true which means no error was returned
             local str_resp = ""

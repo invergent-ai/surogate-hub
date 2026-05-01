@@ -3,7 +3,7 @@ package operations
 import (
 	"net/http"
 
-	"github.com/treeverse/lakefs/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
 )
 
 type HeadBucket struct{}

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/treeverse/lakefs/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
 )
 
 const (

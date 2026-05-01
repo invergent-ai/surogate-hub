@@ -11,16 +11,16 @@ import (
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/go-test/deep"
+	blockfactory "github.com/invergent-ai/surogate-hub/modules/block/factory"
+	configfactory "github.com/invergent-ai/surogate-hub/modules/config/factory"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block/gs"
+	"github.com/invergent-ai/surogate-hub/pkg/block/local"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 	"github.com/spf13/viper"
-	blockfactory "github.com/treeverse/lakefs/modules/block/factory"
-	configfactory "github.com/treeverse/lakefs/modules/config/factory"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/block/gs"
-	"github.com/treeverse/lakefs/pkg/block/local"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/testutil"
 )
 
 func newConfigFromFile(fn string) (*config.BaseConfig, error) {
@@ -86,9 +86,9 @@ func pushEnv(key, value string) func() {
 
 func TestConfig_EnvironmentVariables(t *testing.T) {
 	const dbString = "not://a/database"
-	defer pushEnv("LAKEFS_DATABASE_POSTGRES_CONNECTION_STRING", dbString)()
+	defer pushEnv("SGHUB_DATABASE_POSTGRES_CONNECTION_STRING", dbString)()
 
-	viper.SetEnvPrefix("LAKEFS")
+	viper.SetEnvPrefix("SGHUB")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_")) // support nested config
 	// read in environment variables
 	viper.AutomaticEnv()
@@ -153,7 +153,7 @@ func TestConfig_BuildBlockAdapter(t *testing.T) {
 }
 
 func TestConfig_JSONLogger(t *testing.T) {
-	logfile := "/tmp/lakefs_json_logger_test.log"
+	logfile := "/tmp/sghub_json_logger_test.log"
 	_ = os.Remove(logfile)
 	_, err := newConfigFromFile("testdata/valid_json_logger_config.yaml")
 	testutil.Must(t, err)

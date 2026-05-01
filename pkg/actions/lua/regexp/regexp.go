@@ -4,7 +4,7 @@ import (
 	"regexp"
 
 	"github.com/Shopify/go-lua"
-	"github.com/treeverse/lakefs/pkg/actions/lua/util"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/util"
 )
 
 // Open exposes the regexp functions to Lua code in the `regexp`

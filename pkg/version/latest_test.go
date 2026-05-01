@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/version"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/version"
 )
 
 type checkLatestVersionTestCase struct {

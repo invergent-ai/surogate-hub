@@ -8,7 +8,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	committed "github.com/treeverse/lakefs/pkg/graveler/committed"
+	committed "github.com/invergent-ai/surogate-hub/pkg/graveler/committed"
 )
 
 // MockBatchWriterCloser is a mock of BatchWriterCloser interface.

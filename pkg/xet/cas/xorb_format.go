@@ -8,8 +8,8 @@ import (
 	"io"
 	"strings"
 
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 	"github.com/pierrec/lz4/v4"
-	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 const (

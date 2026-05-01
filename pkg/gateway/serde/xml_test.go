@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/gateway/serde"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/serde"
 )
 
 func TestTimestamp(t *testing.T) {

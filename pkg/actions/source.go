@@ -3,7 +3,7 @@ package actions
 import (
 	"context"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
 type Source interface {

@@ -13,24 +13,23 @@ import (
 	"github.com/getkin/kin-openapi/routers/legacy"
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/sessions"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	"github.com/invergent-ai/surogate-hub/pkg/authentication"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog"
+	"github.com/invergent-ai/surogate-hub/pkg/cloud"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/httputil"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/stats"
+	"github.com/invergent-ai/surogate-hub/pkg/upload"
+	xetcas "github.com/invergent-ai/surogate-hub/pkg/xet/cas"
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
-	"github.com/treeverse/lakefs/pkg/api/params"
-	"github.com/treeverse/lakefs/pkg/auth"
-	"github.com/treeverse/lakefs/pkg/authentication"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/catalog"
-	"github.com/treeverse/lakefs/pkg/cloud"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/httputil"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/permissions"
-	"github.com/treeverse/lakefs/pkg/stats"
-	"github.com/treeverse/lakefs/pkg/upload"
-	xetcas "github.com/treeverse/lakefs/pkg/xet/cas"
-	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 const (
@@ -39,7 +38,7 @@ const (
 	extensionValidationExcludeBody = "x-validation-exclude-body"
 )
 
-func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator auth.Authenticator, authService auth.Service, authenticationService authentication.Service, blockAdapter block.Adapter, metadataManager auth.MetadataManager, migrator Migrator, collector stats.Collector, cloudMetadataProvider cloud.MetadataProvider, actions actionsHandler, auditChecker AuditChecker, logger logging.Logger, gatewayDomains []string, snippets []params.CodeSnippet, pathProvider upload.PathProvider, usageReporter stats.UsageReporterOperations) http.Handler {
+func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator auth.Authenticator, authService auth.Service, authenticationService authentication.Service, blockAdapter block.Adapter, metadataManager auth.MetadataManager, migrator Migrator, collector stats.Collector, cloudMetadataProvider cloud.MetadataProvider, actions actionsHandler, auditChecker AuditChecker, logger logging.Logger, gatewayDomains []string, pathProvider upload.PathProvider, usageReporter stats.UsageReporterOperations) http.Handler {
 	logger.Info("initialize OpenAPI server")
 	swagger, err := apigen.GetSwagger()
 
@@ -121,20 +120,7 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 	r.Mount(apiutil.BaseURL, http.HandlerFunc(InvalidAPIEndpointHandler))
 	r.Mount("/logout", NewLogoutHandler(sessionStore, logger, cfg.GetBaseConfig().Auth.LogoutRedirectURL))
 
-	// Configuration flag to control if the embedded UI is served
-	// or not and assign the correct handler for each case.
-	var rootHandler http.Handler
-	if cfg.GetBaseConfig().UI.Enabled {
-		// Handler which serves the embedded UI
-		// as well as handles erroneous S3 gateway requests
-		// and returns a compatible response
-		rootHandler = NewUIHandler(gatewayDomains, snippets)
-	} else {
-		// Handler which only handles erroneous S3 gateway requests
-		// and returns a compatible response
-		rootHandler = NewS3GatewayEndpointErrorHandler(gatewayDomains)
-	}
-	r.Mount("/", rootHandler)
+	r.Mount("/", NewS3GatewayEndpointErrorHandler(gatewayDomains))
 
 	return r
 }
@@ -142,10 +128,10 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 func xetStorageNamespace(cfg config.Config, blockAdapter block.Adapter) string {
 	if storage := cfg.StorageConfig().GetStorageByID(config.SingleBlockstoreID); storage != nil {
 		if prefix := storage.GetDefaultNamespacePrefix(); prefix != nil && *prefix != "" {
-			return strings.TrimRight(*prefix, "/") + "/_lakefs_xet"
+			return strings.TrimRight(*prefix, "/") + "/_hub_xet"
 		}
 	}
-	return blockAdapter.BlockstoreType() + "://_lakefs_xet"
+	return blockAdapter.BlockstoreType() + "://_hub_xet"
 }
 
 func xetReconstructionCapabilityChecker(cat *catalog.Catalog, authService auth.Service, registry *xetstore.Registry, scanBatchSize int) xetcas.ReconstructionCapabilityChecker {

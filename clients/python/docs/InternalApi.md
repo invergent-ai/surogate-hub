@@ -11,9 +11,9 @@ Method | HTTP request | Description
 [**dump_refs**](InternalApi.md#dump_refs) | **PUT** /repositories/{repository}/refs/dump | Dump repository refs (tags, commits, branches) to object store Deprecated: a new API will introduce long running operations 
 [**get_auth_capabilities**](InternalApi.md#get_auth_capabilities) | **GET** /auth/capabilities | list authentication capabilities supported
 [**get_garbage_collection_config**](InternalApi.md#get_garbage_collection_config) | **GET** /config/garbage-collection | 
-[**get_lake_fs_version**](InternalApi.md#get_lake_fs_version) | **GET** /config/version | 
+[**get_hub_version**](InternalApi.md#get_hub_version) | **GET** /config/version | 
 [**get_metadata_object**](InternalApi.md#get_metadata_object) | **GET** /repositories/{repository}/metadata/object/{type}/{object_id} | return a Surogate Hub metadata object by ID
-[**get_setup_state**](InternalApi.md#get_setup_state) | **GET** /setup_lakefs | check if the Surogate Hub installation is already set up
+[**get_setup_state**](InternalApi.md#get_setup_state) | **GET** /setup_sghub | check if the Surogate Hub installation is already set up
 [**get_storage_config**](InternalApi.md#get_storage_config) | **GET** /config/storage | 
 [**get_usage_report_summary**](InternalApi.md#get_usage_report_summary) | **GET** /usage-report/summary | get usage report summary
 [**internal_create_branch_protection_rule**](InternalApi.md#internal_create_branch_protection_rule) | **POST** /repositories/{repository}/branch_protection | 
@@ -28,7 +28,7 @@ Method | HTTP request | Description
 [**restore_refs**](InternalApi.md#restore_refs) | **PUT** /repositories/{repository}/refs/restore | Restore repository refs (tags, commits, branches) from object store. Deprecated: a new API will introduce long running operations 
 [**set_garbage_collection_rules_preflight**](InternalApi.md#set_garbage_collection_rules_preflight) | **GET** /repositories/{repository}/gc/rules/set_allowed | 
 [**set_repository_metadata**](InternalApi.md#set_repository_metadata) | **POST** /repositories/{repository}/metadata | set repository metadata
-[**setup**](InternalApi.md#setup) | **POST** /setup_lakefs | setup Surogate Hub and create a first user
+[**setup**](InternalApi.md#setup) | **POST** /setup_sghub | setup Surogate Hub and create a first user
 [**setup_comm_prefs**](InternalApi.md#setup_comm_prefs) | **POST** /setup_comm_prefs | setup communications preferences
 [**stage_object**](InternalApi.md#stage_object) | **PUT** /repositories/{repository}/branches/{branch}/objects | stage an object&#39;s metadata for the given branch
 [**upload_object_preflight**](InternalApi.md#upload_object_preflight) | **GET** /repositories/{repository}/branches/{branch}/objects/stage_allowed | 
@@ -742,8 +742,8 @@ This endpoint does not need any parameter.
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **get_lake_fs_version**
-> VersionConfig get_lake_fs_version()
+# **get_hub_version**
+> VersionConfig get_hub_version()
 
 get version of Surogate Hub server
 
@@ -807,11 +807,11 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
     api_instance = surogate_hub_sdk.InternalApi(api_client)
 
     try:
-        api_response = api_instance.get_lake_fs_version()
-        print("The response of InternalApi->get_lake_fs_version:\n")
+        api_response = api_instance.get_hub_version()
+        print("The response of InternalApi->get_hub_version:\n")
         pprint(api_response)
     except Exception as e:
-        print("Exception when calling InternalApi->get_lake_fs_version: %s\n" % e)
+        print("Exception when calling InternalApi->get_hub_version: %s\n" % e)
 ```
 
 

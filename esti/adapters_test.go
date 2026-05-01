@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/treeverse/lakefs/pkg/api/helpers"
+	"github.com/invergent-ai/surogate-hub/pkg/api/helpers"
 )
 
 // ObjectStats metadata of an object stored on a backing store.

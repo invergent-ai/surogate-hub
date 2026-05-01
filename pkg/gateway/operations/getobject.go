@@ -9,18 +9,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/catalog"
-	gatewayerrors "github.com/treeverse/lakefs/pkg/gateway/errors"
-	"github.com/treeverse/lakefs/pkg/gateway/path"
-	"github.com/treeverse/lakefs/pkg/gateway/serde"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/httputil"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/permissions"
-	xetcas "github.com/treeverse/lakefs/pkg/xet/cas"
-	xetreconstruct "github.com/treeverse/lakefs/pkg/xet/reconstruct"
-	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog"
+	gatewayerrors "github.com/invergent-ai/surogate-hub/pkg/gateway/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/path"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/serde"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/httputil"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
+	xetcas "github.com/invergent-ai/surogate-hub/pkg/xet/cas"
+	xetreconstruct "github.com/invergent-ai/surogate-hub/pkg/xet/reconstruct"
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 )
 
 const (
@@ -278,5 +278,5 @@ func parseXETPhysicalAddress(address string) (string, bool) {
 }
 
 func gatewayXETStorageNamespace(adapter block.Adapter) string {
-	return adapter.BlockstoreType() + "://_lakefs_xet"
+	return adapter.BlockstoreType() + "://_hub_xet"
 }

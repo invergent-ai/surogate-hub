@@ -8,10 +8,10 @@ import (
 
 	"github.com/cockroachdb/pebble"
 	"github.com/cockroachdb/pebble/sstable"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/committed"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/pyramid"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/committed"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/pyramid"
 )
 
 type NewSSTableReaderFn func(ctx context.Context, storageID committed.StorageID, ns committed.Namespace, id committed.ID) (*sstable.Reader, error)

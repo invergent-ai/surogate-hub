@@ -6,17 +6,17 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/treeverse/lakefs/pkg/validator"
+	"github.com/invergent-ai/surogate-hub/pkg/validator"
 )
 
 const (
-	LakeFSSchema          = "lakefs"
-	LakeFSSchemaSeparator = "://"
-	PathSeparator         = "/"
+	SgHubSchema          = "sg"
+	SgHubSchemaSeparator = "://"
+	PathSeparator        = "/"
 )
 
 var (
-	ErrMalformedURI     = errors.New("malformed lakefs URI")
+	ErrMalformedURI     = errors.New("malformed sg URI")
 	ErrInvalidRepoURI   = errors.New("not a valid repo URI")
 	ErrInvalidRefURI    = errors.New("not a valid ref URI")
 	ErrInvalidBranchURI = errors.New("not a valid branch URI")
@@ -29,7 +29,7 @@ type URI struct {
 	// Ref represents the reference in the repository (commit, tag, branch, etc.)
 	Ref string
 	// Path is a path to an object (or prefix of such) in Surogate Hub. It *could* be null since there's a difference between
-	// 	an empty path ("lakefs://repo/branch/", and no path at all e.g. "lakefs://repo/branch").
+	// 	an empty path ("sg://repo/branch/", and no path at all e.g. "sg://repo/branch").
 	// 	Since path is the only URI part that is allowed to be empty, it is represented as a pointer.
 	Path *string
 }
@@ -140,8 +140,8 @@ func (u *URI) WithRef(ref string) *URI {
 
 func (u *URI) String() string {
 	var buf strings.Builder
-	buf.WriteString(LakeFSSchema)
-	buf.WriteString(LakeFSSchemaSeparator)
+	buf.WriteString(SgHubSchema)
+	buf.WriteString(SgHubSchemaSeparator)
 	buf.WriteString(u.Repository)
 	if len(u.Ref) == 0 {
 		return buf.String()
@@ -158,7 +158,7 @@ func (u *URI) String() string {
 
 // ParseWithBaseURI parse URI uses base URI as prefix when set and input doesn't start with Surogate Hub protocol
 func ParseWithBaseURI(s string, baseURI string) (*URI, error) {
-	if len(baseURI) > 0 && !strings.HasPrefix(s, LakeFSSchema+LakeFSSchemaSeparator) {
+	if len(baseURI) > 0 && !strings.HasPrefix(s, SgHubSchema+SgHubSchemaSeparator) {
 		s = baseURI + s
 	}
 	return Parse(s)
@@ -166,7 +166,7 @@ func ParseWithBaseURI(s string, baseURI string) (*URI, error) {
 
 func Parse(s string) (*URI, error) {
 	u, err := url.Parse(s)
-	if err != nil || u.Scheme != LakeFSSchema || u.User != nil {
+	if err != nil || u.Scheme != SgHubSchema || u.User != nil {
 		return nil, ErrMalformedURI
 	}
 	repository := u.Hostname()

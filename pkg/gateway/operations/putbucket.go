@@ -3,8 +3,8 @@ package operations
 import (
 	"net/http"
 
-	gatewayerrors "github.com/treeverse/lakefs/pkg/gateway/errors"
-	"github.com/treeverse/lakefs/pkg/permissions"
+	gatewayerrors "github.com/invergent-ai/surogate-hub/pkg/gateway/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
 )
 
 // PutBucket handles S3 Create Bucket operations.  It does *not* actually

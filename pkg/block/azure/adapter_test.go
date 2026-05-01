@@ -6,17 +6,17 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block/azure"
+	"github.com/invergent-ai/surogate-hub/pkg/block/blocktest"
+	"github.com/invergent-ai/surogate-hub/pkg/block/params"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/block/azure"
-	"github.com/treeverse/lakefs/pkg/block/blocktest"
-	"github.com/treeverse/lakefs/pkg/block/params"
-	"github.com/treeverse/lakefs/pkg/config"
 )
 
 func TestAzureAdapter(t *testing.T) {
 	basePath, err := url.JoinPath(blockURL, containerName)
 	require.NoError(t, err)
-	localPath, err := url.JoinPath(basePath, "lakefs")
+	localPath, err := url.JoinPath(basePath, "sghub")
 	require.NoError(t, err)
 	externalPath, err := url.JoinPath(basePath, "external")
 	require.NoError(t, err)

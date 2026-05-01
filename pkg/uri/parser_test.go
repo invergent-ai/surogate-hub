@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/uri"
+	"github.com/invergent-ai/surogate-hub/pkg/uri"
 )
 
 func strp(v string) *string {
@@ -19,7 +19,7 @@ func TestParse(t *testing.T) {
 		Expected *uri.URI
 	}{
 		{
-			Input: "lakefs://foo/bar/baz",
+			Input: "sg://foo/bar/baz",
 			Expected: &uri.URI{
 				Repository: "foo",
 				Ref:        "bar",
@@ -27,13 +27,13 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			Input: "lakefs://foo",
+			Input: "sg://foo",
 			Expected: &uri.URI{
 				Repository: "foo",
 			},
 		},
 		{
-			Input: "lakefs://foo/bar/baz/path",
+			Input: "sg://foo/bar/baz/path",
 			Expected: &uri.URI{
 				Repository: "foo",
 				Ref:        "bar",
@@ -41,7 +41,7 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			Input: "lakefs://foo/bar/baz/path@withappendix.foo",
+			Input: "sg://foo/bar/baz/path@withappendix.foo",
 			Expected: &uri.URI{
 				Repository: "foo",
 				Ref:        "bar",
@@ -49,7 +49,7 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			Input: "lakefs://fo-o/bar/baz/path@withappendix.foo",
+			Input: "sg://fo-o/bar/baz/path@withappendix.foo",
 			Expected: &uri.URI{
 				Repository: "fo-o",
 				Ref:        "bar",
@@ -57,13 +57,13 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			Input: "lakefs://foo",
+			Input: "sg://foo",
 			Expected: &uri.URI{
 				Repository: "foo",
 			},
 		},
 		{
-			Input: "lakefs://foo/bar/",
+			Input: "sg://foo/bar/",
 			Expected: &uri.URI{
 				Repository: "foo",
 				Ref:        "bar",
@@ -71,7 +71,7 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			Input: "lakefs://foo/bar//",
+			Input: "sg://foo/bar//",
 			Expected: &uri.URI{
 				Repository: "foo",
 				Ref:        "bar",
@@ -79,30 +79,30 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			Input: "lakefs://foo/bar",
+			Input: "sg://foo/bar",
 			Expected: &uri.URI{
 				Repository: "foo",
 				Ref:        "bar",
 			},
 		},
 		{
-			Input: "lakefs://foo@bar",
+			Input: "sg://foo@bar",
 			Err:   uri.ErrMalformedURI,
 		},
 		{
-			Input: "lakefs://foo@bar/baz",
+			Input: "sg://foo@bar/baz",
 			Err:   uri.ErrMalformedURI,
 		},
 		{
-			Input: "lakefssss://foo/bar/baz",
+			Input: "sggg://foo/bar/baz",
 			Err:   uri.ErrMalformedURI,
 		},
 		{
-			Input: "lakefs:/foo/bar/baz",
+			Input: "sg:/foo/bar/baz",
 			Err:   uri.ErrMalformedURI,
 		},
 		{
-			Input: "lakefs//foo/bar/baz",
+			Input: "sg//foo/bar/baz",
 			Err:   uri.ErrMalformedURI,
 		},
 	}
@@ -114,6 +114,9 @@ func TestParse(t *testing.T) {
 				t.Fatalf("case (%d) - expected error %v for input %s, got error: %v", i, test.Err, test.Input, err)
 			}
 			continue
+		}
+		if err != nil {
+			t.Fatalf("case (%d) - expected no error for input %s, got error: %v", i, test.Input, err)
 		}
 		if !uri.Equals(u, test.Expected) {
 			t.Fatalf("case (%d) - expected uri '%s' for input '%s', got uri: '%v'", i, test.Expected, test.Input, u)
@@ -130,19 +133,19 @@ func TestURI_String(t *testing.T) {
 			Repository: "foo",
 			Ref:        "bar",
 			Path:       strp("baz/file.csv"),
-		}, "lakefs://foo/bar/baz/file.csv"},
+		}, "sg://foo/bar/baz/file.csv"},
 		{&uri.URI{
 			Repository: "foo",
 			Ref:        "bar",
 			Path:       strp(""),
-		}, "lakefs://foo/bar/"},
+		}, "sg://foo/bar/"},
 		{&uri.URI{
 			Repository: "foo",
 			Ref:        "bar",
-		}, "lakefs://foo/bar"},
+		}, "sg://foo/bar"},
 		{&uri.URI{
 			Repository: "foo",
-		}, "lakefs://foo"},
+		}, "sg://foo"},
 	}
 
 	for i, test := range cases {
@@ -157,8 +160,7 @@ func TestIsValid(t *testing.T) {
 		Input    string
 		Expected bool
 	}{
-		{"lakefs://foo/bar/baz", true},
-		{"lekefs://foo/bar/baz", false},
+		{"sg://foo/bar/baz", true},
 	}
 
 	for i, test := range cases {
@@ -170,7 +172,7 @@ func TestIsValid(t *testing.T) {
 
 func TestMust(t *testing.T) {
 	// should not panic
-	u := uri.Must(uri.Parse("lakefs://foo/bar/baz"))
+	u := uri.Must(uri.Parse("sg://foo/bar/baz"))
 	if !uri.Equals(u, &uri.URI{
 		Repository: "foo",
 		Ref:        "bar",
@@ -185,7 +187,7 @@ func TestMust(t *testing.T) {
 				recovered = true
 			}
 		}()
-		uri.Must(uri.Parse("lakefsssss://foo/bar"))
+		uri.Must(uri.Parse("sggggggg://foo/bar"))
 	}()
 
 	if !recovered {

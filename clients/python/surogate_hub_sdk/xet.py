@@ -23,15 +23,15 @@ class XETUploadResult:
 class XETClient:
     def __init__(
         self,
-        lakefs_client,
+        hub_client,
         xet_endpoint: Optional[str] = None,
         hf_xet_module=None,
         token_info: Optional[TokenInfo] = None,
         token_refresher: Optional[Callable[[], TokenInfo]] = None,
         request_headers: Optional[Dict[str, str]] = None,
     ):
-        self.lakefs_client = lakefs_client
-        self.configuration = lakefs_client._api.configuration
+        self.hub_client = hub_client
+        self.configuration = hub_client._api.configuration
         self.xet_endpoint = (xet_endpoint or self._derive_xet_endpoint(self.configuration.host)).rstrip("/")
         self.hf_xet = hf_xet_module or self._load_hf_xet()
         self._token_info = token_info
@@ -73,7 +73,7 @@ class XETClient:
             user_metadata=metadata,
             content_type=content_type,
         )
-        object_stats = self.lakefs_client.staging_api.link_physical_address(
+        object_stats = self.hub_client.staging_api.link_physical_address(
             repository,
             branch,
             path,
@@ -95,7 +95,7 @@ class XETClient:
         destination_path: str,
         progress_updater: Optional[Callable[[int], None]] = None,
     ) -> str:
-        stats = self.lakefs_client.objects_api.stat_object(repository, ref, path)
+        stats = self.hub_client.objects_api.stat_object(repository, ref, path)
         physical_address = stats.physical_address
         if not physical_address.startswith("xet://"):
             raise ValueError("object is not XET-backed")
@@ -139,7 +139,7 @@ class XETClient:
 
     def _mint_token(self) -> TokenInfo:
         request = urllib.request.Request(self.xet_endpoint + "/v1/token", method="POST")
-        request.add_header("Authorization", self._lakefs_auth_header())
+        request.add_header("Authorization", self._hub_auth_header())
         return self._read_token_response(request)
 
     @staticmethod
@@ -148,7 +148,7 @@ class XETClient:
             data = json.loads(response.read().decode("utf-8"))
         return data["access_token"], int(data["exp"])
 
-    def _lakefs_auth_header(self) -> str:
+    def _hub_auth_header(self) -> str:
         if self.configuration.username is not None and self.configuration.password is not None:
             return self.configuration.get_basic_auth_token()
         if self.configuration.access_token is not None:

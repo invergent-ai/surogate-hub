@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/auth"
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	"github.com/treeverse/lakefs/pkg/kv/kvtest"
 )
 
 func validateInstrumentation(t *testing.T, ctx context.Context, mgr *auth.KVMetadataManager, inst string, k8s, docker bool) {

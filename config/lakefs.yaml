@@ -16,8 +16,6 @@ blockstore:
 committed:
   local_cache:
     dir: ./config/cache
-ui:
-  enabled: true
 tls:
   enabled: false
   cert_file: ./config/certificate.crt
@@ -25,9 +23,9 @@ tls:
 gateways:
   s3:
     domain_name:
-    - lakefs-s3.densemax.local
-    - lakefs.statemesh.svc
-    - lakefs-s3.statemesh.svc
+    - sghub-s3.densemax.local
+    - sghub.statemesh.svc
+    - sghub-s3.statemesh.svc
 cors:
     allowed_origins:
     - https://*.densemax.local

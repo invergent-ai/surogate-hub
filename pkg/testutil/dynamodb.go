@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/dynamodb"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
 	"github.com/ory/dockertest/v3"
 	dc "github.com/ory/dockertest/v3/docker"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/kv/dynamodb"
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
 )
 
 const (

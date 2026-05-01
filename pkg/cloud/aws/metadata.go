@@ -11,9 +11,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/cenkalti/backoff/v4"
-	"github.com/treeverse/lakefs/pkg/block/params"
-	"github.com/treeverse/lakefs/pkg/cloud"
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/block/params"
+	"github.com/invergent-ai/surogate-hub/pkg/cloud"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 type MetadataProvider struct {

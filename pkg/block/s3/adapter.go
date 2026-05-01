@@ -23,10 +23,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/block/params"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/stats"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block/params"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/stats"
 )
 
 var (

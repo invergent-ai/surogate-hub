@@ -13,9 +13,9 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
 	"github.com/Shopify/go-lua"
-	"github.com/treeverse/lakefs/pkg/block/azure"
-	"github.com/treeverse/lakefs/pkg/block/params"
-	"github.com/treeverse/lakefs/pkg/uri"
+	"github.com/invergent-ai/surogate-hub/pkg/block/azure"
+	"github.com/invergent-ai/surogate-hub/pkg/block/params"
+	"github.com/invergent-ai/surogate-hub/pkg/uri"
 )
 
 type Client struct {
@@ -126,7 +126,6 @@ func parsePath(l *lua.State, path string) (string, string) {
 func transformPathToAbfss(l *lua.State) int {
 	path := lua.CheckString(l, 1)
 	const numOfParts = 3
-	// Added adls for backwards compatibility in imports created pre fix of bug: https://github.com/treeverse/lakeFS/issues/7580
 	r := regexp.MustCompile(`^https://(\w+)\.(?:blob|adls)\.core\.windows\.net/([^/]*)/(.+)$`)
 	parts := r.FindStringSubmatch(path)
 	if len(parts) != numOfParts+1 {

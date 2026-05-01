@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"net/http"
+	"net/url"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -11,12 +13,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/thanhpk/randstr"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/logging"
 )
 
 const (
@@ -72,27 +74,42 @@ func TestMultipartUpload(t *testing.T) {
 		t.Fatalf("uploaded object did not match")
 	}
 
-	statResp, err := client.StatObjectWithResponse(ctx, repo, mainBranch, &apigen.StatObjectParams{Path: file, Presign: aws.Bool(true)})
+	localBlockstore := isBlockstoreType(block.BlockstoreTypeLocal) == nil
+	statParams := &apigen.StatObjectParams{Path: file}
+	if !localBlockstore {
+		statParams.Presign = aws.Bool(true)
+	}
+	statResp, err := client.StatObjectWithResponse(ctx, repo, mainBranch, statParams)
 	require.NoError(t, err, "failed to get object")
-	require.Equal(t, http.StatusOK, getResp.StatusCode(), getResp.Status())
+	require.Equal(t, http.StatusOK, statResp.StatusCode(), statResp.Status())
+	require.NotNil(t, statResp.JSON200, "successful response")
 
 	// Get last-modified from the underlying store.
 
-	presignedGetURL := statResp.JSON200.PhysicalAddress
-	res, err := http.Get(presignedGetURL)
-	require.NoError(t, err, "GET underlying")
-	// The presigned URL is usable only for GET, but we don't actually care about its body.
-	_ = res.Body.Close()
-	require.Equal(t, http.StatusOK, res.StatusCode, "%s: %s", presignedGetURL, res.Status)
-	lastModifiedString := res.Header.Get("Last-Modified")
-	underlyingLastModified, err := time.Parse(time.RFC1123, lastModifiedString)
-	require.NoError(t, err, "Last-Modified %s", lastModifiedString)
+	var underlyingLastModified time.Time
+	if localBlockstore {
+		physicalAddress, err := url.Parse(statResp.JSON200.PhysicalAddress)
+		require.NoError(t, err, "parse local physical address")
+		info, err := os.Stat(physicalAddress.Path)
+		require.NoError(t, err, "stat local physical address")
+		underlyingLastModified = time.Unix(info.ModTime().Unix(), 0)
+	} else {
+		presignedGetURL := statResp.JSON200.PhysicalAddress
+		res, err := http.Get(presignedGetURL)
+		require.NoError(t, err, "GET underlying")
+		// The presigned URL is usable only for GET, but we don't actually care about its body.
+		_ = res.Body.Close()
+		require.Equal(t, http.StatusOK, res.StatusCode, "%s: %s", presignedGetURL, res.Status)
+		lastModifiedString := res.Header.Get("Last-Modified")
+		underlyingLastModified, err = time.Parse(time.RFC1123, lastModifiedString)
+		require.NoError(t, err, "Last-Modified %s", lastModifiedString)
+	}
 	// Last-Modified header includes a timezone, which is typically "GMT" on AWS.  Now GMT
 	// _is equal to_ UTC!.  But Go is nothing if not cautious, and considers UTC and GMT to
 	// be different timezones.  So cannot compare with "==" and must use time.Time.Equal.
-	lakeFSMTime := time.Unix(statResp.JSON200.Mtime, 0)
-	require.True(t, lakeFSMTime.Equal(underlyingLastModified),
-		"Surogate Hub mtime %s should be same as on underlying object %s", lakeFSMTime, underlyingLastModified)
+	hubMTime := time.Unix(statResp.JSON200.Mtime, 0)
+	require.True(t, hubMTime.Equal(underlyingLastModified),
+		"Surogate Hub mtime %s should be same as on underlying object %s", hubMTime, underlyingLastModified)
 }
 
 func TestMultipartUploadAbort(t *testing.T) {

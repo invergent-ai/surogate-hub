@@ -5,10 +5,10 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block/blocktest"
+	"github.com/invergent-ai/surogate-hub/pkg/block/gs"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/block/blocktest"
-	"github.com/treeverse/lakefs/pkg/block/gs"
-	"github.com/treeverse/lakefs/pkg/config"
 )
 
 func newAdapter() *gs.Adapter {
@@ -18,7 +18,7 @@ func newAdapter() *gs.Adapter {
 func TestAdapter(t *testing.T) {
 	basePath, err := url.JoinPath("gs://", bucketName)
 	require.NoError(t, err)
-	localPath, err := url.JoinPath(basePath, "lakefs")
+	localPath, err := url.JoinPath(basePath, "sghub")
 	require.NoError(t, err)
 	externalPath, err := url.JoinPath(basePath, "external")
 	require.NoError(t, err)

@@ -4,9 +4,9 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block/azure"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/block/azure"
 )
 
 func TestExtraction(t *testing.T) {

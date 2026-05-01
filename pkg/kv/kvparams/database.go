@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/config"
 	"github.com/mitchellh/go-homedir"
-	"github.com/treeverse/lakefs/pkg/config"
 )
 
 type Config struct {

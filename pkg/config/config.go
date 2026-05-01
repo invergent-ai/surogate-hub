@@ -10,12 +10,11 @@ import (
 	"strings"
 	"time"
 
+	blockparams "github.com/invergent-ai/surogate-hub/pkg/block/params"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	"github.com/mitchellh/go-homedir"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
-	apiparams "github.com/treeverse/lakefs/pkg/api/params"
-	blockparams "github.com/treeverse/lakefs/pkg/block/params"
-	"github.com/treeverse/lakefs/pkg/logging"
 )
 
 var (
@@ -542,14 +541,6 @@ type BaseConfig struct {
 		AuditCheckInterval      time.Duration `mapstructure:"audit_check_interval"`
 		AuditCheckURL           string        `mapstructure:"audit_check_url"`
 	} `mapstructure:"security"`
-	UI struct {
-		// Enabled - control serving of embedded UI
-		Enabled  bool `mapstructure:"enabled"`
-		Snippets []struct {
-			ID   string `mapstructure:"id"`
-			Code string `mapstructure:"code"`
-		} `mapstructure:"snippets"`
-	} `mapstructure:"ui"`
 	UsageReport struct {
 		Enabled       bool          `mapstructure:"enabled"`
 		FlushInterval time.Duration `mapstructure:"flush_interval"`
@@ -647,23 +638,6 @@ func (c *BaseConfig) Validate() error {
 const (
 	gcpAESKeyLength = 32
 )
-
-// UseUILoginPlaceholders returns true if the UI should use placeholders for login
-// the UI should use place holders just in case of LDAP, the other auth methods should have their own login page
-func (c *BaseConfig) UseUILoginPlaceholders() bool {
-	return c.Auth.RemoteAuthenticator.Enabled
-}
-
-func (c *BaseConfig) UISnippets() []apiparams.CodeSnippet {
-	snippets := make([]apiparams.CodeSnippet, 0, len(c.UI.Snippets))
-	for _, item := range c.UI.Snippets {
-		snippets = append(snippets, apiparams.CodeSnippet{
-			ID:   item.ID,
-			Code: item.Code,
-		})
-	}
-	return snippets
-}
 
 func (c *BaseConfig) GetBaseConfig() *BaseConfig {
 	return c

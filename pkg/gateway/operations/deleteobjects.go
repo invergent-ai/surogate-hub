@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/treeverse/lakefs/pkg/auth"
-	"github.com/treeverse/lakefs/pkg/catalog"
-	gerrors "github.com/treeverse/lakefs/pkg/gateway/errors"
-	"github.com/treeverse/lakefs/pkg/gateway/path"
-	"github.com/treeverse/lakefs/pkg/gateway/serde"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog"
+	gerrors "github.com/invergent-ai/surogate-hub/pkg/gateway/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/path"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/serde"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
 )
 
 // maxDeleteObjects maximum number of objects we can delete in one call.
@@ -30,7 +30,7 @@ func (controller *DeleteObjects) Handle(w http.ResponseWriter, req *http.Request
 	// verify we only handle delete request
 	query := req.URL.Query()
 	if !query.Has("delete") {
-		_ = o.EncodeError(w, req, nil, gerrors.ERRLakeFSNotSupported.ToAPIErr())
+		_ = o.EncodeError(w, req, nil, gerrors.ERRHubNotSupported.ToAPIErr())
 		return
 	}
 	o.Incr("delete_objects", o.Principal, o.Repository.Name, "")
@@ -176,7 +176,6 @@ func checkForDeleteError(log logging.Logger, key string, err error) *serde.Delet
 			Message: fmt.Sprintf("error deleting object: %s", apiErr.Description),
 		}
 	case errors.Is(err, catalog.ErrPathRequiredValue):
-		// issue #1706 - https://github.com/treeverse/lakeFS/issues/1706
 		// Spark trying to delete the path "main/", which we map to branch "main" with an empty path.
 		// Spark expects it to succeed (not deleting anything is a success), instead of returning an error.
 		log.Debug("tried to delete with an empty path")

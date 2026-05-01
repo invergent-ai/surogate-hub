@@ -23,16 +23,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/glue/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/cenkalti/backoff/v4"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block/azure"
+	"github.com/invergent-ai/surogate-hub/pkg/block/params"
+	hubcfg "github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
+	"github.com/invergent-ai/surogate-hub/pkg/uri"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/block/azure"
-	"github.com/treeverse/lakefs/pkg/block/params"
-	lakefscfg "github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/testutil"
-	"github.com/treeverse/lakefs/pkg/uri"
 	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 )
@@ -62,23 +62,23 @@ type hiveTableSpec struct {
 }
 
 type exportHooksTestData struct {
-	Repository            string
-	SymlinkActionPath     string
-	SymlinkScriptPath     string
-	TableDescriptorPath   string
-	GlueActionPath        string
-	GlueScriptPath        string
-	Branch                string
-	GlueDB                string
-	AWSAccessKeyID        string
-	AWSSecretAccessKey    string
-	AWSRegion             string
-	AzureAccessKey        string
-	AzureStorageAccount   string
-	OverrideCommitID      string
-	LakeFSAccessKeyID     string
-	LakeFSSecretAccessKey string
-	TableSpec             *hiveTableSpec
+	Repository          string
+	SymlinkActionPath   string
+	SymlinkScriptPath   string
+	TableDescriptorPath string
+	GlueActionPath      string
+	GlueScriptPath      string
+	Branch              string
+	GlueDB              string
+	AWSAccessKeyID      string
+	AWSSecretAccessKey  string
+	AWSRegion           string
+	AzureAccessKey      string
+	AzureStorageAccount string
+	OverrideCommitID    string
+	HubAccessKeyID      string
+	HubSecretAccessKey  string
+	TableSpec           *hiveTableSpec
 }
 
 func renderTplFileAsStr(t *testing.T, tplData any, rootDir fs.FS, path string) string {
@@ -115,7 +115,7 @@ func uploadAndCommitObjects(t *testing.T, ctx context.Context, repo, branch stri
 	commitResp, err := client.CommitWithResponse(ctx, repo, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "Table Data",
 	})
-	require.NoErrorf(t, err, "failed commiting uploaded objects to lakefs://%s/%s", repo, branch)
+	require.NoErrorf(t, err, "failed commiting uploaded objects to sg://%s/%s", repo, branch)
 	require.Equal(t, http.StatusCreated, commitResp.StatusCode())
 	return commitResp.JSON201
 }
@@ -173,7 +173,7 @@ func testSymlinkS3Exporter(t *testing.T, ctx context.Context, repo string, tmplD
 	require.Equal(t, repoResponse.StatusCode(), http.StatusOK, "could not get repository information")
 	namespace := repoResponse.JSON200.StorageNamespace
 
-	symlinksPrefix := fmt.Sprintf("%s/_lakefs/exported/%s/%s/animals/", namespace, mainBranch, commit.Id[:6])
+	symlinksPrefix := fmt.Sprintf("%s/_hub/exported/%s/%s/animals/", namespace, mainBranch, commit.Id[:6])
 	storageURL, err := url.Parse(symlinksPrefix)
 	require.NoError(t, err, "failed extracting bucket name")
 
@@ -211,7 +211,7 @@ func testSymlinkS3Exporter(t *testing.T, ctx context.Context, repo string, tmplD
 	require.NoErrorf(t, err, "failed listing symlink files %s", symlinksPrefix)
 	require.NotEmptyf(t, symlinkLocations, "no symlink files found in blockstore: %s", symlinksPrefix)
 
-	// get the symlink files and compare their physical address to lakefs result
+	// get the symlink files and compare their physical address to hub result
 	storagePhysicalAddrs := map[string]bool{}
 	for _, symlinkFileKey := range symlinkLocations {
 		objRes, err := s3Client.GetObject(ctx, &s3.GetObjectInput{
@@ -230,30 +230,30 @@ func testSymlinkS3Exporter(t *testing.T, ctx context.Context, repo string, tmplD
 		}
 	}
 
-	lakeFSObjs, err := client.ListObjectsWithResponse(ctx, repo, commit.Id, &apigen.ListObjectsParams{
+	hubObjs, err := client.ListObjectsWithResponse(ctx, repo, commit.Id, &apigen.ListObjectsParams{
 		Prefix: apiutil.Ptr(apigen.PaginationPrefix(testData.TableSpec.Path)),
 	})
 
 	require.NoError(t, err, "failed listing Surogate Hub objects")
 
 	// test that all Surogate Hub entries are exported and represented correctly in symlink files
-	lakefsPhysicalAddrs := map[string]bool{}
-	for _, entry := range lakeFSObjs.JSON200.Results {
+	hubPhysicalAddrs := map[string]bool{}
+	for _, entry := range hubObjs.JSON200.Results {
 		// add file to the expected result if it's not hidden and not marker directory file
 		if !strings.Contains(entry.Path, "_hidden") && aws.ToInt64(entry.SizeBytes) > 0 {
-			lakefsPhysicalAddrs[entry.PhysicalAddress] = true
+			hubPhysicalAddrs[entry.PhysicalAddress] = true
 		}
 	}
 
-	require.Equal(t, lakefsPhysicalAddrs, storagePhysicalAddrs, "mismatch between lakefs exported objects in symlink files")
+	require.Equal(t, hubPhysicalAddrs, storagePhysicalAddrs, "mismatch between hub exported objects in symlink files")
 
 	return commit.Id, symlinksPrefix
 }
 
 // TestAWSCatalogExport will verify that symlinks are exported correctly and then in a sequential test verify that the glue exporter works well.
 // The setup in this test includes:
-// Symlinks export: lua script, table in _lakefs_tables, action file, mock table data in CSV form
-// Glue export: lua script, table in _lakefs_tables, action file
+// Symlinks export: lua script, table in _hub_tables, action file, mock table data in CSV form
+// Glue export: lua script, table in _hub_tables, action file
 func TestAWSCatalogExport(t *testing.T) {
 	// skip if blockstore is not not s3
 	requireBlockstoreType(t, block.BlockstoreTypeS3)
@@ -278,11 +278,11 @@ func TestAWSCatalogExport(t *testing.T) {
 	tmplDir, _ := fs.Sub(exportHooksFiles, "export_hooks_files/glue")
 	testData := &exportHooksTestData{
 		Branch:              mainBranch,
-		SymlinkActionPath:   "_lakefs_actions/symlink_export.yaml",
+		SymlinkActionPath:   "_hub_actions/symlink_export.yaml",
 		SymlinkScriptPath:   "scripts/symlink_exporter.lua",
 		GlueScriptPath:      "scripts/glue_exporter.lua",
-		GlueActionPath:      "_lakefs_actions/glue_export.yaml",
-		TableDescriptorPath: "_lakefs_tables/animals.yaml",
+		GlueActionPath:      "_hub_actions/glue_export.yaml",
+		TableDescriptorPath: "_hub_tables/animals.yaml",
 		GlueDB:              glueDB,
 		AWSRegion:           glueRegion,
 		AWSAccessKeyID:      accessKeyID,
@@ -401,7 +401,7 @@ func TestAWSCatalogExport(t *testing.T) {
 }
 
 func setupCatalogExportTestByStorageType(t *testing.T, testData *exportHooksTestData) string {
-	blockstoreType := viper.GetString(lakefscfg.BlockstoreTypeKey)
+	blockstoreType := viper.GetString(hubcfg.BlockstoreTypeKey)
 
 	switch blockstoreType {
 	case block.BlockstoreTypeS3:
@@ -426,7 +426,7 @@ func validateExportTestByStorageType(t *testing.T, ctx context.Context, commit s
 	require.NotNil(t, resp.JSON200)
 	namespaceURL, err := url.Parse(resp.JSON200.StorageNamespace)
 	require.NoError(t, err)
-	keyTempl := "%s/_lakefs/exported/%s/%s/test_table/_delta_log/00000000000000000000.json"
+	keyTempl := "%s/_hub/exported/%s/%s/test_table/_delta_log/00000000000000000000.json"
 	tableStat, err := client.StatObjectWithResponse(ctx, testData.Repository, mainBranch, &apigen.StatObjectParams{
 		Path: "tables/test-table/test partition/0-845b8a42-579e-47ee-9935-921dd8d2ba7d-0.parquet",
 	})
@@ -485,10 +485,10 @@ func TestDeltaCatalogExport(t *testing.T) {
 	accessKeyID := viper.GetString("access_key_id")
 	secretAccessKey := viper.GetString("secret_access_key")
 	testData := &exportHooksTestData{
-		Repository:            repo,
-		Branch:                mainBranch,
-		LakeFSAccessKeyID:     accessKeyID,
-		LakeFSSecretAccessKey: secretAccessKey,
+		Repository:         repo,
+		Branch:             mainBranch,
+		HubAccessKeyID:     accessKeyID,
+		HubSecretAccessKey: secretAccessKey,
 	}
 	blockstore := setupCatalogExportTestByStorageType(t, testData)
 
@@ -514,7 +514,7 @@ func TestDeltaCatalogExport(t *testing.T) {
 	require.NoError(t, err)
 
 	headCommit := uploadAndCommitObjects(t, ctx, repo, mainBranch, map[string]string{
-		"_lakefs_actions/delta_export.yaml": renderTplFileAsStr(t, testData, tmplDir, fmt.Sprintf("%s/_lakefs_actions/delta_export.yaml", blockstore)),
+		"_hub_actions/delta_export.yaml": renderTplFileAsStr(t, testData, tmplDir, fmt.Sprintf("%s/_hub_actions/delta_export.yaml", blockstore)),
 	})
 
 	runs := waitForListRepositoryRunsLen(ctx, t, repo, headCommit.Id, 1)
@@ -540,10 +540,10 @@ func TestDeltaCatalogImportExport(t *testing.T) {
 	accessKeyID := viper.GetString("access_key_id")
 	secretAccessKey := viper.GetString("secret_access_key")
 	testData := &exportHooksTestData{
-		Repository:            repo,
-		Branch:                mainBranch,
-		LakeFSAccessKeyID:     accessKeyID,
-		LakeFSSecretAccessKey: secretAccessKey,
+		Repository:         repo,
+		Branch:             mainBranch,
+		HubAccessKeyID:     accessKeyID,
+		HubSecretAccessKey: secretAccessKey,
 	}
 	blockstore := setupCatalogExportTestByStorageType(t, testData)
 	tmplDir, err := fs.Sub(exportHooksFiles, "export_hooks_files/delta")
@@ -564,7 +564,7 @@ func TestDeltaCatalogImportExport(t *testing.T) {
 	require.NoError(t, err)
 
 	headCommit := uploadAndCommitObjects(t, ctx, repo, mainBranch, map[string]string{
-		"_lakefs_actions/delta_export.yaml": renderTplFileAsStr(t, testData, tmplDir, fmt.Sprintf("%s/_lakefs_actions/delta_export.yaml", blockstore)),
+		"_hub_actions/delta_export.yaml": renderTplFileAsStr(t, testData, tmplDir, fmt.Sprintf("%s/_hub_actions/delta_export.yaml", blockstore)),
 	})
 
 	runs := waitForListRepositoryRunsLen(ctx, t, repo, headCommit.Id, 1)
@@ -626,12 +626,12 @@ func TestDeltaCatalogExportAbfss(t *testing.T) {
 	accessKeyID := viper.GetString("access_key_id")
 	secretAccessKey := viper.GetString("secret_access_key")
 	testData := &exportHooksTestData{
-		Repository:            repo,
-		Branch:                mainBranch,
-		LakeFSAccessKeyID:     accessKeyID,
-		LakeFSSecretAccessKey: secretAccessKey,
-		AzureStorageAccount:   viper.GetString("azure_storage_account"),
-		AzureAccessKey:        viper.GetString("azure_storage_access_key"),
+		Repository:          repo,
+		Branch:              mainBranch,
+		HubAccessKeyID:      accessKeyID,
+		HubSecretAccessKey:  secretAccessKey,
+		AzureStorageAccount: viper.GetString("azure_storage_account"),
+		AzureAccessKey:      viper.GetString("azure_storage_access_key"),
 	}
 
 	tmplDir, err := fs.Sub(exportHooksFiles, "export_hooks_files/delta")
@@ -656,7 +656,7 @@ func TestDeltaCatalogExportAbfss(t *testing.T) {
 	require.NoError(t, err)
 
 	headCommit := uploadAndCommitObjects(t, ctx, repo, mainBranch, map[string]string{
-		"_lakefs_actions/delta_export.yaml": renderTplFileAsStr(t, testData, tmplDir, "azure_adls/_lakefs_actions/delta_export.yaml"),
+		"_hub_actions/delta_export.yaml": renderTplFileAsStr(t, testData, tmplDir, "azure_adls/_hub_actions/delta_export.yaml"),
 	})
 
 	runs := waitForListRepositoryRunsLen(ctx, t, repo, headCommit.Id, 1)
@@ -680,7 +680,7 @@ func validateExportAbfss(t *testing.T, ctx context.Context, commit string, testD
 	require.NotNil(t, resp.JSON200)
 	namespaceURL, err := url.Parse(resp.JSON200.StorageNamespace)
 	require.NoError(t, err)
-	keyTempl := "%s/_lakefs/exported/%s/%s/test_table/_delta_log/00000000000000000000.json"
+	keyTempl := "%s/_hub/exported/%s/%s/test_table/_delta_log/00000000000000000000.json"
 	tableStat, err := client.StatObjectWithResponse(ctx, testData.Repository, mainBranch, &apigen.StatObjectParams{
 		Path: "tables/test-table/test partition/0-845b8a42-579e-47ee-9935-921dd8d2ba7d-0.parquet",
 	})

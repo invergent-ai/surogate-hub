@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/testutil"
 	"github.com/stretchr/testify/assert"
-	"github.com/treeverse/lakefs/pkg/gateway/testutil"
 )
 
 const repoName = "example"

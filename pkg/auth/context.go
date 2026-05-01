@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 
-	"github.com/treeverse/lakefs/pkg/auth/model"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
 )
 
 type contextKey string

@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 // Authenticator authenticates users returning an identifier for the user.

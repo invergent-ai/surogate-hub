@@ -2,9 +2,9 @@ package apiutil
 
 const BaseURL = "/api/v1"
 
-const LakeFSMetadataPrefix = "::lakefs::"
+const HubMetadataPrefix = "::sghub::"
 
 const (
-	LakeFSHeaderInternalPrefix = "x-lakefs-internal-"
-	LakeFSHeaderMetadataPrefix = "x-lakefs-meta-"
+	HubHeaderInternalPrefix = "x-sghub-internal-"
+	HubHeaderMetadataPrefix = "x-sghub-meta-"
 )

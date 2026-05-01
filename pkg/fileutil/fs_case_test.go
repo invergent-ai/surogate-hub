@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/fileutil"
+	"github.com/invergent-ai/surogate-hub/pkg/fileutil"
 )
 
 func fatal(t testing.TB) func(string) {

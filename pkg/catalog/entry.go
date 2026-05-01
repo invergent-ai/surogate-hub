@@ -1,8 +1,8 @@
 package catalog
 
 import (
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/ident"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/ident"
 	"google.golang.org/protobuf/proto"
 )
 

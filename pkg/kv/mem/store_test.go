@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
-	"github.com/treeverse/lakefs/pkg/kv/kvtest"
-	"github.com/treeverse/lakefs/pkg/kv/mem"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/mem"
 )
 
 func TestMemKV(t *testing.T) {

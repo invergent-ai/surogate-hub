@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	"github.com/sirupsen/logrus"
-	"github.com/treeverse/lakefs/pkg/logging"
 )
 
 type contextKey string
@@ -78,7 +78,7 @@ func DefaultLoggingMiddleware(requestIDHeaderName string, fields logging.Fields,
 			startTime := time.Now()
 			writer := &ResponseRecordingWriter{Writer: w, StatusCode: http.StatusOK}
 			r, reqID := RequestID(r)
-			client := GetRequestLakeFSClient(r)
+			client := GetRequestHubClient(r)
 			sourceIP := SourceIP(r)
 
 			// add default fields to context

@@ -5,7 +5,7 @@ import (
 	"io"
 	"path"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
 type HookOutputWriter struct {
@@ -19,7 +19,7 @@ type HookOutputWriter struct {
 
 const (
 	LogOutputExtension  = ".log"
-	LogOutputLocation   = "_lakefs/actions/log"
+	LogOutputLocation   = "_hub/actions/log"
 	runManifestFilename = "run.manifest"
 )
 

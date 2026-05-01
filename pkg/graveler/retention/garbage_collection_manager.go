@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 	"github.com/rs/xid"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/graveler"
 	"google.golang.org/protobuf/proto"
 )
 

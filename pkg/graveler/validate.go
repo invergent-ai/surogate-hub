@@ -3,8 +3,8 @@ package graveler
 import (
 	"strings"
 
+	"github.com/invergent-ai/surogate-hub/pkg/validator"
 	"github.com/rs/xid"
-	"github.com/treeverse/lakefs/pkg/validator"
 )
 
 func ValidateStorageNamespace(v interface{}) error {

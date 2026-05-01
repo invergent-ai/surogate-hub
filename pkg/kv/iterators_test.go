@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/kv/kvtest"
-	"github.com/treeverse/lakefs/pkg/kv/mock"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/mock"
 )
 
 func TestPartitionIterator_ClosedBehaviour(t *testing.T) {

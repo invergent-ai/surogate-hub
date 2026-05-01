@@ -7,16 +7,16 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/catalog"
-	gatewayErrors "github.com/treeverse/lakefs/pkg/gateway/errors"
-	"github.com/treeverse/lakefs/pkg/gateway/path"
-	"github.com/treeverse/lakefs/pkg/gateway/serde"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/httputil"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/permissions"
-	"github.com/treeverse/lakefs/pkg/upload"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog"
+	gatewayErrors "github.com/invergent-ai/surogate-hub/pkg/gateway/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/path"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/serde"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/httputil"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/upload"
 )
 
 const (
@@ -97,7 +97,6 @@ func handleCopy(w http.ResponseWriter, req *http.Request, o *PathOperation, copy
 		o.Log(req).WithError(err).Error("could not parse copy source path")
 		// This is a solution to avoid misleading error messages in gateway. This is a pinpoint fix for the copy object
 		// API, since we decided not to change the entire gateway error handling in order to avoid breaking changes.
-		// See: https://github.com/treeverse/lakeFS/issues/7452
 		apiErr := gatewayErrors.Codes.ToAPIErrWithInternalError(gatewayErrors.ErrInvalidCopySource, err)
 		_ = o.EncodeError(w, req, err, apiErr)
 		return
@@ -295,7 +294,7 @@ func (controller *PutObject) Handle(w http.ResponseWriter, req *http.Request, o 
 
 	if query.Has("tagging") {
 		o.Log(req).Debug("put-object-tagging isn't supported yet")
-		o.EncodeError(w, req, nil, gatewayErrors.Codes.ToAPIErr(gatewayErrors.ERRLakeFSNotSupported))
+		o.EncodeError(w, req, nil, gatewayErrors.Codes.ToAPIErr(gatewayErrors.ERRHubNotSupported))
 		return
 	}
 

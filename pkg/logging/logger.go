@@ -21,8 +21,8 @@ type contextKey string
 const (
 	LogFieldsContextKey = contextKey("log_fields")
 
-	ProjectDirectoryName = "lakefs"
-	ModuleName           = "github.com/treeverse/lakefs"
+	ProjectDirectoryName = "sghub"
+	ModuleName           = "github.com/invergent-ai/surogate-hub"
 
 	// durationStr is the suffix for the field holding a Duration as a
 	// string.

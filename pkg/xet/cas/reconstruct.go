@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/treeverse/lakefs/pkg/xet/reconstruct"
-	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
+	"github.com/invergent-ai/surogate-hub/pkg/xet/reconstruct"
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 )
 
 func ReconstructFileRange(ctx context.Context, registry *xetstore.Registry, xorbs *XorbStore, fileHash string, byteRange reconstruct.ByteRange) (io.ReadCloser, error) {

@@ -2,13 +2,13 @@ package dynamodb_test
 
 import (
 	"context"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/kv/dynamodb"
-	"github.com/treeverse/lakefs/pkg/testutil"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/dynamodb"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
-	"github.com/treeverse/lakefs/pkg/kv/kvtest"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
 )
 
 func TestDynamoKV(t *testing.T) {

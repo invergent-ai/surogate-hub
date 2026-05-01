@@ -3,7 +3,7 @@ package graveler
 import (
 	"fmt"
 
-	"github.com/treeverse/lakefs/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

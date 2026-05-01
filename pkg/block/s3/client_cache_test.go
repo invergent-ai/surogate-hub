@@ -8,9 +8,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-test/deep"
-	"github.com/treeverse/lakefs/pkg/block/params"
-	"github.com/treeverse/lakefs/pkg/block/s3"
-	"github.com/treeverse/lakefs/pkg/testutil"
+	"github.com/invergent-ai/surogate-hub/pkg/block/params"
+	"github.com/invergent-ai/surogate-hub/pkg/block/s3"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 )
 
 var errRegion = errors.New("failed to get region")

@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/Shopify/go-lua"
-	lualibs "github.com/treeverse/lakefs/pkg/actions/lua"
-	"github.com/treeverse/lakefs/pkg/actions/lua/encoding/json"
-	"github.com/treeverse/lakefs/pkg/actions/lua/encoding/parquet"
+	lualibs "github.com/invergent-ai/surogate-hub/pkg/actions/lua"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/encoding/json"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/encoding/parquet"
 )
 
 const parquetSchemaRead = `

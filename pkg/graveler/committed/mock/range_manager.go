@@ -9,8 +9,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	graveler "github.com/treeverse/lakefs/pkg/graveler"
-	committed "github.com/treeverse/lakefs/pkg/graveler/committed"
+	graveler "github.com/invergent-ai/surogate-hub/pkg/graveler"
+	committed "github.com/invergent-ai/surogate-hub/pkg/graveler/committed"
 )
 
 // MockValueIterator is a mock of ValueIterator interface.

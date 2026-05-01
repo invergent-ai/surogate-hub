@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 // WRFile pyramid wrapper for os.file that triggers pyramid hooks for file actions.
@@ -46,7 +46,7 @@ func (f *WRFile) Store(ctx context.Context, filename string) error {
 	ctx, cancelFunc = context.WithCancel(ctx)
 	f.cancelStore = func() {
 		if f.logger.IsTracing() {
-			// logging to determine possible race condition that causes https://github.com/treeverse/lakeFS/issues/3428
+			// logging to determine a possible race condition
 			f.logger.WithField("filename", filename).Trace("Cancelling store context")
 		}
 		cancelFunc()

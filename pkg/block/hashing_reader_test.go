@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/block"
 )
 
 func TestHashingReaderRead(t *testing.T) {

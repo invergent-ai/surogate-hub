@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	gwErrors "github.com/invergent-ai/surogate-hub/pkg/gateway/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/sig"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/minio-go/v7/pkg/signer"
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	gwErrors "github.com/treeverse/lakefs/pkg/gateway/errors"
-	"github.com/treeverse/lakefs/pkg/gateway/sig"
-	"github.com/treeverse/lakefs/pkg/testutil"
 )
 
 func makeRequest(t *testing.T, headers map[string]string, query map[string]string) *http.Request {
@@ -121,7 +121,7 @@ func MakeHeader(m map[string]string) http.Header {
 const (
 	keyID     = "AKIAIOSFODNN7EXAMPLE"
 	secretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-	domain    = "s3.lakefs.test"
+	domain    = "s3.sghub.test"
 	location  = "lu-alpha-1"
 )
 

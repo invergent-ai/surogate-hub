@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
-	"github.com/treeverse/lakefs/pkg/testutil"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 )
 
 var testParams *kvparams.DynamoDB

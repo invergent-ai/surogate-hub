@@ -10,12 +10,12 @@ import (
 
 	"github.com/IBM/pgxpoolprometheus"
 	"github.com/georgysavva/scany/v2/pgxscan"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
 )
 
 type Driver struct{}
@@ -43,7 +43,7 @@ const (
 	DriverName = "postgres"
 
 	DefaultTableName = "kv"
-	paramTableName   = "lakefskv_table"
+	paramTableName   = "hubkv_table"
 
 	// DefaultPartitions Changing the below value means repartitioning and probably a migration.
 	// Change it only if you really know what you're doing.
@@ -159,7 +159,7 @@ func parseStoreConfig(runtimeParams map[string]string, pgParams *kvparams.Postgr
 // setupKeyValueDatabase setup everything required to enable kv over postgres
 func setupKeyValueDatabase(ctx context.Context, conn *pgxpool.Conn, table string, partitionsAmount int) (err error) {
 	var aid string
-	aid, err = generateAdvisoryLockID("lakefs:" + table)
+	aid, err = generateAdvisoryLockID("sghub:" + table)
 	if err != nil {
 		return err
 	}

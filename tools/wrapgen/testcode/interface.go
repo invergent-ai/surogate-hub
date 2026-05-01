@@ -1,4 +1,4 @@
-//go:generate go run github.com/treeverse/lakefs/tools/wrapgen --package testcode --output ./wrapped_gen.go --interface Arithmetic ./interface.go
+//go:generate go run github.com/invergent-ai/surogate-hub/tools/wrapgen --package testcode --output ./wrapped_gen.go --interface Arithmetic ./interface.go
 // Must run goimports after wrapgen: it adds unused imports.
 //go:generate go run golang.org/x/tools/cmd/goimports@latest -w ./wrapped_gen.go
 

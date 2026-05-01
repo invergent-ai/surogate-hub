@@ -5,13 +5,13 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/block"
 )
 
 func TestListXorbsFromWalkerParsesXETXorbKeys(t *testing.T) {
 	ctx := context.Background()
-	storageURI, err := url.Parse("mem://_lakefs_xet")
+	storageURI, err := url.Parse("mem://_hub_xet")
 	require.NoError(t, err)
 	walker := &fakeWalker{entries: []block.ObjectStoreEntry{
 		{RelativeKey: "xet/xorbs/default/xorb-a"},

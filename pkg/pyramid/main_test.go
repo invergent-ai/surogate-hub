@@ -9,10 +9,10 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/block/mem"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/pyramid/params"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block/mem"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/pyramid/params"
 )
 
 // memAdapter a memory based Adapter that count gets and let you wait

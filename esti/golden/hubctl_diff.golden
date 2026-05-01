@@ -1,0 +1,3 @@
+Left ref: sg://${REPO}/${LEFT_BRANCH}
+Right ref: sg://${REPO}/${RIGHT_BRANCH}
+${DIFF_LIST}

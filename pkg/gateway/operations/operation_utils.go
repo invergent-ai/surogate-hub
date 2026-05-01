@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/catalog"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 const amzMetaHeaderPrefix = "X-Amz-Meta-"

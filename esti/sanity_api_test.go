@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
 )
 
 func TestSanityAPI(t *testing.T) {

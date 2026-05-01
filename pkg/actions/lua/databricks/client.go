@@ -13,7 +13,7 @@ import (
 	"github.com/databricks/databricks-sdk-go/config"
 	"github.com/databricks/databricks-sdk-go/service/catalog"
 	"github.com/databricks/databricks-sdk-go/service/sql"
-	luautil "github.com/treeverse/lakefs/pkg/actions/lua/util"
+	luautil "github.com/invergent-ai/surogate-hub/pkg/actions/lua/util"
 )
 
 // identifierRegex https://docs.databricks.com/en/sql/language-manual/sql-ref-identifiers.html

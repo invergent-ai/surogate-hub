@@ -9,8 +9,8 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/Shopify/go-lua"
-	"github.com/treeverse/lakefs/pkg/actions/lua/path"
-	"github.com/treeverse/lakefs/pkg/actions/lua/util"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/path"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/util"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 )

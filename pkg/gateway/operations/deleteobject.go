@@ -4,11 +4,11 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/treeverse/lakefs/pkg/block"
-	gatewayerrors "github.com/treeverse/lakefs/pkg/gateway/errors"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	gatewayerrors "github.com/invergent-ai/surogate-hub/pkg/gateway/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
 )
 
 type DeleteObject struct{}

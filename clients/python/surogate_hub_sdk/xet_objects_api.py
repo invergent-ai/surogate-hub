@@ -224,7 +224,7 @@ class XetObjectsApi(ObjectsApi):
 
     def _mint_token(self) -> TokenInfo:
         request = urllib.request.Request(self.xet_endpoint + "/v1/token", method="POST")
-        request.add_header("Authorization", self._lakefs_auth_header())
+        request.add_header("Authorization", self._hub_auth_header())
         return self._read_token_response(request)
 
     @staticmethod
@@ -233,7 +233,7 @@ class XetObjectsApi(ObjectsApi):
             data = json.loads(response.read().decode("utf-8"))
         return data["access_token"], int(data["exp"])
 
-    def _lakefs_auth_header(self) -> str:
+    def _hub_auth_header(self) -> str:
         if self.configuration.username is not None and self.configuration.password is not None:
             return self.configuration.get_basic_auth_token()
         if self.configuration.access_token is not None:

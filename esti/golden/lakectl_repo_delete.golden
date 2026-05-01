@@ -1,2 +1,0 @@
-Repository: lakefs://${REPO}
-Repository '${REPO}' deleted

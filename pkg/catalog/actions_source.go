@@ -6,12 +6,12 @@ import (
 	"io"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/cache"
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/cache"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
-const repositoryLocation = "_lakefs_actions/"
+const repositoryLocation = "_hub_actions/"
 
 type ActionsSource struct {
 	catalog *Catalog

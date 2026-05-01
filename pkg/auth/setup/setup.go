@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/auth"
-	authacl "github.com/treeverse/lakefs/pkg/auth/acl"
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	authacl "github.com/invergent-ai/surogate-hub/pkg/auth/acl"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
 )
 
 const (

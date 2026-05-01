@@ -1,12 +1,12 @@
 """fsspec filesystem backed by the Surogate Hub object API.
 
-Registers a ``shub://`` protocol. Paths take the form
-``shub://<repository>/<ref>/<object_path>`` — mirroring the
-``lakefs-spec`` convention so users familiar with lakeFS don't get surprised.
+Registers a ``sghub://`` protocol. Paths take the form
+``sghub://<repository>/<ref>/<object_path>`` — mirroring the
+``sghub-spec`` convention so users familiar with Surogate Hub don't get surprised.
 
 Read-only, with HTTP-range-read support on open files, so
-``datasets.load_dataset('shub://...')`` or DuckDB's
-``read_parquet('shub://...')`` can stream without staging the whole
+``datasets.load_dataset('sghub://...')`` or DuckDB's
+``read_parquet('sghub://...')`` can stream without staging the whole
 repository to local disk.
 
 This is the transport that :class:`surogate_hub_sdk.parquet.ParquetQuery`
@@ -32,7 +32,7 @@ from surogate_hub_sdk.exceptions import NotFoundException
 
 log = logging.getLogger(__name__)
 
-PROTOCOL = "shub"
+PROTOCOL = "sghub"
 PROTOCOL_SCHEME = f"{PROTOCOL}://"
 
 

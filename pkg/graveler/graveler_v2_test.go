@@ -10,12 +10,12 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	"github.com/go-openapi/swag"
 	"github.com/golang/mock/gomock"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog/testutils"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/testutil"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
 	"github.com/rs/xid"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/catalog/testutils"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/testutil"
-	"github.com/treeverse/lakefs/pkg/kv"
 )
 
 var (

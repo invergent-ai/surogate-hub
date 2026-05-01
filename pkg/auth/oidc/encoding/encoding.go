@@ -11,7 +11,7 @@ type Claims map[string]interface{}
 // gob encoding in JWT.  It is the default value that gob would give had
 // Claims been part of auth.  It is not (any longer), explicitly to allow
 // external services to serialize matching claims.
-const OIDCClaimsSerdeNickname = "github.com/treeverse/lakefs/pkg/auth/oidc.Claims"
+const OIDCClaimsSerdeNickname = "github.com/invergent-ai/surogate-hub/pkg/auth/oidc.Claims"
 
 // init registers OIDCSerdeNickname as the typename used to serialize Claims
 // using gob encoding in JWT.  It should be called in an init() func of a

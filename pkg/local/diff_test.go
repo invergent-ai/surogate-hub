@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/go-openapi/swag"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/local"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/local"
 )
 
 const diffTestCorrectTime = 1691570412

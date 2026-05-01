@@ -8,19 +8,19 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/treeverse/lakefs/pkg/fileutil"
-	"github.com/treeverse/lakefs/pkg/uri"
+	"github.com/invergent-ai/surogate-hub/pkg/fileutil"
+	"github.com/invergent-ai/surogate-hub/pkg/uri"
 	"gopkg.in/yaml.v3"
 )
 
 const (
-	IndexFileName = ".lakefs_ref.yaml"
-	IgnoreMarker  = "ignored by lakectl local"
+	IndexFileName = ".hub_ref.yaml"
+	IgnoreMarker  = "ignored by hubctl local"
 	IndexFileMode = 0o644
 )
 
-// Index defines the structure of the lakefs local reference file
-// consisting of the information linking local directory with lakefs path
+// Index defines the structure of the hub local reference file
+// consisting of the information linking local directory with hub path
 type Index struct {
 	root            string `yaml:"-"`
 	PathURI         string `yaml:"src"`
@@ -69,7 +69,7 @@ func ReadIndex(path string) (*Index, error) {
 		return nil, err
 	}
 	if idxPath == "" {
-		return nil, fmt.Errorf("could not find lakefs reference file in path %s or parents: %w", path, fs.ErrNotExist)
+		return nil, fmt.Errorf("could not find the sghub reference file in path %s or parents: %w", path, fs.ErrNotExist)
 	}
 	data, err := os.ReadFile(idxPath)
 	if err != nil {

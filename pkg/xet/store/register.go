@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/treeverse/lakefs/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
 )
 
 const Partition = "xet"

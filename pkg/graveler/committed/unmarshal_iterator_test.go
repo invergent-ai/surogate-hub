@@ -5,9 +5,9 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/committed"
-	"github.com/treeverse/lakefs/pkg/graveler/committed/mock"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/committed"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/committed/mock"
 )
 
 func TestUnmarshalIterator(t *testing.T) {

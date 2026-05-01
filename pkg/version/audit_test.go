@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	"github.com/sirupsen/logrus"
-	"github.com/treeverse/lakefs/pkg/logging"
 )
 
 type LogLine struct {

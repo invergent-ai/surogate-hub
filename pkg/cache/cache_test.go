@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/cache"
+	"github.com/invergent-ai/surogate-hub/pkg/cache"
 )
 
 func TestCache(t *testing.T) {

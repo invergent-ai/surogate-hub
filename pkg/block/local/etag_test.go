@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
 )
 
 const PartsNo = 30

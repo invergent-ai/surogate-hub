@@ -202,9 +202,9 @@ Class | Method | HTTP request | Description
 *InternalApi* | [**dump_refs**](docs/InternalApi.md#dump_refs) | **PUT** /repositories/{repository}/refs/dump | Dump repository refs (tags, commits, branches) to object store Deprecated: a new API will introduce long running operations 
 *InternalApi* | [**get_auth_capabilities**](docs/InternalApi.md#get_auth_capabilities) | **GET** /auth/capabilities | list authentication capabilities supported
 *InternalApi* | [**get_garbage_collection_config**](docs/InternalApi.md#get_garbage_collection_config) | **GET** /config/garbage-collection | 
-*InternalApi* | [**get_lake_fs_version**](docs/InternalApi.md#get_lake_fs_version) | **GET** /config/version | 
+*InternalApi* | [**get_hub_version**](docs/InternalApi.md#get_hub_version) | **GET** /config/version | 
 *InternalApi* | [**get_metadata_object**](docs/InternalApi.md#get_metadata_object) | **GET** /repositories/{repository}/metadata/object/{type}/{object_id} | return a Surogate Hub metadata object by ID
-*InternalApi* | [**get_setup_state**](docs/InternalApi.md#get_setup_state) | **GET** /setup_lakefs | check if the Surogate Hub installation is already set up
+*InternalApi* | [**get_setup_state**](docs/InternalApi.md#get_setup_state) | **GET** /setup_sghub | check if the Surogate Hub installation is already set up
 *InternalApi* | [**get_storage_config**](docs/InternalApi.md#get_storage_config) | **GET** /config/storage | 
 *InternalApi* | [**get_usage_report_summary**](docs/InternalApi.md#get_usage_report_summary) | **GET** /usage-report/summary | get usage report summary
 *InternalApi* | [**internal_create_branch_protection_rule**](docs/InternalApi.md#internal_create_branch_protection_rule) | **POST** /repositories/{repository}/branch_protection | 
@@ -219,7 +219,7 @@ Class | Method | HTTP request | Description
 *InternalApi* | [**restore_refs**](docs/InternalApi.md#restore_refs) | **PUT** /repositories/{repository}/refs/restore | Restore repository refs (tags, commits, branches) from object store. Deprecated: a new API will introduce long running operations 
 *InternalApi* | [**set_garbage_collection_rules_preflight**](docs/InternalApi.md#set_garbage_collection_rules_preflight) | **GET** /repositories/{repository}/gc/rules/set_allowed | 
 *InternalApi* | [**set_repository_metadata**](docs/InternalApi.md#set_repository_metadata) | **POST** /repositories/{repository}/metadata | set repository metadata
-*InternalApi* | [**setup**](docs/InternalApi.md#setup) | **POST** /setup_lakefs | setup Surogate Hub and create a first user
+*InternalApi* | [**setup**](docs/InternalApi.md#setup) | **POST** /setup_sghub | setup Surogate Hub and create a first user
 *InternalApi* | [**setup_comm_prefs**](docs/InternalApi.md#setup_comm_prefs) | **POST** /setup_comm_prefs | setup communications preferences
 *InternalApi* | [**stage_object**](docs/InternalApi.md#stage_object) | **PUT** /repositories/{repository}/branches/{branch}/objects | stage an object&#39;s metadata for the given branch
 *InternalApi* | [**upload_object_preflight**](docs/InternalApi.md#upload_object_preflight) | **GET** /repositories/{repository}/branches/{branch}/objects/stage_allowed | 

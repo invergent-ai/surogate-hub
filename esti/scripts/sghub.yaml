@@ -1,0 +1,19 @@
+database:
+  type: "local"
+  local:
+    path: /tmp/sghub/metadata
+auth:
+  encrypt:
+    secret_key: "some random value that should be replaced for production environments"
+
+blockstore:
+  type: local
+  local:
+    path: /tmp/sghub/data
+    import_enabled: true
+    allowed_external_prefixes:
+      - /tmp/
+
+logging:
+  format: text
+  level: trace

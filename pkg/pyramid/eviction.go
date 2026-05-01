@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/dgraph-io/ristretto"
-	"github.com/treeverse/lakefs/pkg/pyramid/params"
+	"github.com/invergent-ai/surogate-hub/pkg/pyramid/params"
 )
 
 // nolint: unused

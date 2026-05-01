@@ -123,11 +123,11 @@ func file_distributed_mc_owner_proto_rawDescGZIP() []byte {
 
 var file_distributed_mc_owner_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_distributed_mc_owner_proto_goTypes = []interface{}{
-	(*MostlyCorrectOwnership)(nil), // 0: io.treeverse.lakefs.kv.MostlyCorrectOwnership
+	(*MostlyCorrectOwnership)(nil), // 0: io.invergent.sghub.kv.MostlyCorrectOwnership
 	(*timestamppb.Timestamp)(nil),  // 1: google.protobuf.Timestamp
 }
 var file_distributed_mc_owner_proto_depIdxs = []int32{
-	1, // 0: io.treeverse.lakefs.kv.MostlyCorrectOwnership.expires:type_name -> google.protobuf.Timestamp
+	1, // 0: io.invergent.sghub.kv.MostlyCorrectOwnership.expires:type_name -> google.protobuf.Timestamp
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name

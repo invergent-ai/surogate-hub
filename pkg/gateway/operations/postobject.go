@@ -9,16 +9,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/catalog"
-	gatewayErrors "github.com/treeverse/lakefs/pkg/gateway/errors"
-	"github.com/treeverse/lakefs/pkg/gateway/multipart"
-	"github.com/treeverse/lakefs/pkg/gateway/path"
-	"github.com/treeverse/lakefs/pkg/gateway/serde"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/httputil"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog"
+	gatewayErrors "github.com/invergent-ai/surogate-hub/pkg/gateway/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/multipart"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/path"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/serde"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/httputil"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
 )
 
 const (

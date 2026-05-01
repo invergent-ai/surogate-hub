@@ -10,7 +10,7 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
-	graveler "github.com/treeverse/lakefs/pkg/graveler"
+	graveler "github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
 // MockKeyValueStore is a mock of KeyValueStore interface.

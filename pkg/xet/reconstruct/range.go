@@ -3,7 +3,7 @@ package reconstruct
 import (
 	"fmt"
 
-	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 )
 
 type ByteRange struct {

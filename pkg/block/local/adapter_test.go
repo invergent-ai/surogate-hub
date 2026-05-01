@@ -5,11 +5,11 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block/blocktest"
+	"github.com/invergent-ai/surogate-hub/pkg/block/local"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/block/blocktest"
-	"github.com/treeverse/lakefs/pkg/block/local"
-	"github.com/treeverse/lakefs/pkg/config"
 )
 
 const testStorageNamespace = "local://test"
@@ -17,8 +17,8 @@ const testStorageNamespace = "local://test"
 // TestLocalAdapter tests the Local Storage Adapter for basic storage functionality
 func TestLocalAdapter(t *testing.T) {
 	tmpDir := t.TempDir()
-	localPath := path.Join(tmpDir, "lakefs")
-	externalPath := block.BlockstoreTypeLocal + "://" + path.Join(tmpDir, "lakefs", "external")
+	localPath := path.Join(tmpDir, "sghub")
+	externalPath := block.BlockstoreTypeLocal + "://" + path.Join(tmpDir, "sghub", "external")
 	adapter, err := local.NewAdapter(localPath, local.WithRemoveEmptyDir(false))
 	if err != nil {
 		t.Fatal("Failed to create new adapter", err)
@@ -29,7 +29,7 @@ func TestLocalAdapter(t *testing.T) {
 // TestAdapterNamespace tests the namespace validity regex with various paths
 func TestAdapterNamespace(t *testing.T) {
 	tmpDir := t.TempDir()
-	localPath := path.Join(tmpDir, "lakefs")
+	localPath := path.Join(tmpDir, "sghub")
 	adapter, err := local.NewAdapter(localPath, local.WithRemoveEmptyDir(false))
 	require.NoError(t, err, "create new adapter")
 	expr, err := regexp.Compile(adapter.GetStorageNamespaceInfo(config.SingleBlockstoreID).ValidityRegex)

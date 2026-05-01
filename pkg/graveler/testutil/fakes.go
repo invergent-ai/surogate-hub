@@ -7,8 +7,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/committed"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/committed"
 )
 
 const DefaultBranchID = graveler.BranchID("main")

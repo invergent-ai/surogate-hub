@@ -1,6 +1,6 @@
 package local
 
-import "github.com/treeverse/lakefs/pkg/logging"
+import "github.com/invergent-ai/surogate-hub/pkg/logging"
 
 type BadgerLogger struct {
 	logging.Logger

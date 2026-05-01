@@ -1,9 +1,9 @@
 syntax = "proto3";
-option go_package = "github.com/treeverse/lakefs/pkg/kv/kvtest";
+option go_package = "github.com/invergent-ai/surogate-hub/pkg/kv/kvtest";
 
 import "google/protobuf/timestamp.proto";
 
-package io.treeverse.lakefs.kvtest;
+package ai.invergent.shub.kvtest;
 
 message TestModel {
     bytes name = 1;

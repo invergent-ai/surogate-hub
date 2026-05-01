@@ -38,7 +38,7 @@ class Artifact:
 
 
 def register_view(con: duckdb.DuckDBPyConnection, urls: List[str]) -> None:
-    # Container users (e.g. the Debian 'lakefs' account in our image) have
+    # Container users (e.g. the Debian 'sghub' account in our image) have
     # ``/nonexistent`` as HOME; DuckDB needs a writable directory to cache
     # extensions. ``/tmp`` is always writable in a pod.
     con.execute("SET home_directory='/tmp'")

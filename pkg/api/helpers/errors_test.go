@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/api/helpers"
+	"github.com/invergent-ai/surogate-hub/pkg/api/helpers"
 )
 
 type Response struct {

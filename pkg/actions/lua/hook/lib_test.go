@@ -3,7 +3,7 @@ package hook_test
 import (
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/actions/lua/hook"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/hook"
 
 	"github.com/Shopify/go-lua"
 )

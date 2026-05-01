@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
 var modifiersRegexp = regexp.MustCompile("(^|[~^@$])[^^~@$]*")

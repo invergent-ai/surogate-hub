@@ -9,18 +9,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
-	"github.com/treeverse/lakefs/pkg/auth"
-	"github.com/treeverse/lakefs/pkg/catalog"
-	gatewayerrors "github.com/treeverse/lakefs/pkg/gateway/errors"
-	"github.com/treeverse/lakefs/pkg/gateway/operations"
-	"github.com/treeverse/lakefs/pkg/gateway/path"
-	"github.com/treeverse/lakefs/pkg/gateway/sig"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/httputil"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/permissions"
-	"github.com/treeverse/lakefs/pkg/stats"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog"
+	gatewayerrors "github.com/invergent-ai/surogate-hub/pkg/gateway/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/operations"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/path"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/sig"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/httputil"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/stats"
 )
 
 func AuthenticationHandler(authService auth.GatewayService, next http.Handler) http.Handler {
@@ -112,7 +112,7 @@ func stripPort(host string) string {
 func EnrichWithOperation(sc *ServerContext, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		ctx := req.Context()
-		client := httputil.GetRequestLakeFSClient(req)
+		client := httputil.GetRequestHubClient(req)
 		o := &operations.Operation{
 			Region:            sc.region,
 			FQDN:              getBareDomain(stripPort(req.Host), sc.bareDomains),

@@ -14,10 +14,10 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/data/azcosmos"
-	"github.com/treeverse/lakefs/pkg/ident"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/ident"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 type Driver struct{}
@@ -455,7 +455,7 @@ func (e *EntriesIterator) Next() bool {
 }
 
 // handleBatchSizeChange handles running query after the first query ran with limited batch size.
-// The reason we switch the batch size is to avoid issues like https://github.com/treeverse/lakeFS/issues/7864
+// The reason we switch the batch size is to avoid issues
 // as opposed to the exponential backoff approach in dynamoDB here we use a dynamic page size and let Cosmos DB manage paging.
 func (e *EntriesIterator) handleBatchSizeChange() error {
 	if e.entry != nil {

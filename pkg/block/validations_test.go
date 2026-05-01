@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/go-openapi/swag"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/testutil"
 )
 
 func TestController_ValidateInterRegionStorage(t *testing.T) {

@@ -11,9 +11,9 @@ All URIs are relative to */api/v1*
 | [**dumpRefs**](InternalApi.md#dumpRefs) | **PUT** /repositories/{repository}/refs/dump | Dump repository refs (tags, commits, branches) to object store Deprecated: a new API will introduce long running operations  |
 | [**getAuthCapabilities**](InternalApi.md#getAuthCapabilities) | **GET** /auth/capabilities | list authentication capabilities supported |
 | [**getGarbageCollectionConfig**](InternalApi.md#getGarbageCollectionConfig) | **GET** /config/garbage-collection |  |
-| [**getLakeFSVersion**](InternalApi.md#getLakeFSVersion) | **GET** /config/version |  |
+| [**getHubVersion**](InternalApi.md#getHubVersion) | **GET** /config/version |  |
 | [**getMetadataObject**](InternalApi.md#getMetadataObject) | **GET** /repositories/{repository}/metadata/object/{type}/{object_id} | return a Surogate Hub metadata object by ID |
-| [**getSetupState**](InternalApi.md#getSetupState) | **GET** /setup_lakefs | check if the Surogate Hub installation is already set up |
+| [**getSetupState**](InternalApi.md#getSetupState) | **GET** /setup_sghub | check if the Surogate Hub installation is already set up |
 | [**getStorageConfig**](InternalApi.md#getStorageConfig) | **GET** /config/storage |  |
 | [**getUsageReportSummary**](InternalApi.md#getUsageReportSummary) | **GET** /usage-report/summary | get usage report summary |
 | [**internalCreateBranchProtectionRule**](InternalApi.md#internalCreateBranchProtectionRule) | **POST** /repositories/{repository}/branch_protection |  |
@@ -28,7 +28,7 @@ All URIs are relative to */api/v1*
 | [**restoreRefs**](InternalApi.md#restoreRefs) | **PUT** /repositories/{repository}/refs/restore | Restore repository refs (tags, commits, branches) from object store. Deprecated: a new API will introduce long running operations  |
 | [**setGarbageCollectionRulesPreflight**](InternalApi.md#setGarbageCollectionRulesPreflight) | **GET** /repositories/{repository}/gc/rules/set_allowed |  |
 | [**setRepositoryMetadata**](InternalApi.md#setRepositoryMetadata) | **POST** /repositories/{repository}/metadata | set repository metadata |
-| [**setup**](InternalApi.md#setup) | **POST** /setup_lakefs | setup Surogate Hub and create a first user |
+| [**setup**](InternalApi.md#setup) | **POST** /setup_sghub | setup Surogate Hub and create a first user |
 | [**setupCommPrefs**](InternalApi.md#setupCommPrefs) | **POST** /setup_comm_prefs | setup communications preferences |
 | [**stageObject**](InternalApi.md#stageObject) | **PUT** /repositories/{repository}/branches/{branch}/objects | stage an object&#39;s metadata for the given branch |
 | [**uploadObjectPreflight**](InternalApi.md#uploadObjectPreflight) | **GET** /repositories/{repository}/branches/{branch}/objects/stage_allowed |  |
@@ -657,9 +657,9 @@ This endpoint does not need any parameter.
 | **200** | Surogate Hub garbage collection config |  -  |
 | **401** | Unauthorized |  -  |
 
-<a id="getLakeFSVersion"></a>
-# **getLakeFSVersion**
-> VersionConfig getLakeFSVersion().execute();
+<a id="getHubVersion"></a>
+# **getHubVersion**
+> VersionConfig getHubVersion().execute();
 
 
 
@@ -709,11 +709,11 @@ public class Example {
 
     InternalApi apiInstance = new InternalApi(defaultClient);
     try {
-      VersionConfig result = apiInstance.getLakeFSVersion()
+      VersionConfig result = apiInstance.getHubVersion()
             .execute();
       System.out.println(result);
     } catch (ApiException e) {
-      System.err.println("Exception when calling InternalApi#getLakeFSVersion");
+      System.err.println("Exception when calling InternalApi#getHubVersion");
       System.err.println("Status code: " + e.getCode());
       System.err.println("Reason: " + e.getResponseBody());
       System.err.println("Response headers: " + e.getResponseHeaders());

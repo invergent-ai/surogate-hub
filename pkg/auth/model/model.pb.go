@@ -739,26 +739,26 @@ func file_auth_model_model_proto_rawDescGZIP() []byte {
 
 var file_auth_model_model_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_auth_model_model_proto_goTypes = []interface{}{
-	(*UserData)(nil),              // 0: io.treeverse.lakefs.auth.model.UserData
-	(*GroupData)(nil),             // 1: io.treeverse.lakefs.auth.model.GroupData
-	(*ACLData)(nil),               // 2: io.treeverse.lakefs.auth.model.ACLData
-	(*PolicyData)(nil),            // 3: io.treeverse.lakefs.auth.model.PolicyData
-	(*CredentialData)(nil),        // 4: io.treeverse.lakefs.auth.model.CredentialData
-	(*StatementData)(nil),         // 5: io.treeverse.lakefs.auth.model.StatementData
-	(*TokenData)(nil),             // 6: io.treeverse.lakefs.auth.model.TokenData
-	(*RepositoriesData)(nil),      // 7: io.treeverse.lakefs.auth.model.RepositoriesData
-	(*UIData)(nil),                // 8: io.treeverse.lakefs.auth.model.UIData
+	(*UserData)(nil),              // 0: io.invergent.sghub.auth.model.UserData
+	(*GroupData)(nil),             // 1: io.invergent.sghub.auth.model.GroupData
+	(*ACLData)(nil),               // 2: io.invergent.sghub.auth.model.ACLData
+	(*PolicyData)(nil),            // 3: io.invergent.sghub.auth.model.PolicyData
+	(*CredentialData)(nil),        // 4: io.invergent.sghub.auth.model.CredentialData
+	(*StatementData)(nil),         // 5: io.invergent.sghub.auth.model.StatementData
+	(*TokenData)(nil),             // 6: io.invergent.sghub.auth.model.TokenData
+	(*RepositoriesData)(nil),      // 7: io.invergent.sghub.auth.model.RepositoriesData
+	(*UIData)(nil),                // 8: io.invergent.sghub.auth.model.UIData
 	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
 }
 var file_auth_model_model_proto_depIdxs = []int32{
-	9, // 0: io.treeverse.lakefs.auth.model.UserData.created_at:type_name -> google.protobuf.Timestamp
-	9, // 1: io.treeverse.lakefs.auth.model.GroupData.created_at:type_name -> google.protobuf.Timestamp
-	9, // 2: io.treeverse.lakefs.auth.model.PolicyData.created_at:type_name -> google.protobuf.Timestamp
-	5, // 3: io.treeverse.lakefs.auth.model.PolicyData.statements:type_name -> io.treeverse.lakefs.auth.model.StatementData
-	2, // 4: io.treeverse.lakefs.auth.model.PolicyData.acl:type_name -> io.treeverse.lakefs.auth.model.ACLData
-	9, // 5: io.treeverse.lakefs.auth.model.CredentialData.issued_date:type_name -> google.protobuf.Timestamp
-	9, // 6: io.treeverse.lakefs.auth.model.TokenData.expired_at:type_name -> google.protobuf.Timestamp
-	7, // 7: io.treeverse.lakefs.auth.model.UIData.repositories:type_name -> io.treeverse.lakefs.auth.model.RepositoriesData
+	9, // 0: io.invergent.sghub.auth.model.UserData.created_at:type_name -> google.protobuf.Timestamp
+	9, // 1: io.invergent.sghub.auth.model.GroupData.created_at:type_name -> google.protobuf.Timestamp
+	9, // 2: io.invergent.sghub.auth.model.PolicyData.created_at:type_name -> google.protobuf.Timestamp
+	5, // 3: io.invergent.sghub.auth.model.PolicyData.statements:type_name -> io.invergent.sghub.auth.model.StatementData
+	2, // 4: io.invergent.sghub.auth.model.PolicyData.acl:type_name -> io.invergent.sghub.auth.model.ACLData
+	9, // 5: io.invergent.sghub.auth.model.CredentialData.issued_date:type_name -> google.protobuf.Timestamp
+	9, // 6: io.invergent.sghub.auth.model.TokenData.expired_at:type_name -> google.protobuf.Timestamp
+	7, // 7: io.invergent.sghub.auth.model.UIData.repositories:type_name -> io.invergent.sghub.auth.model.RepositoriesData
 	8, // [8:8] is the sub-list for method output_type
 	8, // [8:8] is the sub-list for method input_type
 	8, // [8:8] is the sub-list for extension type_name

@@ -5,7 +5,7 @@ database:
 logging:
   format: json
   level: DEBUG
-  output: "/tmp/lakefs_json_logger_test.log"
+  output: "/tmp/sghub_json_logger_test.log"
 
 auth:
   encrypt:

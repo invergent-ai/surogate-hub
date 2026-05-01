@@ -13,12 +13,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/actions"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 	nanoid "github.com/matoous/go-nanoid/v2"
-	"github.com/treeverse/lakefs/pkg/actions"
-	"github.com/treeverse/lakefs/pkg/auth"
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/testutil"
 )
 
 func TestNewLuaHook(t *testing.T) {
@@ -375,15 +375,6 @@ func TestLuaRunTable(t *testing.T) {
 			Name:   "strings_partition",
 			Input:  "testdata/lua/strings_partition.lua",
 			Output: "testdata/lua/strings_partition.output",
-		},
-		{
-			Name:   "catalogexport_hive_partition_pager",
-			Input:  "testdata/lua/catalogexport_hive_partition_pager.lua",
-			Output: "testdata/lua/catalogexport_hive_partition_pager.output",
-		},
-		{
-			Name:  "catalogexport_delta",
-			Input: "testdata/lua/catalogexport_delta.lua",
 		},
 		{
 			Name:  "catalogexport_unity",

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block/mem"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/block/mem"
 )
 
 func TestXorbStorePutIsIdempotentAndStoresBytes(t *testing.T) {

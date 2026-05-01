@@ -3,7 +3,7 @@ package committed
 import (
 	"context"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
 // diffValuesIterator wraps a diffIterator in order to return only values

@@ -14,12 +14,12 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/invergent-ai/surogate-hub/pkg/block/mem"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/pyramid/params"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/block/mem"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/pyramid/params"
 )
 
 const (

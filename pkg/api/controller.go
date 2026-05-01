@@ -24,32 +24,32 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-openapi/swag"
 	"github.com/gorilla/sessions"
+	"github.com/invergent-ai/surogate-hub/pkg/actions"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	authacl "github.com/invergent-ai/surogate-hub/pkg/auth/acl"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/setup"
+	"github.com/invergent-ai/surogate-hub/pkg/authentication"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog"
+	"github.com/invergent-ai/surogate-hub/pkg/cloud"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/httputil"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/samplerepo"
+	"github.com/invergent-ai/surogate-hub/pkg/stats"
+	"github.com/invergent-ai/surogate-hub/pkg/upload"
+	"github.com/invergent-ai/surogate-hub/pkg/validator"
+	"github.com/invergent-ai/surogate-hub/pkg/version"
+	xetcas "github.com/invergent-ai/surogate-hub/pkg/xet/cas"
+	xetreconstruct "github.com/invergent-ai/surogate-hub/pkg/xet/reconstruct"
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 	_ "github.com/marcboeker/go-duckdb/v2"
-	"github.com/treeverse/lakefs/pkg/actions"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
-	"github.com/treeverse/lakefs/pkg/auth"
-	authacl "github.com/treeverse/lakefs/pkg/auth/acl"
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	"github.com/treeverse/lakefs/pkg/auth/setup"
-	"github.com/treeverse/lakefs/pkg/authentication"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/catalog"
-	"github.com/treeverse/lakefs/pkg/cloud"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/httputil"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/permissions"
-	"github.com/treeverse/lakefs/pkg/samplerepo"
-	"github.com/treeverse/lakefs/pkg/stats"
-	"github.com/treeverse/lakefs/pkg/upload"
-	"github.com/treeverse/lakefs/pkg/validator"
-	"github.com/treeverse/lakefs/pkg/version"
-	xetcas "github.com/treeverse/lakefs/pkg/xet/cas"
-	xetreconstruct "github.com/treeverse/lakefs/pkg/xet/reconstruct"
-	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 const (
@@ -61,7 +61,7 @@ const (
 	defaultSTSTTLSeconds = 3600
 	maxSTSTTLSeconds     = 3600 * 12
 
-	lakeFSPrefix = "symlinks"
+	hubPrefix = "symlinks"
 
 	actionStatusCompleted = "completed"
 	actionStatusFailed    = "failed"
@@ -2071,7 +2071,7 @@ func (c *Controller) CreateRepository(w http.ResponseWriter, r *http.Request, bo
 
 	if swag.BoolValue(params.Bare) {
 		// create a bare repository. This is useful in conjunction with refs-restore to create a copy
-		// of another repository by e.g. copying the _lakefs/ directory and restoring its refs
+		// of another repository by e.g. copying the _hub/ directory and restoring its refs
 		repo, err := c.Catalog.CreateBareRepository(ctx, body.Name, storageID, storageNamespace, defaultBranch, swag.BoolValue(body.ReadOnly))
 		if c.handleAPIError(ctx, w, r, err) {
 			return
@@ -2119,9 +2119,11 @@ func (c *Controller) CreateRepository(w http.ResponseWriter, r *http.Request, bo
 		BranchRetentionDays:  make(map[string]int32),
 	}
 	rules.BranchRetentionDays[newRepo.DefaultBranch] = int32(0)
-	err = c.Catalog.SetGarbageCollectionRules(ctx, newRepo.Name, rules)
-	if c.handleAPIError(ctx, w, r, err) {
-		return
+	if !newRepo.ReadOnly {
+		err = c.Catalog.SetGarbageCollectionRules(ctx, newRepo.Name, rules)
+		if c.handleAPIError(ctx, w, r, err) {
+			return
+		}
 	}
 
 	response := apigen.Repository{
@@ -2199,7 +2201,7 @@ func (c *Controller) ensureStorageNamespace(ctx context.Context, storageID, stor
 
 	if s, err := c.BlockAdapter.Get(ctx, obj); err == nil {
 		_ = s.Close()
-		return fmt.Errorf("found lakeFS objects in the storage (%s:%s) key(%s): %w",
+		return fmt.Errorf("found hub objects in the storage (%s:%s) key(%s): %w",
 			storageID, storageNamespace, obj.Identifier, ErrStorageNamespaceInUse)
 	} else if !errors.Is(err, block.ErrDataNotFound) {
 		return err
@@ -3391,7 +3393,7 @@ func (c *Controller) UploadObject(w http.ResponseWriter, r *http.Request, reposi
 	} else {
 		entryBuilder.AddressType(catalog.AddressTypeFull)
 	}
-	meta := extractLakeFSMetadata(r.Header)
+	meta := extractHubMetadata(r.Header)
 	if len(meta) > 0 {
 		entryBuilder.Metadata(meta)
 	}
@@ -4315,7 +4317,7 @@ func (c *Controller) CreateSymlinkFile(w http.ResponseWriter, r *http.Request, r
 			return
 		}
 	}
-	metaLocation := fmt.Sprintf("%s/%s", repo.StorageNamespace, lakeFSPrefix)
+	metaLocation := fmt.Sprintf("%s/%s", repo.StorageNamespace, hubPrefix)
 	response := apigen.StorageURI{
 		Location: metaLocation,
 	}
@@ -4323,7 +4325,7 @@ func (c *Controller) CreateSymlinkFile(w http.ResponseWriter, r *http.Request, r
 }
 
 func writeSymlink(ctx context.Context, repo *catalog.Repository, branch, path string, addresses []string, adapter block.Adapter) error {
-	address := fmt.Sprintf("%s/%s/%s/%s/symlink.txt", lakeFSPrefix, repo.Name, branch, path)
+	address := fmt.Sprintf("%s/%s/%s/%s/symlink.txt", hubPrefix, repo.Name, branch, path)
 	data := strings.Join(addresses, "\n")
 	_, err := adapter.Put(ctx, block.ObjectPointer{
 		StorageID:        repo.StorageID,
@@ -5188,7 +5190,7 @@ func (c *Controller) GetSetupState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if savedState == auth.SetupStateNotInitialized {
-		c.Collector.CollectEvent(stats.Event{Class: "global", Name: "preinit", Client: httputil.GetRequestLakeFSClient(r)})
+		c.Collector.CollectEvent(stats.Event{Class: "global", Name: "preinit", Client: httputil.GetRequestHubClient(r)})
 	}
 
 	response := apigen.SetupState{
@@ -5260,7 +5262,7 @@ func (c *Controller) Setup(w http.ResponseWriter, r *http.Request, body apigen.S
 	meta := stats.NewMetadata(ctx, c.Logger, c.BlockAdapter.BlockstoreType(), c.MetadataManager, c.CloudMetadataProvider)
 	c.Collector.SetInstallationID(meta.InstallationID)
 	c.Collector.CollectMetadata(meta)
-	c.Collector.CollectEvent(stats.Event{Class: "global", Name: "init", UserID: body.Username, Client: httputil.GetRequestLakeFSClient(r)})
+	c.Collector.CollectEvent(stats.Event{Class: "global", Name: "init", UserID: body.Username, Client: httputil.GetRequestHubClient(r)})
 
 	response := apigen.CredentialsWithSecret{
 		AccessKeyId:     cred.AccessKeyID,
@@ -5332,7 +5334,7 @@ func (c *Controller) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) GetLakeFSVersion(w http.ResponseWriter, r *http.Request) {
+func (c *Controller) GetHubVersion(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	_, err := auth.GetUser(ctx)
 	if err != nil {
@@ -5418,7 +5420,7 @@ func (c *Controller) PostStatsEvents(w http.ResponseWriter, r *http.Request, bod
 		}
 	}
 
-	client := httputil.GetRequestLakeFSClient(r)
+	client := httputil.GetRequestHubClient(r)
 	for _, statsEv := range body.Events {
 		ev := stats.Event{
 			Class:  statsEv.Class,
@@ -5747,7 +5749,7 @@ func resolvePathList(objects, prefixes *[]string) []catalog.PathRecord {
 }
 
 func (c *Controller) LogAction(ctx context.Context, action string, r *http.Request, repository, ref, sourceRef string) {
-	client := httputil.GetRequestLakeFSClient(r)
+	client := httputil.GetRequestHubClient(r)
 	ev := stats.Event{
 		Class:      "api_server",
 		Name:       action,
@@ -5868,16 +5870,16 @@ func encodeGCUncommittedMark(mark *catalog.GCUncommittedMark) (*string, error) {
 	return &token, nil
 }
 
-func extractLakeFSMetadata(header http.Header) map[string]string {
+func extractHubMetadata(header http.Header) map[string]string {
 	meta := make(map[string]string)
 	for k, v := range header {
 		lowerKey := strings.ToLower(k)
 		metaKey := ""
 		switch {
-		case strings.HasPrefix(lowerKey, apiutil.LakeFSHeaderMetadataPrefix):
-			metaKey = lowerKey[len(apiutil.LakeFSHeaderMetadataPrefix):]
-		case strings.HasPrefix(lowerKey, apiutil.LakeFSHeaderInternalPrefix):
-			metaKey = apiutil.LakeFSMetadataPrefix + lowerKey[len(apiutil.LakeFSHeaderInternalPrefix):]
+		case strings.HasPrefix(lowerKey, apiutil.HubHeaderMetadataPrefix):
+			metaKey = lowerKey[len(apiutil.HubHeaderMetadataPrefix):]
+		case strings.HasPrefix(lowerKey, apiutil.HubHeaderInternalPrefix):
+			metaKey = apiutil.HubMetadataPrefix + lowerKey[len(apiutil.HubHeaderInternalPrefix):]
 		default:
 			continue
 		}

@@ -1303,7 +1303,7 @@ public class InternalApi {
     public APIgetGarbageCollectionConfigRequest getGarbageCollectionConfig() {
         return new APIgetGarbageCollectionConfigRequest();
     }
-    private okhttp3.Call getLakeFSVersionCall(final ApiCallback _callback) throws ApiException {
+    private okhttp3.Call getHubVersionCall(final ApiCallback _callback) throws ApiException {
         String basePath = null;
         // Operation Servers
         String[] localBasePaths = new String[] {  };
@@ -1349,33 +1349,33 @@ public class InternalApi {
 
     @Deprecated
     @SuppressWarnings("rawtypes")
-    private okhttp3.Call getLakeFSVersionValidateBeforeCall(final ApiCallback _callback) throws ApiException {
-        return getLakeFSVersionCall(_callback);
+    private okhttp3.Call getHubVersionValidateBeforeCall(final ApiCallback _callback) throws ApiException {
+        return getHubVersionCall(_callback);
 
     }
 
 
-    private ApiResponse<VersionConfig> getLakeFSVersionWithHttpInfo() throws ApiException {
-        okhttp3.Call localVarCall = getLakeFSVersionValidateBeforeCall(null);
+    private ApiResponse<VersionConfig> getHubVersionWithHttpInfo() throws ApiException {
+        okhttp3.Call localVarCall = getHubVersionValidateBeforeCall(null);
         Type localVarReturnType = new TypeToken<VersionConfig>(){}.getType();
         return localVarApiClient.execute(localVarCall, localVarReturnType);
     }
 
-    private okhttp3.Call getLakeFSVersionAsync(final ApiCallback<VersionConfig> _callback) throws ApiException {
+    private okhttp3.Call getHubVersionAsync(final ApiCallback<VersionConfig> _callback) throws ApiException {
 
-        okhttp3.Call localVarCall = getLakeFSVersionValidateBeforeCall(_callback);
+        okhttp3.Call localVarCall = getHubVersionValidateBeforeCall(_callback);
         Type localVarReturnType = new TypeToken<VersionConfig>(){}.getType();
         localVarApiClient.executeAsync(localVarCall, localVarReturnType, _callback);
         return localVarCall;
     }
 
-    public class APIgetLakeFSVersionRequest {
+    public class APIgetHubVersionRequest {
 
-        private APIgetLakeFSVersionRequest() {
+        private APIgetHubVersionRequest() {
         }
 
         /**
-         * Build call for getLakeFSVersion
+         * Build call for getHubVersion
          * @param _callback ApiCallback API callback
          * @return Call to execute
          * @throws ApiException If fail to serialize the request body object
@@ -1389,11 +1389,11 @@ public class InternalApi {
          */
         @Deprecated
         public okhttp3.Call buildCall(final ApiCallback _callback) throws ApiException {
-            return getLakeFSVersionCall(_callback);
+            return getHubVersionCall(_callback);
         }
 
         /**
-         * Execute getLakeFSVersion request
+         * Execute getHubVersion request
          * @return VersionConfig
          * @throws ApiException If fail to call the API, e.g. server error or cannot deserialize the response body
          * @http.response.details
@@ -1406,12 +1406,12 @@ public class InternalApi {
          */
         @Deprecated
         public VersionConfig execute() throws ApiException {
-            ApiResponse<VersionConfig> localVarResp = getLakeFSVersionWithHttpInfo();
+            ApiResponse<VersionConfig> localVarResp = getHubVersionWithHttpInfo();
             return localVarResp.getData();
         }
 
         /**
-         * Execute getLakeFSVersion request with HTTP info returned
+         * Execute getHubVersion request with HTTP info returned
          * @return ApiResponse&lt;VersionConfig&gt;
          * @throws ApiException If fail to call the API, e.g. server error or cannot deserialize the response body
          * @http.response.details
@@ -1424,11 +1424,11 @@ public class InternalApi {
          */
         @Deprecated
         public ApiResponse<VersionConfig> executeWithHttpInfo() throws ApiException {
-            return getLakeFSVersionWithHttpInfo();
+            return getHubVersionWithHttpInfo();
         }
 
         /**
-         * Execute getLakeFSVersion request (asynchronously)
+         * Execute getHubVersion request (asynchronously)
          * @param _callback The callback to be executed when the API call finishes
          * @return The request call
          * @throws ApiException If fail to process the API call, e.g. serializing the request body object
@@ -1442,14 +1442,14 @@ public class InternalApi {
          */
         @Deprecated
         public okhttp3.Call executeAsync(final ApiCallback<VersionConfig> _callback) throws ApiException {
-            return getLakeFSVersionAsync(_callback);
+            return getHubVersionAsync(_callback);
         }
     }
 
     /**
      * 
      * get version of Surogate Hub server
-     * @return APIgetLakeFSVersionRequest
+     * @return APIgetHubVersionRequest
      * @http.response.details
      <table summary="Response Details" border="1">
         <tr><td> Status Code </td><td> Description </td><td> Response Headers </td></tr>
@@ -1459,8 +1459,8 @@ public class InternalApi {
      * @deprecated
      */
     @Deprecated
-    public APIgetLakeFSVersionRequest getLakeFSVersion() {
-        return new APIgetLakeFSVersionRequest();
+    public APIgetHubVersionRequest getHubVersion() {
+        return new APIgetHubVersionRequest();
     }
     private okhttp3.Call getMetadataObjectCall(String repository, String objectId, String type, Boolean presign, final ApiCallback _callback) throws ApiException {
         String basePath = null;
@@ -1690,7 +1690,7 @@ public class InternalApi {
         Object localVarPostBody = null;
 
         // create path and map variables
-        String localVarPath = "/setup_lakefs";
+        String localVarPath = "/setup_sghub";
 
         List<Pair> localVarQueryParams = new ArrayList<Pair>();
         List<Pair> localVarCollectionQueryParams = new ArrayList<Pair>();
@@ -4346,7 +4346,7 @@ public class InternalApi {
         Object localVarPostBody = setup;
 
         // create path and map variables
-        String localVarPath = "/setup_lakefs";
+        String localVarPath = "/setup_sghub";
 
         List<Pair> localVarQueryParams = new ArrayList<Pair>();
         List<Pair> localVarCollectionQueryParams = new ArrayList<Pair>();

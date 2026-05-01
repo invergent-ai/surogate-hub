@@ -8,18 +8,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/gateway/sig"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/sig"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/routers"
 	"github.com/getkin/kin-openapi/routers/legacy"
 	"github.com/go-openapi/swag"
 	"github.com/gorilla/sessions"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/auth"
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	oidcencoding "github.com/treeverse/lakefs/pkg/auth/oidc/encoding"
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	oidcencoding "github.com/invergent-ai/surogate-hub/pkg/auth/oidc/encoding"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 const (

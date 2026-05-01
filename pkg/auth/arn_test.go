@@ -3,7 +3,7 @@ package auth_test
 import (
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/auth"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
 )
 
 func TestParseARN(t *testing.T) {
@@ -13,33 +13,33 @@ func TestParseARN(t *testing.T) {
 		Error bool
 	}{
 		{Input: "", Error: true},
-		{Input: "arn:lakefs:repo", Error: true},
-		{Input: "arn:lakefs:repos:a:b:myrepo", Arn: auth.Arn{
-			Partition:  "lakefs",
+		{Input: "arn:sghub:repo", Error: true},
+		{Input: "arn:sghub:repos:a:b:myrepo", Arn: auth.Arn{
+			Partition:  "sghub",
 			Service:    "repos",
 			Region:     "a",
 			AccountID:  "b",
 			ResourceID: "myrepo"}},
-		{Input: "arn:lakefs:repos:a::myrepo", Arn: auth.Arn{
-			Partition:  "lakefs",
+		{Input: "arn:sghub:repos:a::myrepo", Arn: auth.Arn{
+			Partition:  "sghub",
 			Service:    "repos",
 			Region:     "a",
 			AccountID:  "",
 			ResourceID: "myrepo"}},
-		{Input: "arn:lakefs:repos::b:myrepo", Arn: auth.Arn{
-			Partition:  "lakefs",
+		{Input: "arn:sghub:repos::b:myrepo", Arn: auth.Arn{
+			Partition:  "sghub",
 			Service:    "repos",
 			Region:     "",
 			AccountID:  "b",
 			ResourceID: "myrepo"}},
-		{Input: "arn:lakefs:repos:::myrepo", Arn: auth.Arn{
-			Partition:  "lakefs",
+		{Input: "arn:sghub:repos:::myrepo", Arn: auth.Arn{
+			Partition:  "sghub",
 			Service:    "repos",
 			Region:     "",
 			AccountID:  "",
 			ResourceID: "myrepo"}},
-		{Input: "arn:lakefs:fs:::myrepo/branch/file:with:colon", Arn: auth.Arn{
-			Partition:  "lakefs",
+		{Input: "arn:sghub:fs:::myrepo/branch/file:with:colon", Arn: auth.Arn{
+			Partition:  "sghub",
 			Service:    "fs",
 			Region:     "",
 			AccountID:  "",
@@ -79,15 +79,15 @@ func TestArnMatch(t *testing.T) {
 		InputDestination string
 		Match            bool
 	}{
-		{"arn:lakefs:repos::b:myrepo", "arn:lakefs:repos::b:myrepo", true},
-		{"arn:lakefs:repos::b:*", "arn:lakefs:repos::b:myrepo", true},
-		{"arn:lakefs:repos::b:my*", "arn:lakefs:repos::b:myrepo", true},
-		{"arn:lakefs:repos::b:my*po", "arn:lakefs:repos::b:myrepo", true},
-		{"arn:lakefs:repos::b:our*", "arn:lakefs:repos::b:myrepo", false},
-		{"arn:lakefs:repos::b:my*own", "arn:lakefs:repos::b:myrepo", false},
-		{"arn:lakefs:repos::b:myrepo", "arn:lakefs:repos::b:*", false},
-		{"arn:lakefs:repo:::*", "arn:lakefs:repo:::*", true},
-		{"arn:lakefs:repo", "arn:lakefs:repo", false},
+		{"arn:sghub:repos::b:myrepo", "arn:sghub:repos::b:myrepo", true},
+		{"arn:sghub:repos::b:*", "arn:sghub:repos::b:myrepo", true},
+		{"arn:sghub:repos::b:my*", "arn:sghub:repos::b:myrepo", true},
+		{"arn:sghub:repos::b:my*po", "arn:sghub:repos::b:myrepo", true},
+		{"arn:sghub:repos::b:our*", "arn:sghub:repos::b:myrepo", false},
+		{"arn:sghub:repos::b:my*own", "arn:sghub:repos::b:myrepo", false},
+		{"arn:sghub:repos::b:myrepo", "arn:sghub:repos::b:*", false},
+		{"arn:sghub:repo:::*", "arn:sghub:repo:::*", true},
+		{"arn:sghub:repo", "arn:sghub:repo", false},
 	}
 
 	for _, c := range cases {

@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/treeverse/lakefs/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
 )
 
 func ListXorbsFromWalker(ctx context.Context, walker block.Walker, storageURI *url.URL) ([]XorbRef, error) {

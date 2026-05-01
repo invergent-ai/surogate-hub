@@ -7,9 +7,9 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	nanoid "github.com/matoous/go-nanoid/v2"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/logging"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 

@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-binaries:
-    name: Build lakefs & lakectl (linux/amd64)
+    name: Build sghub & hubctl (linux/amd64)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -22,11 +22,6 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Resolve version
         id: version
         run: |
@@ -35,12 +30,12 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
-      - name: Generate code (API, protos, UI)
+      - name: Generate code (API, protos)
         env:
           VERSION: ${{ steps.version.outputs.version }}
           PACKAGE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          make gen-ui gen-api gen-code
+          make gen-api gen-code
 
       - name: Install build deps
         run: |
@@ -54,18 +49,18 @@ jobs:
           CGO_ENABLED: '1'
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          LDFLAGS="-X github.com/treeverse/lakefs/pkg/version.Version=${VERSION}"
+          LDFLAGS="-X github.com/invergent-ai/surogate-hub/pkg/version.Version=${VERSION}"
           mkdir -p dist
-          go build -ldflags "${LDFLAGS}" -o dist/lakefs ./cmd/lakefs
-          go build -ldflags "${LDFLAGS}" -o dist/lakectl ./cmd/lakectl
+          go build -ldflags "${LDFLAGS}" -o dist/sghub ./cmd/sghub
+          go build -ldflags "${LDFLAGS}" -o dist/hubctl ./cmd/hubctl
 
       - name: Package archive
         id: archive
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          NAME="lakefs_${VERSION}_linux_amd64"
+          NAME="sghub_${VERSION}_linux_amd64"
           mkdir -p out
-          tar -C dist -czf "out/${NAME}.tar.gz" lakefs lakectl
+          tar -C dist -czf "out/${NAME}.tar.gz" sghub hubctl
           echo "asset=out/${NAME}.tar.gz" >> "$GITHUB_OUTPUT"
 
       - name: Upload artifact
@@ -156,11 +151,6 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Resolve version
         id: version
         run: |
@@ -169,12 +159,12 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
-      - name: Generate code (API, protos, UI)
+      - name: Generate code (API, protos)
         env:
           VERSION: ${{ steps.version.outputs.version }}
           PACKAGE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          make gen-ui gen-api gen-code
+          make gen-api gen-code
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -189,12 +179,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push lakefs image
+      - name: Build & push sghub image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
-          target: lakefs
+          target: sghub
           platforms: linux/amd64
           push: true
           build-args: |

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/Shopify/go-lua"
-	"github.com/treeverse/lakefs/pkg/actions/lua/util"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/util"
 )
 
 const defaultRequestTimeout = 30 * time.Second

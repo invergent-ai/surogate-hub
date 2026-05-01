@@ -6,9 +6,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 
-	"github.com/treeverse/lakefs/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
 )
 
 const (

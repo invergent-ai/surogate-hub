@@ -19,9 +19,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 type Driver struct{}
@@ -393,8 +393,7 @@ func (s *Store) Scan(ctx context.Context, partitionKey []byte, options kv.ScanOp
 		limit:        int(firstScanLimit),
 	}
 
-	// Setting the limit just for the first scan to avoid issues like
-	// https://github.com/treeverse/lakeFS/issues/7864
+	// Setting the limit just for the first scan to avoid issues
 	it.runQuery(it.limit)
 	if it.err != nil {
 		err := it.err

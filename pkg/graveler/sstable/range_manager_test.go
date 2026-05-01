@@ -9,11 +9,11 @@ import (
 
 	pebblesst "github.com/cockroachdb/pebble/sstable"
 	"github.com/golang/mock/gomock"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/committed"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/sstable"
+	fsMock "github.com/invergent-ai/surogate-hub/pkg/pyramid/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/graveler/committed"
-	"github.com/treeverse/lakefs/pkg/graveler/sstable"
-	fsMock "github.com/treeverse/lakefs/pkg/pyramid/mock"
 )
 
 func makeNewReader(r fakeReader) func(context.Context, committed.StorageID, committed.Namespace, committed.ID) (*pebblesst.Reader, error) {

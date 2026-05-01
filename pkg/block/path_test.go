@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/treeverse/lakefs/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
 )
 
 func equalStrings(a, b []string) bool {

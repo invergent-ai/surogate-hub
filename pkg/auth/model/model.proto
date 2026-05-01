@@ -1,9 +1,9 @@
 syntax = "proto3";
-option go_package = "github.com/treeverse/lakefs/auth/model";
+option go_package = "github.com/invergent-ai/surogate-hub/auth/model";
 
 import "google/protobuf/timestamp.proto";
 
-package io.treeverse.lakefs.auth.model;
+package ai.invergent.shub.auth.model;
 
 // message data model for model.User struct
 message UserData {

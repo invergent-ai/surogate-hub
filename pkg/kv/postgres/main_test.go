@@ -8,9 +8,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/ory/dockertest/v3"
-	"github.com/treeverse/lakefs/pkg/testutil"
 )
 
 const (
@@ -24,8 +24,8 @@ var (
 func runDBInstance(dockerPool *dockertest.Pool, dbName string) (string, func()) {
 	ctx := context.Background()
 	resource, err := dockerPool.Run("postgres", "11", []string{
-		"POSTGRES_USER=lakefs",
-		"POSTGRES_PASSWORD=lakefs",
+		"POSTGRES_USER=sghub",
+		"POSTGRES_PASSWORD=sghub",
 		"POSTGRES_DB=" + dbName,
 	})
 	if err != nil {
@@ -49,7 +49,7 @@ func runDBInstance(dockerPool *dockertest.Pool, dbName string) (string, func()) 
 	// create connection
 	var pgPool *pgxpool.Pool
 	port := resource.GetPort("5432/tcp")
-	uri := fmt.Sprintf("postgres://lakefs:lakefs@localhost:%s/%s?sslmode=disable", port, url.PathEscape(dbName))
+	uri := fmt.Sprintf("postgres://sghub:sghub@localhost:%s/%s?sslmode=disable", port, url.PathEscape(dbName))
 	err = dockerPool.Retry(func() error {
 		var err error
 		pgPool, err = pgxpool.New(ctx, uri)

@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/config"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
-	"github.com/treeverse/lakefs/pkg/config"
 )
 
 const DefaultListenAddress = "0.0.0.0:8001"

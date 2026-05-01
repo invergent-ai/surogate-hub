@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/treeverse/lakefs/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
 )
 
 func updateKVSchemaVersion(ctx context.Context, kvStore kv.Store, version uint) error {

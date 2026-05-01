@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/block"
-	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 )
 
 type ReadPresigner interface {

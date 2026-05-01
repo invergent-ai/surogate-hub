@@ -3,14 +3,15 @@ package esti
 import (
 	"bytes"
 	"context"
-	"github.com/google/uuid"
 	"net/http"
 	"testing"
 	"text/template"
 	"time"
 
+	"github.com/google/uuid"
+
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
 )
 
 var actionPreCommitTmpl = template.Must(template.New("action-pre-commit").Parse(
@@ -78,7 +79,7 @@ func createAction(t *testing.T, ctx context.Context, repo, branch, path string, 
 	err := tmp.Execute(&doc, docData)
 	require.NoError(t, err)
 	content := doc.String()
-	uploadResp, err := uploadContent(ctx, repo, branch, "_lakefs_actions/"+uuid.NewString(), content)
+	uploadResp, err := uploadContent(ctx, repo, branch, "_hub_actions/"+uuid.NewString(), content)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusCreated, uploadResp.StatusCode())
 	logger.WithField("branch", branch).Info("Commit initial content")

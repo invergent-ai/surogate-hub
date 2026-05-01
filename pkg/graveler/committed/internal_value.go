@@ -1,7 +1,7 @@
 package committed
 
 import (
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
 // rangeToValue returns the Value representing rng in a MetaRange

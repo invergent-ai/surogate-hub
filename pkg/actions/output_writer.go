@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
 type OutputWriter interface {

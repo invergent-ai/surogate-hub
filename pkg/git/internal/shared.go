@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/treeverse/lakefs/pkg/git/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/git/errors"
 )
 
 func HandleOutput(out string, err error) (string, error) {

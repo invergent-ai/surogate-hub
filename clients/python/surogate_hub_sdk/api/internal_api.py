@@ -2016,7 +2016,7 @@ class InternalApi:
 
 
     @validate_call
-    def get_lake_fs_version(
+    def get_hub_version(
         self,
         _request_timeout: Union[
             None,
@@ -2031,7 +2031,7 @@ class InternalApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> VersionConfig:
-        """(Deprecated) get_lake_fs_version
+        """(Deprecated) get_hub_version
 
         get version of Surogate Hub server
 
@@ -2058,7 +2058,7 @@ class InternalApi:
         """ # noqa: E501
         warnings.warn("GET /config/version is deprecated.", DeprecationWarning)
 
-        _param = self._get_lake_fs_version_serialize(
+        _param = self._get_hub_version_serialize(
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -2081,7 +2081,7 @@ class InternalApi:
 
 
     @validate_call
-    def get_lake_fs_version_with_http_info(
+    def get_hub_version_with_http_info(
         self,
         _request_timeout: Union[
             None,
@@ -2096,7 +2096,7 @@ class InternalApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> ApiResponse[VersionConfig]:
-        """(Deprecated) get_lake_fs_version
+        """(Deprecated) get_hub_version
 
         get version of Surogate Hub server
 
@@ -2123,7 +2123,7 @@ class InternalApi:
         """ # noqa: E501
         warnings.warn("GET /config/version is deprecated.", DeprecationWarning)
 
-        _param = self._get_lake_fs_version_serialize(
+        _param = self._get_hub_version_serialize(
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -2146,7 +2146,7 @@ class InternalApi:
 
 
     @validate_call
-    def get_lake_fs_version_without_preload_content(
+    def get_hub_version_without_preload_content(
         self,
         _request_timeout: Union[
             None,
@@ -2161,7 +2161,7 @@ class InternalApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> RESTResponseType:
-        """(Deprecated) get_lake_fs_version
+        """(Deprecated) get_hub_version
 
         get version of Surogate Hub server
 
@@ -2188,7 +2188,7 @@ class InternalApi:
         """ # noqa: E501
         warnings.warn("GET /config/version is deprecated.", DeprecationWarning)
 
-        _param = self._get_lake_fs_version_serialize(
+        _param = self._get_hub_version_serialize(
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -2206,7 +2206,7 @@ class InternalApi:
         return response_data.response
 
 
-    def _get_lake_fs_version_serialize(
+    def _get_hub_version_serialize(
         self,
         _request_auth,
         _content_type,
@@ -2822,7 +2822,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/setup_lakefs',
+            resource_path='/setup_sghub',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -7083,7 +7083,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/setup_lakefs',
+            resource_path='/setup_sghub',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,

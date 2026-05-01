@@ -1,6 +1,6 @@
 package actions
 
-//go:generate go run github.com/golang/mock/mockgen@v1.6.0 -package=mock -destination=mock/mock_actions.go github.com/treeverse/lakefs/pkg/actions Source,OutputWriter
+//go:generate go run github.com/golang/mock/mockgen@v1.6.0 -package=mock -destination=mock/mock_actions.go github.com/invergent-ai/surogate-hub/pkg/actions Source,OutputWriter
 
 import (
 	"bytes"
@@ -14,12 +14,12 @@ import (
 
 	"github.com/antonmedv/expr"
 	"github.com/hashicorp/go-multierror"
-	"github.com/treeverse/lakefs/pkg/actions/lua/hook"
-	"github.com/treeverse/lakefs/pkg/auth"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/stats"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/hook"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/stats"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

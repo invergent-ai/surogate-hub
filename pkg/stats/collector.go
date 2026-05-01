@@ -10,8 +10,8 @@ import (
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/google/uuid"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/version"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/version"
 )
 
 const (
@@ -57,7 +57,7 @@ func (e Event) ClearExtended() Event {
 	e.Ref = ""
 	e.SourceRef = ""
 	e.UserID = ""
-	if !strings.HasPrefix(e.Client, "lakefs-") {
+	if !strings.HasPrefix(e.Client, "sghub-") {
 		e.Client = ""
 	}
 	return e

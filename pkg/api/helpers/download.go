@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 
 	"github.com/go-openapi/swag"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/uri"
 	"github.com/jedib0t/go-pretty/v6/progress"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/uri"
 	"golang.org/x/sync/errgroup"
 )
 

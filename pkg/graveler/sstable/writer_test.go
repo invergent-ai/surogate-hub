@@ -7,11 +7,11 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/committed"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/sstable"
+	"github.com/invergent-ai/surogate-hub/pkg/pyramid/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/thanhpk/randstr"
-	"github.com/treeverse/lakefs/pkg/graveler/committed"
-	"github.com/treeverse/lakefs/pkg/graveler/sstable"
-	"github.com/treeverse/lakefs/pkg/pyramid/mock"
 )
 
 func TestWriter(t *testing.T) {

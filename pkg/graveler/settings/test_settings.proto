@@ -1,5 +1,5 @@
 syntax = "proto3";
-option go_package = "github.com/treeverse/lakefs/graveler/settings";
+option go_package = "github.com/invergent-ai/surogate-hub/graveler/settings";
 
 message ExampleSettings {
   int32 example_int = 1;

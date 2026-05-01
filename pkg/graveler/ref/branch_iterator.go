@@ -5,8 +5,8 @@ import (
 	"errors"
 	"sort"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
 )
 
 // CompareFunc type used for sorting in InMemIterator, it is a strictly bigger comparison function required for the

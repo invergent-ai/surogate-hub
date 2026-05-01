@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/httputil"
+	"github.com/invergent-ai/surogate-hub/pkg/httputil"
 )
 
 func TestParseRange(t *testing.T) {

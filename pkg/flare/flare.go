@@ -1,4 +1,4 @@
-// Package flare is used for collecting, sanitizing, and packaging lakeFS configuration, log files, and environment variables
+// Package flare is used for collecting, sanitizing, and packaging hub configuration, log files, and environment variables
 // for debugging and troubleshooting purposes.
 package flare
 
@@ -18,7 +18,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var defaultEnvVarPrefixes = []string{"LAKEFS_", "HTTP_", "HOSTNAME"}
+var defaultEnvVarPrefixes = []string{"SGHUB_", "HTTP_", "HOSTNAME"}
 
 const (
 	DirPermissions  = 0700
@@ -69,7 +69,7 @@ func NewFlare(options ...Option) (*Flare, error) {
 	// remove the ini transformer because it has false positives with plain text log lines
 	config := scanner.NewConfigBuilderFrom(scanner.NewConfigWithDefaults()).RemoveTransformers("ini").Build()
 	// set zero threshold for entropy-based detection in the keyword based detector
-	// example: LAKEFS_AUTH_ENCRYPT_SECRET_KEY=123asdasd will be detected by the {secret, key} keywords regardless of the value
+	// example: SGHUB_AUTH_ENCRYPT_SECRET_KEY=123asdasd will be detected by the {secret, key} keywords regardless of the value
 	// The value here is the threshold of the result of calculating the Shannon entropy of the string
 	// This can be a value between 0 and log2(len(string))
 	// A value of 0 means that we will detect the secret even if all characters are the same
@@ -96,7 +96,7 @@ func NewFlare(options ...Option) (*Flare, error) {
 }
 
 // WithEnvVarPrefixes replaces the default list of environment variable prefixes that flare processes.
-// The default list is "LAKEFS_", "HTTP_", "HOSTNAME".
+// The default list is "SGHUB_", "HTTP_", "HOSTNAME".
 func WithEnvVarPrefixes(prefixes []string) Option {
 	return func(f *Flare) {
 		f.envVarPrefixes = prefixes
@@ -104,7 +104,7 @@ func WithEnvVarPrefixes(prefixes []string) Option {
 }
 
 // WithAdditionalEnvVarPrefix adds additional environment prefixes to the default list that flare processes.
-// The default list is "LAKEFS_", "HTTP_", "HOSTNAME".
+// The default list is "SGHUB_", "HTTP_", "HOSTNAME".
 func WithAdditionalEnvVarPrefix(envVar string) Option {
 	return func(f *Flare) {
 		f.envVarPrefixes = append(f.envVarPrefixes, envVar)

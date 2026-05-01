@@ -14,12 +14,12 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block/params"
 	gonanoid "github.com/matoous/go-nanoid/v2"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/block/params"
 )
 
-const cacheDirName = "_lakefs_cache"
+const cacheDirName = "_hub_cache"
 
 type Walker struct {
 	mark            block.Mark

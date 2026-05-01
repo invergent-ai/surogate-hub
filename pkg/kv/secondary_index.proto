@@ -1,7 +1,7 @@
 syntax = "proto3";
-option go_package = "github.com/treeverse/lakefs/kv";
+option go_package = "github.com/invergent-ai/surogate-hub/kv";
 
-package io.treeverse.lakefs.kv;
+package ai.invergent.shub.kv;
 
 // message data model for secondary index
 message SecondaryIndex {

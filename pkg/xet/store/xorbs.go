@@ -1,8 +1,8 @@
 package store
 
 import (
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
 )
 
 func XorbObjectPointer(storageNamespace, prefix, hash string) block.ObjectPointer {

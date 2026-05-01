@@ -13,11 +13,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
-	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 func TestXETShardRegistrationDedupProbe(t *testing.T) {

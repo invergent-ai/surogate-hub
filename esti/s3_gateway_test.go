@@ -21,16 +21,16 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/thanhpk/randstr"
 
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	gtwerrors "github.com/invergent-ai/surogate-hub/pkg/gateway/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/tags"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
-	"github.com/treeverse/lakefs/pkg/block"
-	gtwerrors "github.com/treeverse/lakefs/pkg/gateway/errors"
-	"github.com/treeverse/lakefs/pkg/testutil"
 )
 
 type GetCredentials = func(id, secret, token string) *credentials.Credentials
@@ -660,7 +660,7 @@ func TestS3HeadBucket(t *testing.T) {
 // getOrCreatePathToLargeObject returns a configured existing large
 // (largeDataContentLength, 6MiB) object, or creates a new one under
 // testPrefix.
-func getOrCreatePathToLargeObject(t *testing.T, ctx context.Context, s3lakefsClient *minio.Client, repo, branch string) (string, int64) {
+func getOrCreatePathToLargeObject(t *testing.T, ctx context.Context, s3HubClient *minio.Client, repo, branch string) (string, int64) {
 	t.Helper()
 
 	path := "source-file"
@@ -685,7 +685,7 @@ func getOrCreatePathToLargeObject(t *testing.T, ctx context.Context, s3lakefsCli
 	objContent := testutil.NewRandomReader(r, largeDataContentLength)
 
 	// upload data
-	_, err := s3lakefsClient.PutObject(ctx, repo, s3Path, objContent, largeDataContentLength,
+	_, err := s3HubClient.PutObject(ctx, repo, s3Path, objContent, largeDataContentLength,
 		minio.PutObjectOptions{})
 	require.NoError(t, err)
 	return s3Path, largeDataContentLength
@@ -700,9 +700,9 @@ func TestS3CopyObjectMultipart(t *testing.T) {
 	destRepo := createRepositoryByName(ctx, t, destRepoName)
 	defer deleteRepositoryIfAskedTo(ctx, destRepoName)
 
-	s3lakefsClient := newMinioClient(t, credentials.NewStaticV4)
+	s3HubClient := newMinioClient(t, credentials.NewStaticV4)
 
-	srcPath, objectLength := getOrCreatePathToLargeObject(t, ctx, s3lakefsClient, repo, branch)
+	srcPath, objectLength := getOrCreatePathToLargeObject(t, ctx, s3HubClient, repo, branch)
 	destPath := gatewayTestPrefix + "dest-file"
 
 	dest := minio.CopyDestOptions{
@@ -726,7 +726,7 @@ func TestS3CopyObjectMultipart(t *testing.T) {
 		},
 	}
 
-	ui, err := s3lakefsClient.ComposeObject(ctx, dest, srcs...)
+	ui, err := s3HubClient.ComposeObject(ctx, dest, srcs...)
 	if err != nil {
 		t.Fatalf("minio.Client.ComposeObject from(%+v) to(%+v): %s", srcs, dest, err)
 	}
@@ -738,7 +738,7 @@ func TestS3CopyObjectMultipart(t *testing.T) {
 	// Comparing 2 readers is too much work.  Instead just hash them.
 	// This will fail for malicious bad S3 gateways, but otherwise is
 	// fine.
-	uploadedReader, err := s3lakefsClient.GetObject(ctx, repo, srcPath, minio.GetObjectOptions{})
+	uploadedReader, err := s3HubClient.GetObject(ctx, repo, srcPath, minio.GetObjectOptions{})
 	if err != nil {
 		t.Fatalf("Get uploaded object: %s", err)
 	}
@@ -751,7 +751,7 @@ func TestS3CopyObjectMultipart(t *testing.T) {
 		t.Fatal("Impossibly bad luck: uploaded data with CRC64 == 0!")
 	}
 
-	copiedReader, err := s3lakefsClient.GetObject(ctx, repo, srcPath, minio.GetObjectOptions{})
+	copiedReader, err := s3HubClient.GetObject(ctx, repo, srcPath, minio.GetObjectOptions{})
 	if err != nil {
 		t.Fatalf("Get copied object: %s", err)
 	}
@@ -783,8 +783,8 @@ func TestS3CopyObject(t *testing.T) {
 	userMetadata := map[string]string{"X-Amz-Meta-Key1": "value1", "X-Amz-Meta-Key2": "value2"}
 
 	// upload data
-	s3lakefsClient := newMinioClient(t, credentials.NewStaticV2)
-	_, err := s3lakefsClient.PutObject(ctx, repo, srcPath, strings.NewReader(objContent), int64(len(objContent)),
+	s3HubClient := newMinioClient(t, credentials.NewStaticV2)
+	_, err := s3HubClient.PutObject(ctx, repo, srcPath, strings.NewReader(objContent), int64(len(objContent)),
 		minio.PutObjectOptions{
 			UserMetadata: userMetadata,
 		})
@@ -792,7 +792,7 @@ func TestS3CopyObject(t *testing.T) {
 
 	t.Run("same_branch", func(t *testing.T) {
 		// copy the object to the same repository
-		_, err = s3lakefsClient.CopyObject(ctx,
+		_, err = s3HubClient.CopyObject(ctx,
 			minio.CopyDestOptions{
 				Bucket: repo,
 				Object: destPath,
@@ -805,7 +805,7 @@ func TestS3CopyObject(t *testing.T) {
 			t.Fatalf("minio.Client.CopyObject from(%s) to(%s): %s", srcPath, destPath, err)
 		}
 
-		download, err := s3lakefsClient.GetObject(ctx, repo, destPath, minio.GetObjectOptions{})
+		download, err := s3HubClient.GetObject(ctx, repo, destPath, minio.GetObjectOptions{})
 		if err != nil {
 			t.Fatalf("minio.Client.GetObject(%s): %s", destPath, err)
 		}
@@ -838,7 +838,7 @@ func TestS3CopyObject(t *testing.T) {
 		// copy the object to different repository. should create another version of the file
 		userMetadataReplace := map[string]string{"X-Amz-Meta-Key1": "value1Replace", "X-Amz-Meta-Key2": "value2Replace"}
 
-		_, err := s3lakefsClient.CopyObject(ctx,
+		_, err := s3HubClient.CopyObject(ctx,
 			minio.CopyDestOptions{
 				Bucket:          destRepo,
 				Object:          destPath,
@@ -853,7 +853,7 @@ func TestS3CopyObject(t *testing.T) {
 			t.Fatalf("minio.Client.CopyObjectFrom(%s)To(%s): %s", srcPath, destPath, err)
 		}
 
-		download, err := s3lakefsClient.GetObject(ctx, destRepo, destPath, minio.GetObjectOptions{})
+		download, err := s3HubClient.GetObject(ctx, destRepo, destPath, minio.GetObjectOptions{})
 		if err != nil {
 			t.Fatalf("minio.Client.GetObject(%s): %s", destPath, err)
 		}
@@ -889,17 +889,17 @@ func TestS3PutObjectTagging(t *testing.T) {
 	defer tearDownTest(repo)
 
 	srcPath := gatewayTestPrefix + "source-file"
-	s3lakefsClient := newMinioClient(t, credentials.NewStaticV2)
+	s3HubClient := newMinioClient(t, credentials.NewStaticV2)
 
 	tag, err := tags.NewTags(map[string]string{"tag1": "value1"}, true)
 	require.NoError(t, err)
 
-	err = s3lakefsClient.PutObjectTagging(ctx, repo, srcPath, tag, minio.PutObjectTaggingOptions{})
+	err = s3HubClient.PutObjectTagging(ctx, repo, srcPath, tag, minio.PutObjectTaggingOptions{})
 	require.Error(t, err)
 
 	errResponse := minio.ToErrorResponse(err)
-	require.Equal(t, "ERRLakeFSNotSupported", errResponse.Code)
-	require.Equal(t, "This operation is not supported in LakeFS", errResponse.Message)
+	require.Equal(t, "ERRHubNotSupported", errResponse.Code)
+	require.Equal(t, "This operation is not supported by Surogate Hub", errResponse.Message)
 }
 
 func TestS3CopyObjectErrors(t *testing.T) {
@@ -913,11 +913,11 @@ func TestS3CopyObjectErrors(t *testing.T) {
 	destPath := gatewayTestPrefix + "dest-file"
 
 	// upload data
-	s3lakefsClient := newMinioClient(t, credentials.NewStaticV2)
+	s3HubClient := newMinioClient(t, credentials.NewStaticV2)
 
 	t.Run("malformed dest", func(t *testing.T) {
 		// copy the object to a non-existent repo - tests internal Surogate Hub error
-		_, err := s3lakefsClient.CopyObject(ctx,
+		_, err := s3HubClient.CopyObject(ctx,
 			minio.CopyDestOptions{
 				Bucket: "wrong-repo",
 				Object: destPath,
@@ -950,7 +950,7 @@ func TestS3CopyObjectErrors(t *testing.T) {
 		require.NotNil(t, linkResp.JSON200)
 
 		// copy the object to the same repository
-		_, err = s3lakefsClient.CopyObject(ctx,
+		_, err = s3HubClient.CopyObject(ctx,
 			minio.CopyDestOptions{
 				Bucket: repo,
 				Object: destPath,
@@ -964,7 +964,7 @@ func TestS3CopyObjectErrors(t *testing.T) {
 	})
 
 	t.Run("readonly repo from non-existing source", func(t *testing.T) {
-		_, err := s3lakefsClient.CopyObject(ctx,
+		_, err := s3HubClient.CopyObject(ctx,
 			minio.CopyDestOptions{
 				Bucket: readOnlyRepo,
 				Object: destPath,

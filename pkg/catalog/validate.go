@@ -3,8 +3,8 @@ package catalog
 import (
 	"fmt"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/validator"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/validator"
 )
 
 const (

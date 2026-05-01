@@ -5,9 +5,9 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
 	nanoid "github.com/matoous/go-nanoid/v2"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/kv"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 

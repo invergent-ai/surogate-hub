@@ -8,14 +8,14 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/treeverse/lakefs/pkg/batch"
-	"github.com/treeverse/lakefs/pkg/cache"
-	"github.com/treeverse/lakefs/pkg/distributed"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/httputil"
-	"github.com/treeverse/lakefs/pkg/ident"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/batch"
+	"github.com/invergent-ai/surogate-hub/pkg/cache"
+	"github.com/invergent-ai/surogate-hub/pkg/distributed"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/httputil"
+	"github.com/invergent-ai/surogate-hub/pkg/ident"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 const (

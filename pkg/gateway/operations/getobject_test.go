@@ -10,15 +10,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
+	"github.com/invergent-ai/surogate-hub/pkg/upload"
+	xetcas "github.com/invergent-ai/surogate-hub/pkg/xet/cas"
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/catalog"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/kv/kvtest"
-	"github.com/treeverse/lakefs/pkg/upload"
-	xetcas "github.com/treeverse/lakefs/pkg/xet/cas"
-	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 func TestGetObjectXETPhysicalAddressRange(t *testing.T) {
@@ -48,7 +48,7 @@ func TestGetObjectXETPhysicalAddressRange(t *testing.T) {
 		SizeBytes: uint64(len(chunk)),
 	}})
 	require.NoError(t, err)
-	xorbStore := xetcas.NewXorbStore(c.BlockAdapter, "mem://_lakefs_xet")
+	xorbStore := xetcas.NewXorbStore(c.BlockAdapter, "mem://_hub_xet")
 	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
 	require.NoError(t, err)
 	_, err = xetstore.NewRegistry(c.KVStore).RegisterShard(ctx, xetstore.RegisterShardParams{

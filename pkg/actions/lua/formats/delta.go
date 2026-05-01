@@ -13,7 +13,7 @@ import (
 	"github.com/csimplestring/delta-go/action"
 	"github.com/csimplestring/delta-go/storage"
 	deltaStore "github.com/csimplestring/delta-go/store"
-	luautil "github.com/treeverse/lakefs/pkg/actions/lua/util"
+	luautil "github.com/invergent-ai/surogate-hub/pkg/actions/lua/util"
 )
 
 type storageType string
@@ -71,7 +71,7 @@ func (dc *DeltaClient) getTableMetadata(log delta.Log) (map[string]any, error) {
 
 func (dc *DeltaClient) getS3DeltaTable(repo, ref, prefix string, awsProps *storage.AWSProperties) (delta.Log, error) {
 	config := delta.Config{StoreType: string(s3StorageType)}
-	u := fmt.Sprintf("lakefs://%s/%s/%s", repo, ref, prefix)
+	u := fmt.Sprintf("sg://%s/%s/%s", repo, ref, prefix)
 	parsedURL, err := url.Parse(u)
 	if err != nil {
 		return nil, err
@@ -159,15 +159,15 @@ func (awsI AWSInfo) GetAccessProperties() (interface{}, error) {
 }
 
 // newDelta is a factory function to create server/cloud specific Delta Lake client
-// lakeFSAddr is the domain or "authority:port" of the running lakeFS server
-func newDelta(ctx context.Context, lakeFSAddr string) lua.Function {
-	if regexp.MustCompile(`^:\d+`).MatchString(lakeFSAddr) {
+// hubAddr is the domain or "authority:port" of the running hub server
+func newDelta(ctx context.Context, hubAddr string) lua.Function {
+	if regexp.MustCompile(`^:\d+`).MatchString(hubAddr) {
 		// workaround in case we listen on all interfaces without specifying ip
-		lakeFSAddr = fmt.Sprintf("localhost%s", lakeFSAddr)
+		hubAddr = fmt.Sprintf("localhost%s", hubAddr)
 	}
-	lakeFSAddr = fmt.Sprintf("http://%s", lakeFSAddr)
+	hubAddr = fmt.Sprintf("http://%s", hubAddr)
 	return func(l *lua.State) int {
-		client := newS3DeltaClient(l, ctx, lakeFSAddr)
+		client := newS3DeltaClient(l, ctx, hubAddr)
 		l.NewTable()
 		for name, goFn := range functions {
 			l.PushGoFunction(goFn(client))
@@ -177,7 +177,7 @@ func newDelta(ctx context.Context, lakeFSAddr string) lua.Function {
 	}
 }
 
-func newS3DeltaClient(l *lua.State, ctx context.Context, lakeFSAddr string) *DeltaClient {
+func newS3DeltaClient(l *lua.State, ctx context.Context, hubAddr string) *DeltaClient {
 	accessKeyID := lua.CheckString(l, 1)
 	secretAccessKey := lua.CheckString(l, 2)
 	awsProps := storage.AWSProperties{
@@ -188,13 +188,13 @@ func newS3DeltaClient(l *lua.State, ctx context.Context, lakeFSAddr string) *Del
 				SecretAccessKey: secretAccessKey,
 			}, nil
 		}),
-		Endpoint: lakeFSAddr,
+		Endpoint: hubAddr,
 	}
 	if !l.IsNone(3) {
 		awsProps.Region = lua.CheckString(l, 3)
 	}
 
-	storage.RegisterS3CompatBucketURLOpener("lakefs", &awsProps)
+	storage.RegisterS3CompatBucketURLOpener("sghub", &awsProps)
 
 	return &DeltaClient{accessProvider: AWSInfo{AWSProps: awsProps}, ctx: ctx}
 }

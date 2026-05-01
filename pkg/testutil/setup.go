@@ -16,12 +16,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	"github.com/spf13/viper"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/logging"
 )
 
 const defaultSetupTimeout = 5 * time.Minute
@@ -43,10 +43,10 @@ func SetupTestingEnv(params *SetupTestingEnvParams) (logging.Logger, apigen.Clie
 	viper.SetConfigName(strings.ToLower(params.Name))
 	viper.AutomaticEnv()
 
-	viper.SetDefault("setup_lakefs", true)
-	viper.SetDefault("setup_lakefs_timeout", defaultSetupTimeout)
+	viper.SetDefault("setup_sghub", true)
+	viper.SetDefault("setup_sghub_timeout", defaultSetupTimeout)
 	viper.SetDefault("endpoint_url", "http://localhost:8000")
-	viper.SetDefault("s3_endpoint", "s3.local.lakefs.io:8000")
+	viper.SetDefault("s3_endpoint", "s3.local.sghub.io:8000")
 	viper.SetDefault("storage_namespace", fmt.Sprintf("s3://%s", params.StorageNS))
 	viper.SetDefault(config.BlockstoreTypeKey, block.BlockstoreTypeS3)
 	viper.SetDefault("version", "dev")
@@ -78,9 +78,9 @@ func SetupTestingEnv(params *SetupTestingEnvParams) (logging.Logger, apigen.Clie
 		logger.WithError(err).Fatal("could not initialize API client")
 	}
 
-	setupLakeFS := viper.GetBool("setup_lakefs")
-	if setupLakeFS {
-		if err := waitUntilLakeFSRunning(ctx, logger, client); err != nil {
+	setupSgHub := viper.GetBool("setup_sghub")
+	if setupSgHub {
+		if err := waitUntilHubRunning(ctx, logger, client); err != nil {
 			logger.WithError(err).Fatal("Waiting for Surogate Hub")
 		}
 
@@ -182,8 +182,8 @@ func NewClientFromCreds(logger logging.Logger, accessKeyID string, secretAccessK
 
 const checkIteration = 5 * time.Second
 
-func waitUntilLakeFSRunning(ctx context.Context, logger logging.Logger, cl apigen.ClientWithResponsesInterface) error {
-	setupCtx, cancel := context.WithTimeout(ctx, viper.GetDuration("setup_lakefs_timeout"))
+func waitUntilHubRunning(ctx context.Context, logger logging.Logger, cl apigen.ClientWithResponsesInterface) error {
+	setupCtx, cancel := context.WithTimeout(ctx, viper.GetDuration("setup_sghub_timeout"))
 	defer cancel()
 	for {
 		resp, err := cl.HealthCheckWithResponse(setupCtx)

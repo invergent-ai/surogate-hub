@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 // RequestBufferSize is the amount of requests users can dispatch that haven't been processed yet before

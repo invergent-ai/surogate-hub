@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/ref"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/ref"
 )
 
 func TestCommitsGenerationPriorityQueue_Len(t *testing.T) {

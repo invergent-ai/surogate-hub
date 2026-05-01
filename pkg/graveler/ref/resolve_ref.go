@@ -5,8 +5,8 @@ import (
 	"errors"
 	"regexp"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/ident"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/ident"
 )
 
 type Store interface {

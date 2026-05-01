@@ -4,9 +4,9 @@ import (
 	"errors"
 	"testing"
 
+	giterror "github.com/invergent-ai/surogate-hub/pkg/git/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/git/internal"
 	"github.com/stretchr/testify/require"
-	giterror "github.com/treeverse/lakefs/pkg/git/errors"
-	"github.com/treeverse/lakefs/pkg/git/internal"
 )
 
 var testErr = errors.New("this is a test generated error")

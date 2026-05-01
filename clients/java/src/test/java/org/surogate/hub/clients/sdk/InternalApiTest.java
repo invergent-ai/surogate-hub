@@ -156,8 +156,8 @@ public class InternalApiTest {
      * @throws ApiException if the Api call fails
      */
     @Test
-    public void getLakeFSVersionTest() throws ApiException {
-        VersionConfig response = api.getLakeFSVersion()
+    public void getHubVersionTest() throws ApiException {
+        VersionConfig response = api.getHubVersion()
                 .execute();
         // TODO: test validations
     }

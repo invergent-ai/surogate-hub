@@ -3,7 +3,7 @@ package ref_test
 import (
 	"encoding/hex"
 
-	"github.com/treeverse/lakefs/pkg/ident"
+	"github.com/invergent-ai/surogate-hub/pkg/ident"
 )
 
 type fakeAddressProvider struct {

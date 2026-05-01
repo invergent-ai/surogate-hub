@@ -10,18 +10,18 @@ import (
 	"testing"
 
 	"cloud.google.com/go/storage"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/block/gs"
+	"github.com/invergent-ai/surogate-hub/pkg/block/mem"
+	"github.com/invergent-ai/surogate-hub/pkg/block/params"
+	blocks3 "github.com/invergent-ai/surogate-hub/pkg/block/s3"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ory/dockertest/v3"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/block/gs"
-	"github.com/treeverse/lakefs/pkg/block/mem"
-	"github.com/treeverse/lakefs/pkg/block/params"
-	blocks3 "github.com/treeverse/lakefs/pkg/block/s3"
 )
 
 const (
-	DBName                    = "lakefs_db"
+	DBName                    = "hub_db"
 	DBContainerTimeoutSeconds = 60 * 30 // 30 minutes
 
 	EnvKeyUseBlockAdapter = "USE_BLOCK_ADAPTER" // pragma: allowlist secret
@@ -56,8 +56,8 @@ func GetDBInstance(pool *dockertest.Pool) (string, func()) {
 
 	// run new instance and connect
 	resource, err := pool.Run("postgres", "11", []string{
-		"POSTGRES_USER=lakefs",
-		"POSTGRES_PASSWORD=lakefs",
+		"POSTGRES_USER=sghub",
+		"POSTGRES_PASSWORD=sghub",
 		fmt.Sprintf("POSTGRES_DB=%s", DBName),
 	})
 	if err != nil {
@@ -100,8 +100,8 @@ func GetDBInstance(pool *dockertest.Pool) (string, func()) {
 func formatPostgresResourceURI(resource *dockertest.Resource) string {
 	dbParams := map[string]string{
 		"POSTGRES_DB":       DBName,
-		"POSTGRES_USER":     "lakefs",
-		"POSTGRES_PASSWORD": "lakefs",
+		"POSTGRES_USER":     "sghub",
+		"POSTGRES_PASSWORD": "sghub",
 		"POSTGRES_PORT":     resource.GetPort("5432/tcp"),
 	}
 	env := resource.Container.Config.Env

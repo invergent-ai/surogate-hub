@@ -1,7 +1,7 @@
 package ref
 
 import (
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
 func CommitDataToCommitRecord(c *graveler.CommitData) *graveler.CommitRecord {

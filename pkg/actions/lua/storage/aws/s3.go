@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/treeverse/lakefs/pkg/actions/lua/util"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/util"
 )
 
 var errDeleteObject = errors.New("delete object failed")

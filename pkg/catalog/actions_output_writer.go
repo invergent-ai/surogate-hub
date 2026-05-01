@@ -4,8 +4,8 @@ import (
 	"context"
 	"io"
 
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
 type ActionsOutputWriter struct {

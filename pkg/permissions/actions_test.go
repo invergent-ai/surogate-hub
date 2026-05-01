@@ -4,7 +4,7 @@ import (
 	"golang.org/x/exp/slices"
 	"testing"
 
-	"github.com/treeverse/lakefs/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/permissions"
 )
 
 func TestAllActions(t *testing.T) {

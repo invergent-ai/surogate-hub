@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 )
 
 type FileRefLiveFunc func(ctx context.Context, ref xetstore.FileRef) (bool, error)

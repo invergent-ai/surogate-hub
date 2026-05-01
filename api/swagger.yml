@@ -1440,11 +1440,11 @@ components:
         gc_commits_location:
           type: string
           description: location of the resulting commits csv table (partitioned by run_id)
-          example: s3://my-storage-namespace/_lakefs/retention/commits
+          example: s3://my-storage-namespace/_sghub/retention/commits
         gc_addresses_location:
           type: string
           description: location to use for expired addresses parquet table (partitioned by run_id)
-          example: s3://my-storage-namespace/_lakefs/retention/addresses
+          example: s3://my-storage-namespace/_sghub/retention/addresses
         gc_commits_presigned_url:
           type: string
           description: a presigned url to download the commits csv
@@ -1908,7 +1908,7 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /setup_lakefs:
+  /setup_sghub:
     get:
       tags:
         - internal
@@ -6010,7 +6010,7 @@ paths:
     get:
       tags:
         - internal
-      operationId: getLakeFSVersion
+      operationId: getHubVersion
       description: get version of Surogate Hub server
       deprecated: true
       responses:

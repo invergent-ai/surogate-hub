@@ -4,7 +4,7 @@ import (
 	neturl "net/url"
 
 	"github.com/Shopify/go-lua"
-	"github.com/treeverse/lakefs/pkg/actions/lua/util"
+	"github.com/invergent-ai/surogate-hub/pkg/actions/lua/util"
 )
 
 func Open(l *lua.State) {

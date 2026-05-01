@@ -9,8 +9,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	kv "github.com/treeverse/lakefs/pkg/kv"
-	kvparams "github.com/treeverse/lakefs/pkg/kv/kvparams"
+	kv "github.com/invergent-ai/surogate-hub/pkg/kv"
+	kvparams "github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
 )
 
 // MockDriver is a mock of Driver interface.

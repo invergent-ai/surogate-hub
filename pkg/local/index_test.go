@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/local"
+	"github.com/invergent-ai/surogate-hub/pkg/uri"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/local"
-	"github.com/treeverse/lakefs/pkg/uri"
 )
 
 const (
@@ -34,7 +34,7 @@ func writeIndex(t *testing.T, dir string) {
 }
 
 func TestWriteIndex(t *testing.T) {
-	expectedContent := fmt.Sprintf("src: lakefs://%s/%s/%s\nat_head: %s\nactive_operation: \"\"\n", repo, ref, uPath, head)
+	expectedContent := fmt.Sprintf("src: sg://%s/%s/%s\nat_head: %s\nactive_operation: \"\"\n", repo, ref, uPath, head)
 	tmpDir := t.TempDir()
 	writeIndex(t, tmpDir)
 	buf, err := os.ReadFile(filepath.Join(tmpDir, local.IndexFileName))

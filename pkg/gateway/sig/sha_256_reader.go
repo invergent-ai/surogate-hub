@@ -6,7 +6,7 @@ import (
 	"hash"
 	"io"
 
-	"github.com/treeverse/lakefs/pkg/gateway/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/gateway/errors"
 )
 
 type Sha256Reader struct {

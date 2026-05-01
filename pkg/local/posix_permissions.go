@@ -7,15 +7,15 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
-	"github.com/treeverse/lakefs/pkg/uri"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
+	"github.com/invergent-ai/surogate-hub/pkg/uri"
 )
 
 const (
 	// DefaultFilePermissions Octal representation of default file permissions
 	DefaultFilePermissions      = 0o100666
-	POSIXPermissionsMetadataKey = apiutil.LakeFSMetadataPrefix + "posix-permissions"
+	POSIXPermissionsMetadataKey = apiutil.HubMetadataPrefix + "posix-permissions"
 )
 
 var (

@@ -1,0 +1,3 @@
+Source: sg://${REPO}/${SOURCE_BRANCH}
+Destination: sg://${REPO}/${DEST_BRANCH}
+Merged "${SOURCE_BRANCH}" into "${DEST_BRANCH}" to get "<COMMIT_ID>".

@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog/testutils"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/committed"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/committed/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/catalog/testutils"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/graveler/committed"
-	"github.com/treeverse/lakefs/pkg/graveler/committed/mock"
 )
 
 func TestManager_WriteRange(t *testing.T) {

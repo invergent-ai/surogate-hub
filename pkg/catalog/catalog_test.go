@@ -12,13 +12,13 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog"
+	cUtils "github.com/invergent-ai/surogate-hub/pkg/catalog/testutils"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	gUtils "github.com/invergent-ai/surogate-hub/pkg/graveler/testutil"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/catalog"
-	cUtils "github.com/treeverse/lakefs/pkg/catalog/testutils"
-	"github.com/treeverse/lakefs/pkg/graveler"
-	gUtils "github.com/treeverse/lakefs/pkg/graveler/testutil"
-	"github.com/treeverse/lakefs/pkg/testutil"
 	"github.com/xitongsys/parquet-go-source/buffer"
 	"github.com/xitongsys/parquet-go/reader"
 	"google.golang.org/protobuf/proto"
@@ -898,7 +898,7 @@ func createPrepareUncommittedTestScenario(t *testing.T, repositoryID string, num
 			GetUncommittedLocation(gomock.Any(), gomock.Any()).
 			MinTimes(1).
 			DoAndReturn(func(runID string, sn graveler.StorageNamespace) (string, error) {
-				return fmt.Sprintf("%s/retention/gc/uncommitted/%s/uncommitted/", "_lakefs", runID), nil
+				return fmt.Sprintf("%s/retention/gc/uncommitted/%s/uncommitted/", "_hub", runID), nil
 			})
 	}
 

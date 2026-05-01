@@ -12,12 +12,12 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-multierror"
+	"github.com/invergent-ai/surogate-hub/pkg/ident"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/xid"
-	"github.com/treeverse/lakefs/pkg/ident"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/logging"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -129,7 +129,7 @@ const (
 	MergeStrategyDestWinsStr = "dest-wins"
 	MergeStrategySrcWinsStr  = "source-wins"
 
-	MergeStrategyMetadataKey = ".lakefs.merge.strategy"
+	MergeStrategyMetadataKey = ".hub.merge.strategy"
 )
 
 // mergeStrategyString String representation for MergeStrategy consts. Pay attention to the order!
@@ -376,7 +376,7 @@ type Repository struct {
 
 type RepositoryMetadata map[string]string
 
-const MetadataKeyLastImportTimeStamp = ".lakefs.last.import.timestamp"
+const MetadataKeyLastImportTimeStamp = ".hub.last.import.timestamp"
 
 func NewRepository(storageID StorageID, storageNamespace StorageNamespace, defaultBranchID BranchID, readOnly bool) Repository {
 	return Repository{

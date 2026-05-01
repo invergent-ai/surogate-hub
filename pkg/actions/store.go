@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/treeverse/lakefs/pkg/graveler"
-	"github.com/treeverse/lakefs/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
 )
 
 // Store is an abstraction over our datasource (key-value store) that provides actions operations

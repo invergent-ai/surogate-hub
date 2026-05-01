@@ -18,34 +18,34 @@ import (
 
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
 	"github.com/go-openapi/swag"
+	"github.com/invergent-ai/surogate-hub/pkg/actions"
+	"github.com/invergent-ai/surogate-hub/pkg/api"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
+	"github.com/invergent-ai/surogate-hub/pkg/auth"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/acl"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/crypt"
+	authmodel "github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	authparams "github.com/invergent-ai/surogate-hub/pkg/auth/params"
+	"github.com/invergent-ai/surogate-hub/pkg/authentication"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
+	"github.com/invergent-ai/surogate-hub/pkg/cache"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog"
+	"github.com/invergent-ai/surogate-hub/pkg/config"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler/settings"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/mem"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/stats"
+	"github.com/invergent-ai/surogate-hub/pkg/testutil"
+	"github.com/invergent-ai/surogate-hub/pkg/upload"
+	"github.com/invergent-ai/surogate-hub/pkg/version"
+	xetcas "github.com/invergent-ai/surogate-hub/pkg/xet/cas"
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
-	"github.com/treeverse/lakefs/pkg/actions"
-	"github.com/treeverse/lakefs/pkg/api"
-	"github.com/treeverse/lakefs/pkg/api/apigen"
-	"github.com/treeverse/lakefs/pkg/api/apiutil"
-	"github.com/treeverse/lakefs/pkg/auth"
-	"github.com/treeverse/lakefs/pkg/auth/acl"
-	"github.com/treeverse/lakefs/pkg/auth/crypt"
-	authmodel "github.com/treeverse/lakefs/pkg/auth/model"
-	authparams "github.com/treeverse/lakefs/pkg/auth/params"
-	"github.com/treeverse/lakefs/pkg/authentication"
-	"github.com/treeverse/lakefs/pkg/block"
-	"github.com/treeverse/lakefs/pkg/cache"
-	"github.com/treeverse/lakefs/pkg/catalog"
-	"github.com/treeverse/lakefs/pkg/config"
-	"github.com/treeverse/lakefs/pkg/graveler/settings"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
-	"github.com/treeverse/lakefs/pkg/kv/kvtest"
-	"github.com/treeverse/lakefs/pkg/kv/mem"
-	"github.com/treeverse/lakefs/pkg/logging"
-	"github.com/treeverse/lakefs/pkg/stats"
-	"github.com/treeverse/lakefs/pkg/testutil"
-	"github.com/treeverse/lakefs/pkg/upload"
-	"github.com/treeverse/lakefs/pkg/version"
-	xetcas "github.com/treeverse/lakefs/pkg/xet/cas"
-	xetstore "github.com/treeverse/lakefs/pkg/xet/store"
 )
 
 const (
@@ -196,7 +196,7 @@ func setupHandler(t testing.TB) (http.Handler, *dependencies) {
 	auditChecker := version.NewDefaultAuditChecker(cfg.Security.AuditCheckURL, "", nil)
 
 	authenticationService := authentication.NewDummyService()
-	handler := api.Serve(cfg, c, authenticator, authService, authenticationService, c.BlockAdapter, meta, migrator, collector, nil, actionsService, auditChecker, logging.ContextUnavailable(), nil, nil, upload.DefaultPathProvider, stats.DefaultUsageReporter)
+	handler := api.Serve(cfg, c, authenticator, authService, authenticationService, c.BlockAdapter, meta, migrator, collector, nil, actionsService, auditChecker, logging.ContextUnavailable(), nil, upload.DefaultPathProvider, stats.DefaultUsageReporter)
 
 	return handler, &dependencies{
 		blocks:      c.BlockAdapter,
@@ -218,7 +218,7 @@ func setupClientByEndpoint(t testing.TB, endpointURL string, accessKeyID, secret
 	}
 	clt, err := apigen.NewClientWithResponses(endpointURL+apiutil.BaseURL, opts...)
 	if err != nil {
-		t.Fatal("failed to create lakefs api client:", err)
+		t.Fatal("failed to create hub api client:", err)
 	}
 	return clt
 }
@@ -357,7 +357,7 @@ func TestServeXETReconstructionRequiresLiveLogicalContext(t *testing.T) {
 		SizeBytes: uint64(len(chunk)),
 	}})
 	require.NoError(t, err)
-	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_lakefs_xet")
+	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_hub_xet")
 	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
 	require.NoError(t, err)
 	_, err = xetstore.NewRegistry(deps.catalog.KVStore).RegisterShard(ctx, xetstore.RegisterShardParams{
@@ -431,7 +431,7 @@ func TestServeXETReconstructionUsesFileRefFallback(t *testing.T) {
 		SizeBytes: uint64(len(chunk)),
 	}})
 	require.NoError(t, err)
-	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_lakefs_xet")
+	xorbStore := xetcas.NewXorbStore(deps.blocks, "mem://_hub_xet")
 	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
 	require.NoError(t, err)
 	registry := xetstore.NewRegistry(deps.catalog.KVStore)
@@ -506,7 +506,7 @@ func TestInvalidRoute(t *testing.T) {
 	ctx := context.Background()
 	resp, err := clt.ListRepositoriesWithResponse(ctx, &apigen.ListRepositoriesParams{})
 	if err != nil {
-		t.Fatalf("failed to get lakefs server version")
+		t.Fatalf("failed to get hub server version")
 	}
 	if resp.JSONDefault == nil {
 		t.Fatalf("client api call expected default error, got nil")

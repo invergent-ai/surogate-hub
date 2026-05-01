@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/treeverse/lakefs/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
 )
 
 var (

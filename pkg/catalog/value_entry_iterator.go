@@ -1,7 +1,7 @@
 package catalog
 
 import (
-	"github.com/treeverse/lakefs/pkg/graveler"
+	"github.com/invergent-ai/surogate-hub/pkg/graveler"
 )
 
 type valueEntryIterator struct {

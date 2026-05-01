@@ -5,11 +5,11 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
+	_ "github.com/invergent-ai/surogate-hub/pkg/kv/mem"
+	"github.com/invergent-ai/surogate-hub/pkg/stats"
 	gonanoid "github.com/matoous/go-nanoid/v2"
-	"github.com/treeverse/lakefs/pkg/kv"
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
-	_ "github.com/treeverse/lakefs/pkg/kv/mem"
-	"github.com/treeverse/lakefs/pkg/stats"
 )
 
 func TestNewUsageCounter(t *testing.T) {

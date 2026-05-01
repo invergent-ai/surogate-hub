@@ -1,4 +1,4 @@
-module github.com/treeverse/lakefs
+module github.com/invergent-ai/surogate-hub
 
 go 1.24
 
@@ -7,7 +7,6 @@ toolchain go1.24.4
 require (
 	cloud.google.com/go v0.121.0 // indirect
 	cloud.google.com/go/storage v1.52.0
-	github.com/apache/thrift v0.22.0
 	github.com/cockroachdb/pebble v0.0.0-20230106151110-65ff304d3d7a
 	github.com/cubewise-code/go-mime v0.0.0-20200519001935-8c5762b177d8
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc

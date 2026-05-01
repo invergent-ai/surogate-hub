@@ -29,8 +29,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/treeverse/lakefs/pkg/auth/model"
-	gwerrors "github.com/treeverse/lakefs/pkg/gateway/errors"
+	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	gwerrors "github.com/invergent-ai/surogate-hub/pkg/gateway/errors"
 )
 
 // Streaming AWS Signature Version '4' constants.

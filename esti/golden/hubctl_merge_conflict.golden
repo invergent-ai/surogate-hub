@@ -1,0 +1,4 @@
+Source: sg://${REPO}/${SOURCE_BRANCH}
+Destination: sg://${REPO}/${DEST_BRANCH}
+Conflict found.
+Error executing command.

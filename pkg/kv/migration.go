@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/treeverse/lakefs/pkg/kv/kvparams"
-	"github.com/treeverse/lakefs/pkg/logging"
+	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
+	"github.com/invergent-ai/surogate-hub/pkg/logging"
 )
 
 type Migrator interface {
@@ -57,12 +57,12 @@ func ValidateSchemaVersion(ctx context.Context, store Store) (int, error) {
 	case kvVersion >= NextSchemaVersion:
 		return kvVersion, fmt.Errorf("incompatible schema version. Latest: %d: %w", NextSchemaVersion-1, ErrMigrationVersion)
 	case kvVersion < InitialMigrateVersion:
-		return kvVersion, fmt.Errorf("migration to KV required. Did you migrate using version v0.80.x? https://docs.lakefs.io/reference/upgrade.html#lakefs-0800-or-greater-kv-migration: %w", ErrMigrationVersion)
+		return kvVersion, fmt.Errorf("migration to KV required: %w", ErrMigrationVersion)
 	case kvVersion < ACLMigrateVersion,
 		kvVersion < ACLNoReposMigrateVersion:
-		return kvVersion, fmt.Errorf("migration to ACL required. Please run 'lakefs migrate up': %w", ErrMigrationRequired)
+		return kvVersion, fmt.Errorf("migration to ACL required. Please run 'sghub migrate up': %w", ErrMigrationRequired)
 	case kvVersion < ACLImportMigrateVersion:
-		return kvVersion, fmt.Errorf("ACL migration required. Please run 'lakefs migrate up': %w", ErrMigrationRequired)
+		return kvVersion, fmt.Errorf("ACL migration required. Please run 'sghub migrate up': %w", ErrMigrationRequired)
 	}
 
 	logging.FromContext(ctx).WithField("version", kvVersion).Info("KV valid")
