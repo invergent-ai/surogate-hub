@@ -202,7 +202,7 @@ Class | Method | HTTP request | Description
 *InternalApi* | [**dump_refs**](docs/InternalApi.md#dump_refs) | **PUT** /repositories/{repository}/refs/dump | Dump repository refs (tags, commits, branches) to object store Deprecated: a new API will introduce long running operations 
 *InternalApi* | [**get_auth_capabilities**](docs/InternalApi.md#get_auth_capabilities) | **GET** /auth/capabilities | list authentication capabilities supported
 *InternalApi* | [**get_garbage_collection_config**](docs/InternalApi.md#get_garbage_collection_config) | **GET** /config/garbage-collection | 
-*InternalApi* | [**get_hub_version**](docs/InternalApi.md#get_hub_version) | **GET** /config/version |
+*InternalApi* | [**get_hub_version**](docs/InternalApi.md#get_hub_version) | **GET** /config/version | 
 *InternalApi* | [**get_metadata_object**](docs/InternalApi.md#get_metadata_object) | **GET** /repositories/{repository}/metadata/object/{type}/{object_id} | return a Surogate Hub metadata object by ID
 *InternalApi* | [**get_setup_state**](docs/InternalApi.md#get_setup_state) | **GET** /setup_sghub | check if the Surogate Hub installation is already set up
 *InternalApi* | [**get_storage_config**](docs/InternalApi.md#get_storage_config) | **GET** /config/storage | 
@@ -415,4 +415,5 @@ Authentication schemes defined for the API:
 ## Author
 
 contact@invergent.ai
+
 

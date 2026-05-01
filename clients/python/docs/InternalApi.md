@@ -11,7 +11,7 @@ Method | HTTP request | Description
 [**dump_refs**](InternalApi.md#dump_refs) | **PUT** /repositories/{repository}/refs/dump | Dump repository refs (tags, commits, branches) to object store Deprecated: a new API will introduce long running operations 
 [**get_auth_capabilities**](InternalApi.md#get_auth_capabilities) | **GET** /auth/capabilities | list authentication capabilities supported
 [**get_garbage_collection_config**](InternalApi.md#get_garbage_collection_config) | **GET** /config/garbage-collection | 
-[**get_hub_version**](InternalApi.md#get_hub_version) | **GET** /config/version |
+[**get_hub_version**](InternalApi.md#get_hub_version) | **GET** /config/version | 
 [**get_metadata_object**](InternalApi.md#get_metadata_object) | **GET** /repositories/{repository}/metadata/object/{type}/{object_id} | return a Surogate Hub metadata object by ID
 [**get_setup_state**](InternalApi.md#get_setup_state) | **GET** /setup_sghub | check if the Surogate Hub installation is already set up
 [**get_storage_config**](InternalApi.md#get_storage_config) | **GET** /config/storage | 
@@ -2867,3 +2867,4 @@ void (empty response body)
 **0** | Internal Server Error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+

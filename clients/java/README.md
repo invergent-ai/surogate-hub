@@ -226,7 +226,7 @@ Class | Method | HTTP request | Description
 *InternalApi* | [**dumpRefs**](docs/InternalApi.md#dumpRefs) | **PUT** /repositories/{repository}/refs/dump | Dump repository refs (tags, commits, branches) to object store Deprecated: a new API will introduce long running operations 
 *InternalApi* | [**getAuthCapabilities**](docs/InternalApi.md#getAuthCapabilities) | **GET** /auth/capabilities | list authentication capabilities supported
 *InternalApi* | [**getGarbageCollectionConfig**](docs/InternalApi.md#getGarbageCollectionConfig) | **GET** /config/garbage-collection | 
-*InternalApi* | [**getHubVersion**](docs/InternalApi.md#getHubVersion) | **GET** /config/version |
+*InternalApi* | [**getHubVersion**](docs/InternalApi.md#getHubVersion) | **GET** /config/version | 
 *InternalApi* | [**getMetadataObject**](docs/InternalApi.md#getMetadataObject) | **GET** /repositories/{repository}/metadata/object/{type}/{object_id} | return a Surogate Hub metadata object by ID
 *InternalApi* | [**getSetupState**](docs/InternalApi.md#getSetupState) | **GET** /setup_sghub | check if the Surogate Hub installation is already set up
 *InternalApi* | [**getStorageConfig**](docs/InternalApi.md#getStorageConfig) | **GET** /config/storage | 
@@ -441,5 +441,6 @@ Authentication schemes defined for the API:
 It's recommended to create an instance of `ApiClient` per thread in a multithreaded environment to avoid any potential issues.
 
 ## Author
+
 
 
