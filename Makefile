@@ -126,7 +126,7 @@ package-python-sdk: sdk-python
 
 package: package-python
 
-gen-api: docs/assets/js/swagger.yml ## Run the swagger code generator
+gen-api: ## Run the swagger code generator
 	$(GOGENERATE) ./pkg/api/apigen ./pkg/auth ./pkg/authentication
 
 gen-code: gen-api ## Run the generator for inline commands
