@@ -38,7 +38,7 @@ var abuseCommitCmd = &cobra.Command{
 
 		// generate randomly selected keys as input
 		client := getClient()
-		resp, err := client.GetRepositoryWithResponse(cmd.Context(), u.Repository)
+		resp, err := client.GetRepositoryWithResponse(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository))
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)
 		if resp.JSON200 == nil {
 			Die("Bad response from server", 1)
@@ -51,7 +51,7 @@ var abuseCommitCmd = &cobra.Command{
 			allowEmpty := true
 			for work := range input {
 				start := time.Now()
-				resp, err := client.CommitWithResponse(ctx, u.Repository, u.Ref, &apigen.CommitParams{},
+				resp, err := client.CommitWithResponse(ctx, apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), u.Ref, &apigen.CommitParams{},
 					apigen.CommitJSONRequestBody(apigen.CommitCreation{
 						Message:    work,
 						AllowEmpty: &allowEmpty,

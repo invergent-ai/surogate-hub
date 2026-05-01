@@ -42,7 +42,7 @@ var findMergeBaseCmd = &cobra.Command{
 			Die("both references must belong to the same repository", 1)
 		}
 
-		resp, err := client.FindMergeBaseWithResponse(cmd.Context(), destinationRef.Repository, sourceRef.Ref, destinationRef.Ref)
+		resp, err := client.FindMergeBaseWithResponse(cmd.Context(), apigen.RepositoryOwner(destinationRef.Repository), apigen.RepositoryName(destinationRef.Repository), sourceRef.Ref, destinationRef.Ref)
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)
 		if resp.JSON200 == nil {
 			Die("Bad response from server", 1)

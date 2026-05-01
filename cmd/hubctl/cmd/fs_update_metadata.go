@@ -39,7 +39,7 @@ var fsUpdateUserMetadataCmd = &cobra.Command{
 
 		ctx := cmd.Context()
 		resp, err := client.UpdateObjectUserMetadata(
-			ctx, pathURI.Repository, pathURI.Ref,
+			ctx, apigen.RepositoryOwner(pathURI.Repository), apigen.RepositoryName(pathURI.Repository), pathURI.Ref,
 			&apigen.UpdateObjectUserMetadataParams{Path: *pathURI.Path},
 			body,
 		)

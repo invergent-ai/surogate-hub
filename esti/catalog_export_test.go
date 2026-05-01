@@ -112,7 +112,7 @@ func uploadAndCommitObjects(t *testing.T, ctx context.Context, repo, branch stri
 		}
 	}
 
-	commitResp, err := client.CommitWithResponse(ctx, repo, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err := client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "Table Data",
 	})
 	require.NoErrorf(t, err, "failed commiting uploaded objects to sg://%s/%s", repo, branch)
@@ -168,7 +168,7 @@ func testSymlinkS3Exporter(t *testing.T, ctx context.Context, repo string, tmplD
 
 	// list symlink.txt files from blockstore
 
-	repoResponse, err := client.GetRepositoryWithResponse(ctx, repo)
+	repoResponse, err := client.GetRepositoryWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo))
 	require.NoError(t, err, "could not get repository information")
 	require.Equal(t, repoResponse.StatusCode(), http.StatusOK, "could not get repository information")
 	namespace := repoResponse.JSON200.StorageNamespace
@@ -230,7 +230,7 @@ func testSymlinkS3Exporter(t *testing.T, ctx context.Context, repo string, tmplD
 		}
 	}
 
-	hubObjs, err := client.ListObjectsWithResponse(ctx, repo, commit.Id, &apigen.ListObjectsParams{
+	hubObjs, err := client.ListObjectsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), commit.Id, &apigen.ListObjectsParams{
 		Prefix: apiutil.Ptr(apigen.PaginationPrefix(testData.TableSpec.Path)),
 	})
 
@@ -421,13 +421,13 @@ func setupCatalogExportTestByStorageType(t *testing.T, testData *exportHooksTest
 }
 
 func validateExportTestByStorageType(t *testing.T, ctx context.Context, commit string, testData *exportHooksTestData, blockstoreType string) {
-	resp, err := client.GetRepositoryWithResponse(ctx, testData.Repository)
+	resp, err := client.GetRepositoryWithResponse(ctx, apigen.RepositoryOwner(testData.Repository), apigen.RepositoryName(testData.Repository))
 	require.NoError(t, err)
 	require.NotNil(t, resp.JSON200)
 	namespaceURL, err := url.Parse(resp.JSON200.StorageNamespace)
 	require.NoError(t, err)
 	keyTempl := "%s/_hub/exported/%s/%s/test_table/_delta_log/00000000000000000000.json"
-	tableStat, err := client.StatObjectWithResponse(ctx, testData.Repository, mainBranch, &apigen.StatObjectParams{
+	tableStat, err := client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(testData.Repository), apigen.RepositoryName(testData.Repository), mainBranch, &apigen.StatObjectParams{
 		Path: "tables/test-table/test partition/0-845b8a42-579e-47ee-9935-921dd8d2ba7d-0.parquet",
 	})
 	require.NoError(t, err)
@@ -522,7 +522,7 @@ func TestDeltaCatalogExport(t *testing.T) {
 	require.Equal(t, "completed", run.Status)
 
 	amount := apigen.PaginationAmount(1)
-	tasks, err := client.ListRunHooksWithResponse(ctx, repo, run.RunId, &apigen.ListRunHooksParams{
+	tasks, err := client.ListRunHooksWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), run.RunId, &apigen.ListRunHooksParams{
 		Amount: &amount,
 	})
 	require.NoError(t, err)
@@ -572,7 +572,7 @@ func TestDeltaCatalogImportExport(t *testing.T) {
 	require.Equal(t, "completed", run.Status)
 
 	amount := apigen.PaginationAmount(1)
-	tasks, err := client.ListRunHooksWithResponse(ctx, repo, run.RunId, &apigen.ListRunHooksParams{
+	tasks, err := client.ListRunHooksWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), run.RunId, &apigen.ListRunHooksParams{
 		Amount: &amount,
 	})
 	require.NoError(t, err)
@@ -598,7 +598,7 @@ func uploadToPhysicalAddress(t *testing.T, ctx context.Context, repo, branch, ob
 	unescapedAddress, err := url.PathUnescape(physicalAddress.String())
 	require.NoError(t, err)
 
-	resp, err := client.StageObjectWithResponse(ctx, repo, branch, &apigen.StageObjectParams{
+	resp, err := client.StageObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.StageObjectParams{
 		Path: objPath,
 	}, apigen.StageObjectJSONRequestBody{
 		Checksum:        stats.ETag,
@@ -612,7 +612,7 @@ func uploadToPhysicalAddress(t *testing.T, ctx context.Context, repo, branch, ob
 
 func getStorageNamespace(t *testing.T, ctx context.Context, repo string) string {
 	t.Helper()
-	resp, err := client.GetRepositoryWithResponse(ctx, repo)
+	resp, err := client.GetRepositoryWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo))
 	require.NoError(t, err)
 	require.NotNil(t, resp.JSON200)
 	return resp.JSON200.StorageNamespace
@@ -664,7 +664,7 @@ func TestDeltaCatalogExportAbfss(t *testing.T) {
 	require.Equal(t, "completed", run.Status)
 
 	amount := apigen.PaginationAmount(1)
-	tasks, err := client.ListRunHooksWithResponse(ctx, repo, run.RunId, &apigen.ListRunHooksParams{
+	tasks, err := client.ListRunHooksWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), run.RunId, &apigen.ListRunHooksParams{
 		Amount: &amount,
 	})
 	require.NoError(t, err)
@@ -675,13 +675,13 @@ func TestDeltaCatalogExportAbfss(t *testing.T) {
 }
 
 func validateExportAbfss(t *testing.T, ctx context.Context, commit string, testData *exportHooksTestData) {
-	resp, err := client.GetRepositoryWithResponse(ctx, testData.Repository)
+	resp, err := client.GetRepositoryWithResponse(ctx, apigen.RepositoryOwner(testData.Repository), apigen.RepositoryName(testData.Repository))
 	require.NoError(t, err)
 	require.NotNil(t, resp.JSON200)
 	namespaceURL, err := url.Parse(resp.JSON200.StorageNamespace)
 	require.NoError(t, err)
 	keyTempl := "%s/_hub/exported/%s/%s/test_table/_delta_log/00000000000000000000.json"
-	tableStat, err := client.StatObjectWithResponse(ctx, testData.Repository, mainBranch, &apigen.StatObjectParams{
+	tableStat, err := client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(testData.Repository), apigen.RepositoryName(testData.Repository), mainBranch, &apigen.StatObjectParams{
 		Path: "tables/test-table/test partition/0-845b8a42-579e-47ee-9935-921dd8d2ba7d-0.parquet",
 	})
 	require.NoError(t, err)

@@ -14,7 +14,7 @@ func TestIdentity(t *testing.T) {
 	branch1 := "feature-1"
 	branch2 := "feature-2"
 
-	_, err := client.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+	_, err := client.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 		Name:   branch1,
 		Source: mainBranch,
 	})
@@ -22,7 +22,7 @@ func TestIdentity(t *testing.T) {
 
 	checksum, objContent, err := uploadFileRandomDataAndReport(ctx, repo, branch1, objPath, false)
 	require.NoError(t, err, "failed uploading file")
-	commitResp, err := client.CommitWithResponse(ctx, repo, branch1, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err := client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch1, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "commit on branch1",
 	})
 	require.NoError(t, err, "failed to commit changes")
@@ -30,7 +30,7 @@ func TestIdentity(t *testing.T) {
 		"failed to commit changes repo %s branch %s", repo, mainBranch)
 
 	// upload the same content again to a different branch
-	_, err = client.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+	_, err = client.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 		Name:   branch2,
 		Source: mainBranch,
 	})
@@ -40,16 +40,16 @@ func TestIdentity(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, checksum, checksumNew, "Same file uploaded to committed branch, expected no checksum difference")
 
-	_, err = client.CommitWithResponse(ctx, repo, branch2, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	_, err = client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch2, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "commit on branch2",
 	})
 	require.NoError(t, err, "failed to commit changes")
 
-	diff, err := client.DiffRefsWithResponse(ctx, repo, branch1, branch2, &apigen.DiffRefsParams{})
+	diff, err := client.DiffRefsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch1, branch2, &apigen.DiffRefsParams{})
 	require.NoError(t, err, "Diff refs failed")
 	require.Empty(t, diff.JSON200.Results, "Expected no diff files")
 
-	resp, err := client.MergeIntoBranchWithResponse(ctx, repo, branch1, branch2, apigen.MergeIntoBranchJSONRequestBody{})
+	resp, err := client.MergeIntoBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch1, branch2, apigen.MergeIntoBranchJSONRequestBody{})
 	require.NoError(t, err, "error during merge")
 	require.NotEmpty(t, resp.JSON200, "allow merge with no changes between the branches")
 }

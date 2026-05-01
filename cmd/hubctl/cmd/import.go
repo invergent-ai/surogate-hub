@@ -65,7 +65,7 @@ var importCmd = &cobra.Command{
 			body.Commit.Metadata = &apigen.CommitCreation_Metadata{AdditionalProperties: metadata}
 		}
 
-		importResp, err := client.ImportStartWithResponse(ctx, toURI.Repository, toURI.Ref, body)
+		importResp, err := client.ImportStartWithResponse(ctx, apigen.RepositoryOwner(toURI.Repository), apigen.RepositoryName(toURI.Repository), toURI.Ref, body)
 		DieOnErrorOrUnexpectedStatusCode(importResp, err, http.StatusAccepted)
 		if importResp.JSON202 == nil {
 			Die("Bad response from server", 1)
@@ -91,11 +91,11 @@ var importCmd = &cobra.Command{
 			case <-sigCtx.Done():
 				fmt.Println()
 				fmt.Println("Canceling import")
-				resp, err := client.ImportCancelWithResponse(ctx, toURI.Repository, toURI.Ref, &apigen.ImportCancelParams{Id: importID})
+				resp, err := client.ImportCancelWithResponse(ctx, apigen.RepositoryOwner(toURI.Repository), apigen.RepositoryName(toURI.Repository), toURI.Ref, &apigen.ImportCancelParams{Id: importID})
 				DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusNoContent)
 				Die("Import Canceled", 1)
 			case <-ticker.C:
-				statusResp, err = client.ImportStatusWithResponse(ctx, toURI.Repository, toURI.Ref, &apigen.ImportStatusParams{Id: importID})
+				statusResp, err = client.ImportStatusWithResponse(ctx, apigen.RepositoryOwner(toURI.Repository), apigen.RepositoryName(toURI.Repository), toURI.Ref, &apigen.ImportStatusParams{Id: importID})
 				DieOnErrorOrUnexpectedStatusCode(statusResp, err, http.StatusOK)
 				status := statusResp.JSON200
 				if status == nil {
@@ -186,7 +186,7 @@ func verifySourceMatchConfiguredStorage(ctx context.Context, client *apigen.Clie
 }
 
 func branchExists(ctx context.Context, client *apigen.ClientWithResponses, repository string, branch string) (error, bool) {
-	resp, err := client.GetBranchWithResponse(ctx, repository, branch)
+	resp, err := client.GetBranchWithResponse(ctx, apigen.RepositoryOwner(repository), apigen.RepositoryName(repository), branch)
 	if err != nil {
 		return err, false
 	}
@@ -203,7 +203,7 @@ func branchExists(ctx context.Context, client *apigen.ClientWithResponses, repos
 func init() {
 	importCmd.Flags().String("from", "", "prefix to read from (e.g. \"s3://bucket/sub/path/\"). must not be in a storage namespace")
 	_ = importCmd.MarkFlagRequired("from")
-	importCmd.Flags().String("to", "", "Surogate Hub path to load objects into (e.g. \"sg://repo/branch/sub/path/\")")
+	importCmd.Flags().String("to", "", "Surogate Hub path to load objects into (e.g. \"sg://my-user/my-repo/main/sub/path/\")")
 	_ = importCmd.MarkFlagRequired("to")
 	importCmd.Flags().Bool("merge", false, "merge imported branch into target branch")
 	_ = importCmd.Flags().MarkDeprecated("merge", "import is done directly into target branch")

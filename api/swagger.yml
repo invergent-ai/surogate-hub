@@ -268,7 +268,7 @@ components:
       properties:
         name:
           type: string
-          pattern: "^[a-zA-Z0-9][a-zA-Z0-9-.]{2,62}$"
+          pattern: "^[a-zA-Z0-9][a-zA-Z0-9-.]{2,62}/[a-zA-Z0-9][a-zA-Z0-9-.]{2,62}$"
         storage_id:
           type: string
           description: Unique identifier of the underlying data store
@@ -3005,8 +3005,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}:
+  /repositories/{user}/{repository}:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3056,8 +3061,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/metadata:
+  /repositories/{user}/{repository}/metadata:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3130,8 +3140,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/settings/gc_rules:
+  /repositories/{user}/{repository}/settings/gc_rules:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3198,8 +3213,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/settings/branch_protection:
+  /repositories/{user}/{repository}/settings/branch_protection:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3270,8 +3290,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/refs/dump:
+  /repositories/{user}/{repository}/refs/dump:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3302,8 +3327,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/refs/restore:
+  /repositories/{user}/{repository}/refs/restore:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3336,8 +3366,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/dump:
+  /repositories/{user}/{repository}/dump:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3392,8 +3427,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/restore:
+  /repositories/{user}/{repository}/restore:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3456,8 +3496,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/tags:
+  /repositories/{user}/{repository}/tags:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3521,8 +3566,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/tags/{tag}:
+  /repositories/{user}/{repository}/tags/{tag}:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3578,8 +3628,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/branches:
+  /repositories/{user}/{repository}/branches:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3648,8 +3703,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/refs/{ref}/commits:
+  /repositories/{user}/{repository}/refs/{ref}/commits:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3719,8 +3779,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/branches/{branch}/commits:
+  /repositories/{user}/{repository}/branches/{branch}/commits:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3777,8 +3842,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/commits:
+  /repositories/{user}/{repository}/commits:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3811,8 +3881,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/branches/{branch}:
+  /repositories/{user}/{repository}/branches/{branch}:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3895,8 +3970,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/branches/{branch}/hard_reset:
+  /repositories/{user}/{repository}/branches/{branch}/hard_reset:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3944,8 +4024,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/branches/{branch}/revert:
+  /repositories/{user}/{repository}/branches/{branch}/revert:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -3989,8 +4074,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/branches/{branch}/cherry-pick:
+  /repositories/{user}/{repository}/branches/{branch}/cherry-pick:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -4038,8 +4128,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/refs/{sourceRef}/merge/{destinationBranch}:
+  /repositories/{user}/{repository}/refs/{sourceRef}/merge/{destinationBranch}:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -4123,12 +4218,17 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/branches/{branch}/diff:
+  /repositories/{user}/{repository}/branches/{branch}/diff:
     parameters:
       - $ref: "#/components/parameters/PaginationAfter"
       - $ref: "#/components/parameters/PaginationAmount"
       - $ref: "#/components/parameters/PaginationPrefix"
       - $ref: "#/components/parameters/PaginationDelimiter"
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -4161,8 +4261,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/refs/{leftRef}/diff/{rightRef}:
+  /repositories/{user}/{repository}/refs/{leftRef}/diff/{rightRef}:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -4212,8 +4317,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/commits/{commitId}:
+  /repositories/{user}/{repository}/commits/{commitId}:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -4245,8 +4355,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/refs/{ref}/objects:
+  /repositories/{user}/{repository}/refs/{ref}/objects:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -4417,8 +4532,13 @@ paths:
         default:
           description: internal server error
 
-  /repositories/{repository}/branches/{branch}/staging/pmpu:
+  /repositories/{user}/{repository}/branches/{branch}/staging/pmpu:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -4467,8 +4587,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/branches/{branch}/staging/pmpu/{uploadId}:
+  /repositories/{user}/{repository}/branches/{branch}/staging/pmpu/{uploadId}:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -4551,8 +4676,13 @@ paths:
           $ref: "#/components/responses/ServerError"
 
 
-  /repositories/{repository}/branches/{branch}/staging/backing:
+  /repositories/{user}/{repository}/branches/{branch}/staging/backing:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -4645,8 +4775,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/branches/{branch}/import:
+  /repositories/{user}/{repository}/branches/{branch}/import:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -4742,8 +4877,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/branches/{branch}/objects/stage_allowed:
+  /repositories/{user}/{repository}/branches/{branch}/objects/stage_allowed:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -4778,8 +4918,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/branches/{branch}/objects:
+  /repositories/{user}/{repository}/branches/{branch}/objects:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -4910,8 +5055,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/branches/{branch}/objects/delete:
+  /repositories/{user}/{repository}/branches/{branch}/objects/delete:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -4957,8 +5107,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/branches/{branch}/objects/copy:
+  /repositories/{user}/{repository}/branches/{branch}/objects/copy:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5007,8 +5162,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/refs/{ref}/objects/stat:
+  /repositories/{user}/{repository}/refs/{ref}/objects/stat:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5062,8 +5222,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/branches/{branch}/objects/stat/user_metadata:
+  /repositories/{user}/{repository}/branches/{branch}/objects/stat/user_metadata:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5107,8 +5272,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/refs/{ref}/objects/underlyingProperties:
+  /repositories/{user}/{repository}/refs/{ref}/objects/underlyingProperties:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5147,8 +5317,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/refs/{ref}/objects/ls:
+  /repositories/{user}/{repository}/refs/{ref}/objects/ls:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5197,8 +5372,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/refs/{branch}/symlink:
+  /repositories/{user}/{repository}/refs/{branch}/symlink:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5236,13 +5416,18 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/actions/runs:
+  /repositories/{user}/{repository}/actions/runs:
     get:
       tags:
         - actions
       operationId: listRepositoryRuns
       summary: list runs
       parameters:
+        - in: path
+          name: user
+          required: true
+          schema:
+            type: string
         - in: path
           name: repository
           required: true
@@ -5274,13 +5459,18 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/actions/runs/{run_id}:
+  /repositories/{user}/{repository}/actions/runs/{run_id}:
     get:
       tags:
         - actions
       operationId: getRun
       summary: get a run
       parameters:
+        - in: path
+          name: user
+          required: true
+          schema:
+            type: string
         - in: path
           name: repository
           required: true
@@ -5307,13 +5497,18 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/actions/runs/{run_id}/hooks:
+  /repositories/{user}/{repository}/actions/runs/{run_id}/hooks:
     get:
       tags:
         - actions
       operationId: listRunHooks
       summary: list run hooks
       parameters:
+        - in: path
+          name: user
+          required: true
+          schema:
+            type: string
         - in: path
           name: repository
           required: true
@@ -5342,13 +5537,18 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/actions/runs/{run_id}/hooks/{hook_run_id}/output:
+  /repositories/{user}/{repository}/actions/runs/{run_id}/hooks/{hook_run_id}/output:
     get:
       tags:
         - actions
       operationId: getRunHookOutput
       summary: get run hook output
       parameters:
+        - in: path
+          name: user
+          required: true
+          schema:
+            type: string
         - in: path
           name: repository
           required: true
@@ -5381,8 +5581,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/metadata/object/{type}/{object_id}:
+  /repositories/{user}/{repository}/metadata/object/{type}/{object_id}:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5441,8 +5646,13 @@ paths:
           $ref: "#/components/responses/ServerError"
 
 
-  /repositories/{repository}/metadata/meta_range/{meta_range}:
+  /repositories/{user}/{repository}/metadata/meta_range/{meta_range}:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5479,8 +5689,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/metadata/range/{range}:
+  /repositories/{user}/{repository}/metadata/range/{range}:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5517,8 +5732,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/gc/rules/set_allowed:
+  /repositories/{user}/{repository}/gc/rules/set_allowed:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5540,8 +5760,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/gc/rules:
+  /repositories/{user}/{repository}/gc/rules:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5607,8 +5832,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/gc/prepare_commits:
+  /repositories/{user}/{repository}/gc/prepare_commits:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5637,8 +5867,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/gc/prepare_uncommited:
+  /repositories/{user}/{repository}/gc/prepare_uncommited:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5674,8 +5909,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/branch_protection/set_allowed:
+  /repositories/{user}/{repository}/branch_protection/set_allowed:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5699,8 +5939,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/branch_protection:
+  /repositories/{user}/{repository}/branch_protection:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5790,8 +6035,13 @@ paths:
           type: string
       - $ref: "#/components/parameters/PaginationAmount"
 
-  /repositories/{repository}/pulls:
+  /repositories/{user}/{repository}/pulls:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5863,8 +6113,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/pulls/{pull_request}:
+  /repositories/{user}/{repository}/pulls/{pull_request}:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true
@@ -5927,8 +6182,13 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /repositories/{repository}/pulls/{pull_request}/merge:
+  /repositories/{user}/{repository}/pulls/{pull_request}/merge:
     parameters:
+      - in: path
+        name: user
+        required: true
+        schema:
+          type: string
       - in: path
         name: repository
         required: true

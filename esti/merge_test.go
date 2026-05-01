@@ -25,12 +25,12 @@ func TestMergeAndList(t *testing.T) {
 	}
 
 	logger.WithField("branch", mainBranch).Info("Commit initial content")
-	commitResp, err := client.CommitWithResponse(ctx, repo, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{Message: "Initial content"})
+	commitResp, err := client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{Message: "Initial content"})
 	require.NoError(t, err, "failed to commit initial content")
 	require.Equal(t, http.StatusCreated, commitResp.StatusCode())
 
 	logger.WithField("branch", branch).Info("Create branch")
-	createBranchResp, err := client.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+	createBranchResp, err := client.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 		Name:   branch,
 		Source: mainBranch,
 	})
@@ -62,18 +62,18 @@ func doMergeAndListIteration(t *testing.T, logger logging.Logger, ctx context.Co
 	const totalFiles = addedFiles + 1
 
 	logger.WithField("iteration", iteration).Info("Commit uploaded files")
-	commitResp, err := client.CommitWithResponse(ctx, repo, branch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err := client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: fmt.Sprintf("Adding %d files", addedFiles),
 	})
 	require.NoError(t, err, "failed to commit changes")
 	require.Equal(t, http.StatusCreated, commitResp.StatusCode())
 
-	mergeRes, err := client.MergeIntoBranchWithResponse(ctx, repo, branch, mainBranch, apigen.MergeIntoBranchJSONRequestBody{Strategy: &strategy})
+	mergeRes, err := client.MergeIntoBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, mainBranch, apigen.MergeIntoBranchJSONRequestBody{Strategy: &strategy})
 	require.NoError(t, err, "failed to merge branches")
 	require.Equal(t, http.StatusOK, mergeRes.StatusCode())
 	logger.WithFields(logging.Fields{"iteration": iteration, "mergeResult": mergeRes}).Info("Merged successfully")
 
-	res, err := client.GetCommitWithResponse(ctx, repo, mergeRes.JSON200.Reference)
+	res, err := client.GetCommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mergeRes.JSON200.Reference)
 	require.NoError(t, err, "failed to get commit")
 	require.NotNil(t, res.JSON200)
 	metadata := res.JSON200.Metadata
@@ -81,7 +81,7 @@ func doMergeAndListIteration(t *testing.T, logger logging.Logger, ctx context.Co
 	require.True(t, ok)
 	require.Equal(t, strategy, val)
 
-	resp, err := client.ListObjectsWithResponse(ctx, repo, mainBranch, &apigen.ListObjectsParams{Amount: apiutil.Ptr(apigen.PaginationAmount(100))})
+	resp, err := client.ListObjectsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.ListObjectsParams{Amount: apiutil.Ptr(apigen.PaginationAmount(100))})
 	require.NoError(t, err, "failed to list objects")
 	require.Equal(t, http.StatusOK, resp.StatusCode())
 	payload := resp.JSON200

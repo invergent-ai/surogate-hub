@@ -28,7 +28,7 @@ func StreamRepositoryDiffs(ctx context.Context, client apigen.ClientWithResponse
 	hasMore := true
 	var after string
 	for hasMore {
-		diffResp, err := client.DiffRefsWithResponse(ctx, left.Repository, left.Ref, right.Ref, &apigen.DiffRefsParams{
+		diffResp, err := client.DiffRefsWithResponse(ctx, apigen.RepositoryOwner(left.Repository), apigen.RepositoryName(left.Repository), left.Ref, right.Ref, &apigen.DiffRefsParams{
 			After:  (*apigen.PaginationAfter)(swag.String(after)),
 			Prefix: (*apigen.PaginationPrefix)(&prefix),
 			Type:   diffType,

@@ -37,14 +37,14 @@ func TestDownloadMetadataObject(t *testing.T) {
 
 	repo := createRepositoryUnique(ctx, t)
 	uploadFileRandomData(ctx, t, repo, mainBranch, "some/random/path/43543985430548930")
-	commitResp, err := client.CommitWithResponse(ctx, repo, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err := client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "committing just to get a meta range!",
 	})
 	require.NoError(t, err, "failed to commit changes")
 	metarangeId := commitResp.JSON201.MetaRangeId
 
 	// download meta-range
-	response, err := client.GetMetadataObjectWithResponse(ctx, repo, "meta_range", metarangeId, &apigen.GetMetadataObjectParams{})
+	response, err := client.GetMetadataObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "meta_range", metarangeId, &apigen.GetMetadataObjectParams{})
 	if err != nil {
 		t.Errorf("got unexpected error downloading metarange")
 	}
@@ -64,7 +64,7 @@ func TestDownloadMetadataObject(t *testing.T) {
 	rangeId := committed.ID(gv.Identity)
 
 	// now try the range ID
-	response, err = client.GetMetadataObjectWithResponse(ctx, repo, "range", string(rangeId), &apigen.GetMetadataObjectParams{})
+	response, err = client.GetMetadataObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "range", string(rangeId), &apigen.GetMetadataObjectParams{})
 	require.NoError(t, err, "failed to get range with presign=true")
 
 	// try reading the range

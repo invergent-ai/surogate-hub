@@ -30,6 +30,11 @@ func handleGatewayRequest(w http.ResponseWriter, r *http.Request, gatewayDomains
 	o.EncodeError(w, r, nil, err)
 }
 
+func handleGatewayAPIEndpointRequest(w http.ResponseWriter, r *http.Request) {
+	o := operations.Operation{}
+	_ = o.EncodeError(w, r, nil, gwerrors.ErrNoSuchBucketPossibleAPIEndpoint.ToAPIErr())
+}
+
 func isGatewayRequest(r *http.Request) bool {
 	// v4 and v2 header key are equal
 	vals := r.Header.Values(sig.V4authHeaderName)

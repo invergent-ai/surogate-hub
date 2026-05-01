@@ -112,21 +112,27 @@ func ValidateRepositoryID(v interface{}) error {
 	if len(repositoryID) == 0 {
 		return ErrRequiredValue
 	}
-	if !validator.ReValidRepositoryID.MatchString(repositoryID) {
+	parts := strings.Split(repositoryID, "/")
+	if len(parts) != 2 {
 		return ErrInvalidRepositoryID
 	}
-	if strings.HasSuffix(repositoryID, ".") || strings.HasSuffix(repositoryID, ".lock") {
-		return ErrInvalidRepositoryID
-	}
-	if strings.Contains(repositoryID, "..") || strings.Contains(repositoryID, "/") {
-		return ErrInvalidRepositoryID
-	}
-	if strings.ContainsAny(repositoryID, "^:?*[\\") {
-		return ErrInvalidRepositoryID
-	}
-	for _, r := range repositoryID {
-		if isControlCodeOrSpace(r) {
+	for _, part := range parts {
+		if !validator.ReValidRepositoryIDPart.MatchString(part) {
 			return ErrInvalidRepositoryID
+		}
+		if strings.HasSuffix(part, ".") || strings.HasSuffix(part, ".lock") {
+			return ErrInvalidRepositoryID
+		}
+		if strings.Contains(part, "..") {
+			return ErrInvalidRepositoryID
+		}
+		if strings.ContainsAny(part, "^:?*[\\") {
+			return ErrInvalidRepositoryID
+		}
+		for _, r := range part {
+			if isControlCodeOrSpace(r) {
+				return ErrInvalidRepositoryID
+			}
 		}
 	}
 	return nil

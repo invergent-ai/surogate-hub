@@ -4,6 +4,32 @@ import (
 	"testing"
 )
 
+func TestMustParseNamespacedURIs(t *testing.T) {
+	oldBaseURI := baseURI
+	baseURI = ""
+	t.Cleanup(func() { baseURI = oldBaseURI })
+
+	repo := MustParseRepoURI("repository URI", "sg://alice/model")
+	if repo.Repository != "alice/model" || repo.Ref != "" || repo.Path != nil {
+		t.Fatalf("repo URI parsed incorrectly: %+v", repo)
+	}
+
+	branch := MustParseBranchURI("branch URI", "sg://alice/model/main")
+	if branch.Repository != "alice/model" || branch.Ref != "main" || branch.Path != nil {
+		t.Fatalf("branch URI parsed incorrectly: %+v", branch)
+	}
+
+	ref := MustParseRefURI("ref URI", "sg://alice/model/abc123")
+	if ref.Repository != "alice/model" || ref.Ref != "abc123" || ref.Path != nil {
+		t.Fatalf("ref URI parsed incorrectly: %+v", ref)
+	}
+
+	path := MustParsePathURI("path URI", "sg://alice/model/main/data/file.txt")
+	if path.Repository != "alice/model" || path.Ref != "main" || path.Path == nil || *path.Path != "data/file.txt" {
+		t.Fatalf("path URI parsed incorrectly: %+v", path)
+	}
+}
+
 func TestIsValidAccessKeyID(t *testing.T) {
 	type args struct {
 		accessKeyID string

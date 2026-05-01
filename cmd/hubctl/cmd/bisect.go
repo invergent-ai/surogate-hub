@@ -60,7 +60,7 @@ type Bisect struct {
 const bisectStartCmdArgs = 2
 
 func resolveCommitOrDie(ctx context.Context, client apigen.ClientWithResponsesInterface, repository, ref string) string {
-	response, err := client.GetCommitWithResponse(ctx, repository, ref)
+	response, err := client.GetCommitWithResponse(ctx, apigen.RepositoryOwner(repository), apigen.RepositoryName(repository), ref)
 	DieOnErrorOrUnexpectedStatusCode(response, err, http.StatusOK)
 	if response.JSON200 == nil {
 		Die("Bad response from server", 1)
@@ -153,7 +153,7 @@ func (b *Bisect) Update(ctx context.Context, client apigen.ClientWithResponsesIn
 	}
 	var commits []*apigen.Commit
 	for {
-		logResponse, err := client.LogCommitsWithResponse(ctx, b.Repository, b.BadCommit, params)
+		logResponse, err := client.LogCommitsWithResponse(ctx, apigen.RepositoryOwner(b.Repository), apigen.RepositoryName(b.Repository), b.BadCommit, params)
 		DieOnErrorOrUnexpectedStatusCode(logResponse, err, http.StatusOK)
 		if logResponse.JSON200 == nil {
 			Die("Bad response from server", 1)

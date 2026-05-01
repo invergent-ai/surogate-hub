@@ -7,9 +7,10 @@ import (
 )
 
 var (
-	ReValidRef          = regexp.MustCompile(`^[^\s]+$`)
-	ReValidBranchID     = regexp.MustCompile(`^\w[-\w]*$`)
-	ReValidRepositoryID = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-.]{2,62}$`)
+	ReValidRef              = regexp.MustCompile(`^[^\s]+$`)
+	ReValidBranchID         = regexp.MustCompile(`^\w[-\w]*$`)
+	ReValidRepositoryIDPart = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-.]{2,62}$`)
+	ReValidRepositoryID     = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-.]{2,62}/[a-zA-Z0-9][a-zA-Z0-9-.]{2,62}$`)
 )
 
 var (

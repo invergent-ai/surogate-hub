@@ -48,11 +48,11 @@ func getTestClient(t *testing.T, endpoint string) *apigen.ClientWithResponses {
 func TestUncommittedOutsideOfPrefix(t *testing.T) {
 	prefix := "xyzzy/"
 	remote := &uri.URI{
-		Repository: "test",
+		Repository: "test-user/test",
 		Ref:        "test",
 	}
 	idx := &local.Index{
-		PathURI:         fmt.Sprintf("sg://test/test/%s", prefix),
+		PathURI:         fmt.Sprintf("sg://test-user/test/test/%s", prefix),
 		ActiveOperation: "",
 	}
 

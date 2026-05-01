@@ -70,20 +70,20 @@ func TestSuperPermissions(t *testing.T) {
 	superClient := newClientFromGroup(t, ctx, log, "super", groupIDs)
 
 	// listing the available branches should succeed
-	resListBranches, err := superClient.ListBranchesWithResponse(ctx, repo, &apigen.ListBranchesParams{})
+	resListBranches, err := superClient.ListBranchesWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListBranchesParams{})
 	require.NoError(t, err, "Super unexpectedly failed while listing branches of repository")
 	require.Equal(t, http.StatusOK, resListBranches.StatusCode(), "Super unexpectedly failed to list branches of repository")
 
 	branches := resListBranches.JSON200.Results
 
 	// reading the commit of the main branch of the repo should succeed
-	resCommit, err := superClient.GetCommitWithResponse(ctx, repo, branches[0].CommitId)
+	resCommit, err := superClient.GetCommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branches[0].CommitId)
 	require.NoError(t, err, "Super unexpectedly failed while reading branch commit")
 	require.Equal(t, http.StatusOK, resCommit.StatusCode(), "Super unexpectedly failed to read branch commit")
 
 	// creating a branch should succeed
 	branch1 := "feature-1"
-	resAddBranch, err := superClient.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+	resAddBranch, err := superClient.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 		Name:   branch1,
 		Source: mainBranch,
 	})
@@ -96,7 +96,7 @@ func TestSuperPermissions(t *testing.T) {
 	require.Equal(t, http.StatusOK, resMerge.StatusCode(), "Super unexpectedly failed to merge branch")
 
 	// deleting the repository should succeed and result in no content response
-	resDeleteRepo, err := superClient.DeleteRepositoryWithResponse(ctx, repo, &apigen.DeleteRepositoryParams{})
+	resDeleteRepo, err := superClient.DeleteRepositoryWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.DeleteRepositoryParams{})
 	require.NoError(t, err, "Super failed while testing delete repository")
 	require.Equal(t, http.StatusNoContent, resDeleteRepo.StatusCode(), "Super unexpectedly did not receive \"no content\" response while deleting repo")
 
@@ -123,20 +123,20 @@ func TestWriterPermissions(t *testing.T) {
 	writerClient := newClientFromGroup(t, ctx, log, "writer", groupIDs)
 
 	// listing the available branches should succeed
-	resListBranches, err := writerClient.ListBranchesWithResponse(ctx, repo, &apigen.ListBranchesParams{})
+	resListBranches, err := writerClient.ListBranchesWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListBranchesParams{})
 	require.NoError(t, err, "Writer failed while listing branches of repository")
 	require.Equal(t, http.StatusOK, resListBranches.StatusCode(), "Writer unexpectedly failed to list branches of repository")
 
 	branches := resListBranches.JSON200.Results
 
 	// reading the commit of the main branch of the repo should succeed
-	resCommit, err := writerClient.GetCommitWithResponse(ctx, repo, branches[0].CommitId)
+	resCommit, err := writerClient.GetCommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branches[0].CommitId)
 	require.NoError(t, err, "Writer failed while reading branch commit")
 	require.Equal(t, http.StatusOK, resCommit.StatusCode(), "Writer unexpectedly failed to read branch commit")
 
 	// creating a branch should succeed
 	branch1 := "feature-1"
-	resAddBranch, err := writerClient.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+	resAddBranch, err := writerClient.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 		Name:   branch1,
 		Source: mainBranch,
 	})
@@ -149,7 +149,7 @@ func TestWriterPermissions(t *testing.T) {
 	require.Equal(t, http.StatusOK, resMerge.StatusCode(), "Writer unexpectedly failed to merge branch")
 
 	// attempting to delete the repository should be unauthorized
-	resDeleteRepo, err := writerClient.DeleteRepositoryWithResponse(ctx, repo, &apigen.DeleteRepositoryParams{})
+	resDeleteRepo, err := writerClient.DeleteRepositoryWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.DeleteRepositoryParams{})
 	require.NoError(t, err, "Writer failed while testing delete repository")
 	require.Equal(t, http.StatusUnauthorized, resDeleteRepo.StatusCode(), "Writer unexpectedly did not receive unauthorized response while deleting repo")
 
@@ -171,20 +171,20 @@ func TestReaderPermissions(t *testing.T) {
 	readerClient := newClientFromGroup(t, ctx, log, "reader", groupIDs)
 
 	// listing the available branches should succeed
-	resListBranches, err := readerClient.ListBranchesWithResponse(ctx, repo, &apigen.ListBranchesParams{})
+	resListBranches, err := readerClient.ListBranchesWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListBranchesParams{})
 	require.NoError(t, err, "Reader failed while listing branches of repository")
 	require.Equal(t, http.StatusOK, resListBranches.StatusCode(), "Reader unexpectedly failed to list branches of repository")
 
 	branches := resListBranches.JSON200.Results
 
 	// reading the commit of the main branch of the repo should succeed
-	resCommit, err := readerClient.GetCommitWithResponse(ctx, repo, branches[0].CommitId)
+	resCommit, err := readerClient.GetCommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branches[0].CommitId)
 	require.NoError(t, err, "Reader failed while reading branch commit")
 	require.Equal(t, http.StatusOK, resCommit.StatusCode(), "Reader unexpectedly failed to read branch commit")
 
 	// attempting to create a branch should be unauthorized
 	const branch1 = "feature-1"
-	resAddBranch, err := readerClient.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+	resAddBranch, err := readerClient.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 		Name:   branch1,
 		Source: mainBranch,
 	})
@@ -192,7 +192,7 @@ func TestReaderPermissions(t *testing.T) {
 	require.Equal(t, http.StatusUnauthorized, resAddBranch.StatusCode(), "Reader unexpectedly did not receive unauthorized response while creating branch")
 
 	// attempting to delete the repository should be unauthorized
-	resDeleteRepo, err := readerClient.DeleteRepositoryWithResponse(ctx, repo, &apigen.DeleteRepositoryParams{})
+	resDeleteRepo, err := readerClient.DeleteRepositoryWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.DeleteRepositoryParams{})
 	require.NoError(t, err, "Reader failed while testing delete repository")
 	require.Equal(t, http.StatusUnauthorized, resDeleteRepo.StatusCode(), "Reader unexpectedly did not receive unauthorized response while deleting repo")
 }
@@ -229,7 +229,7 @@ func TestRepoMetadata_Unauthorized(t *testing.T) {
 	// generate client with no group association
 	clt := newClientFromGroup(t, ctx, log, "none", nil)
 	t.Run("set", func(t *testing.T) {
-		resp, err := clt.SetRepositoryMetadataWithResponse(ctx, repo, apigen.SetRepositoryMetadataJSONRequestBody{
+		resp, err := clt.SetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.SetRepositoryMetadataJSONRequestBody{
 			Metadata: apigen.RepositoryMetadataSet_Metadata{
 				AdditionalProperties: map[string]string{"foo": "bar"},
 			},
@@ -241,7 +241,7 @@ func TestRepoMetadata_Unauthorized(t *testing.T) {
 		}
 	})
 	t.Run("delete", func(t *testing.T) {
-		resp, err := clt.DeleteRepositoryMetadataWithResponse(ctx, repo, apigen.DeleteRepositoryMetadataJSONRequestBody{Keys: []string{"foo"}})
+		resp, err := clt.DeleteRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.DeleteRepositoryMetadataJSONRequestBody{Keys: []string{"foo"}})
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON401)
 		if !strings.Contains(resp.JSON401.Message, auth.ErrInsufficientPermissions.Error()) {
@@ -250,7 +250,7 @@ func TestRepoMetadata_Unauthorized(t *testing.T) {
 	})
 
 	t.Run("get", func(t *testing.T) {
-		resp, err := clt.GetRepositoryMetadataWithResponse(ctx, repo)
+		resp, err := clt.GetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo))
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON401)
 		if !strings.Contains(resp.JSON401.Message, auth.ErrInsufficientPermissions.Error()) {
@@ -270,7 +270,7 @@ func TestCreatePolicy(t *testing.T) {
 				{
 					Action:   []string{"fs:ReadObject"},
 					Effect:   "allow",
-					Resource: "arn:sghub:fs:::repository/foo/object/*",
+					Resource: "arn:sghub:fs:::repository/test-user/foo/object/*",
 				},
 			},
 		})
@@ -286,7 +286,7 @@ func TestCreatePolicy(t *testing.T) {
 				{
 					Action:   []string{"fsx:ReadObject"},
 					Effect:   "allow",
-					Resource: "arn:sghub:fs:::repository/foo/object/*",
+					Resource: "arn:sghub:fs:::repository/test-user/foo/object/*",
 				},
 			},
 		})
@@ -302,12 +302,12 @@ func TestBranchProtectionRules_Unauthorized(t *testing.T) {
 
 	// generate client with no group association
 	clt := newClientFromGroup(t, ctx, log, "none", nil)
-	respPreflight, err := clt.CreateBranchProtectionRulePreflightWithResponse(ctx, repo)
+	respPreflight, err := clt.CreateBranchProtectionRulePreflightWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusUnauthorized, respPreflight.StatusCode())
 
 	// the result of an actual call to the endpoint should have the same result
-	resp, err := clt.InternalCreateBranchProtectionRuleWithResponse(ctx, repo, apigen.InternalCreateBranchProtectionRuleJSONRequestBody{
+	resp, err := clt.InternalCreateBranchProtectionRuleWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.InternalCreateBranchProtectionRuleJSONRequestBody{
 		Pattern: "main",
 	})
 	require.NoError(t, err)
@@ -319,12 +319,12 @@ func TestGarbageCollectionRules_Unauthorized(t *testing.T) {
 
 	// generate client with no group association
 	clt := newClientFromGroup(t, ctx, log, "none", nil)
-	respPreflight, err := clt.SetGarbageCollectionRulesPreflightWithResponse(ctx, repo)
+	respPreflight, err := clt.SetGarbageCollectionRulesPreflightWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusUnauthorized, respPreflight.StatusCode())
 
 	// the result of an actual call to the endpoint should have the same result
-	resp, err := clt.SetGCRulesWithResponse(ctx, repo, apigen.SetGCRulesJSONRequestBody{
+	resp, err := clt.SetGCRulesWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.SetGCRulesJSONRequestBody{
 		Branches: []apigen.GarbageCollectionRule{{BranchId: "main", RetentionDays: 1}}, DefaultRetentionDays: 5,
 	})
 	require.NoError(t, err)
@@ -453,17 +453,17 @@ func TestUpdatePolicy(t *testing.T) {
 func mergeAuthTest(t *testing.T, cli *apigen.ClientWithResponses, ctx context.Context, repo string, branch string) (*apigen.MergeIntoBranchResponse, error) {
 	uploadFileRandomData(ctx, t, repo, mainBranch, "README")
 
-	resMainCommit, err := cli.CommitWithResponse(ctx, repo, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{Message: "Initial content"})
+	resMainCommit, err := cli.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{Message: "Initial content"})
 	require.NoError(t, err, "failed to commit initial content in merge auth test")
 	require.Equal(t, http.StatusCreated, resMainCommit.StatusCode())
 
 	uploadFileRandomData(ctx, t, repo, branch, "foo.txt")
 
-	resBranchCommit, err := cli.CommitWithResponse(ctx, repo, branch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{Message: "Additional content"})
+	resBranchCommit, err := cli.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{Message: "Additional content"})
 	require.NoError(t, err, "failed to commit additional content in merge auth test")
 	require.Equal(t, http.StatusCreated, resBranchCommit.StatusCode())
 
-	return client.MergeIntoBranchWithResponse(ctx, repo, branch, mainBranch, apigen.MergeIntoBranchJSONRequestBody{})
+	return client.MergeIntoBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, mainBranch, apigen.MergeIntoBranchJSONRequestBody{})
 }
 
 func mapGroupNamesToIDs(t *testing.T, ctx context.Context, groups []string) (map[string]string, []string) {

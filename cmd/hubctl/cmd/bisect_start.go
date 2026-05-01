@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +25,7 @@ var bisectStartCmd = &cobra.Command{
 		client := getClient()
 		ctx := cmd.Context()
 		// check repository exists
-		repoResponse, err := client.GetRepositoryWithResponse(ctx, repository)
+		repoResponse, err := client.GetRepositoryWithResponse(ctx, apigen.RepositoryOwner(repository), apigen.RepositoryName(repository))
 		DieOnErrorOrUnexpectedStatusCode(repoResponse, err, http.StatusOK)
 		if repoResponse.JSON200 == nil {
 			Die("Bad response from server", 1)

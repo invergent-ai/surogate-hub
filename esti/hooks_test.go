@@ -42,7 +42,7 @@ func TestHooksSuccess(t *testing.T) {
 	ctx, _, repo := setupTest(t)
 	defer tearDownTest(repo)
 	parseAndUploadActions(t, ctx, repo, mainBranch)
-	commitResp, err := client.CommitWithResponse(ctx, repo, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err := client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "Initial content",
 	})
 	require.NoError(t, err, "failed to commit initial content")
@@ -82,7 +82,7 @@ func waitForListRepositoryRunsLen(ctx context.Context, t *testing.T, repo, ref s
 	bo.MaxInterval = 5 * time.Second
 	bo.MaxElapsedTime = 30 * time.Second
 	listFunc := func() error {
-		runsResp, err := client.ListRepositoryRunsWithResponse(ctx, repo, &apigen.ListRepositoryRunsParams{
+		runsResp, err := client.ListRepositoryRunsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListRepositoryRunsParams{
 			Commit: apiutil.Ptr(ref),
 		})
 		require.NoError(t, err)
@@ -102,7 +102,7 @@ func testCommitMerge(t *testing.T, ctx context.Context, repo string) {
 	const branch = "feature-1"
 
 	t.Log("Create branch", branch)
-	createBranchResp, err := client.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+	createBranchResp, err := client.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 		Name:   branch,
 		Source: mainBranch,
 	})
@@ -116,7 +116,7 @@ func testCommitMerge(t *testing.T, ctx context.Context, repo string) {
 	require.Equal(t, http.StatusCreated, resp.StatusCode())
 
 	t.Log("Commit content", branch)
-	commitResp, err := client.CommitWithResponse(ctx, repo, branch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err := client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "Initial content",
 	})
 	require.NoError(t, err, "failed to commit initial content")
@@ -169,7 +169,7 @@ func testCommitMerge(t *testing.T, ctx context.Context, repo string) {
 		Metadata:      commitRecord.Metadata.AdditionalProperties,
 	}, postCommitEvent)
 
-	mergeResp, err := client.MergeIntoBranchWithResponse(ctx, repo, branch, mainBranch, apigen.MergeIntoBranchJSONRequestBody{})
+	mergeResp, err := client.MergeIntoBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, mainBranch, apigen.MergeIntoBranchJSONRequestBody{})
 	require.NoError(t, err)
 
 	webhookData, err = responseWithTimeout(server, 1*time.Minute)
@@ -235,14 +235,14 @@ func testCommitMerge(t *testing.T, ctx context.Context, repo string) {
 
 func testCreateDeleteBranch(t *testing.T, ctx context.Context, repo string) {
 	const testBranch = "test_branch_delete"
-	createBranchResp, err := client.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+	createBranchResp, err := client.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 		Name:   testBranch,
 		Source: mainBranch,
 	})
 	require.NoError(t, err, "failed to create branch")
 	require.Equal(t, http.StatusCreated, createBranchResp.StatusCode())
 
-	resp, err := client.GetBranchWithResponse(ctx, repo, mainBranch)
+	resp, err := client.GetBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode())
 	commitID := resp.JSON200.CommitId
@@ -288,7 +288,7 @@ func testCreateDeleteBranch(t *testing.T, ctx context.Context, repo string) {
 	}, postCreateBranchEvent)
 
 	// Delete branch
-	deleteBranchResp, err := client.DeleteBranchWithResponse(ctx, repo, testBranch, &apigen.DeleteBranchParams{})
+	deleteBranchResp, err := client.DeleteBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), testBranch, &apigen.DeleteBranchParams{})
 
 	require.NoError(t, err, "failed to delete branch")
 	require.Equal(t, http.StatusNoContent, deleteBranchResp.StatusCode())
@@ -335,12 +335,12 @@ func testCreateDeleteBranch(t *testing.T, ctx context.Context, repo string) {
 func testCreateDeleteTag(t *testing.T, ctx context.Context, repo string) {
 	const tagID = "tag_test_hooks"
 
-	resp, err := client.GetBranchWithResponse(ctx, repo, mainBranch)
+	resp, err := client.GetBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode())
 	commitID := resp.JSON200.CommitId
 
-	createTagResp, err := client.CreateTagWithResponse(ctx, repo, apigen.CreateTagJSONRequestBody{
+	createTagResp, err := client.CreateTagWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateTagJSONRequestBody{
 		Id:  tagID,
 		Ref: commitID,
 	})
@@ -389,7 +389,7 @@ func testCreateDeleteTag(t *testing.T, ctx context.Context, repo string) {
 	}, postCreateTagEvent)
 
 	// Delete tag
-	deleteTagResp, err := client.DeleteTagWithResponse(ctx, repo, tagID, &apigen.DeleteTagParams{})
+	deleteTagResp, err := client.DeleteTagWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), tagID, &apigen.DeleteTagParams{})
 
 	require.NoError(t, err, "failed to delete tag")
 	require.Equal(t, http.StatusNoContent, deleteTagResp.StatusCode())

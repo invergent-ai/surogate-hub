@@ -22,7 +22,7 @@ var tagListCmd = &cobra.Command{
 
 		ctx := cmd.Context()
 		client := getClient()
-		resp, err := client.ListTagsWithResponse(ctx, u.Repository, &apigen.ListTagsParams{
+		resp, err := client.ListTagsWithResponse(ctx, apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), &apigen.ListTagsParams{
 			After:  apiutil.Ptr(apigen.PaginationAfter(after)),
 			Amount: apiutil.Ptr(apigen.PaginationAmount(amount)),
 		})

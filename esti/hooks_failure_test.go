@@ -91,7 +91,7 @@ func hookFailToCreateBranch(t *testing.T, path string) {
 	const branch = "feature-1"
 
 	logger.WithField("branch", branch).Info("Create branch")
-	resp, err := client.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+	resp, err := client.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 		Name:   branch,
 		Source: mainBranch,
 	})
@@ -101,7 +101,7 @@ func hookFailToCreateBranch(t *testing.T, path string) {
 	createAction(t, ctx, repo, branch, path, actionPreCreateBranchTmpl)
 
 	logger.WithField("branch", "test_branch").Info("Create branch - expect failure")
-	resp, err = client.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+	resp, err = client.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 		Name:   "test_branch",
 		Source: branch,
 	})
@@ -115,7 +115,7 @@ func hookFailToCommit(t *testing.T, path string) {
 	const branch = "feature-1"
 
 	logger.WithField("branch", branch).Info("Create branch")
-	resp, err := client.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+	resp, err := client.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 		Name:   branch,
 		Source: mainBranch,
 	})
@@ -127,7 +127,7 @@ func hookFailToCommit(t *testing.T, path string) {
 
 	createAction(t, ctx, repo, branch, path, actionPreCommitTmpl)
 
-	commitResp, err := client.CommitWithResponse(ctx, repo, branch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err := client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "Initial content",
 	})
 	require.NoError(t, err)

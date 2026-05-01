@@ -41,7 +41,7 @@ func TestCopyObject(t *testing.T) {
 			false,
 		)
 
-		res, err := client.StatObjectWithResponse(ctx, repo, ingestionBranch, &apigen.StatObjectParams{
+		res, err := client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), ingestionBranch, &apigen.StatObjectParams{
 			Path: largeObject,
 		})
 		require.NoError(t, err)
@@ -50,7 +50,7 @@ func TestCopyObject(t *testing.T) {
 		objStat := res.JSON200
 		destPath := "foo"
 		srcBranch := ingestionBranch
-		copyResp, err := client.CopyObjectWithResponse(ctx, repo, "main", &apigen.CopyObjectParams{
+		copyResp, err := client.CopyObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CopyObjectParams{
 			DestPath: destPath,
 		}, apigen.CopyObjectJSONRequestBody{
 			SrcPath: largeObject,
@@ -72,7 +72,7 @@ func TestCopyObject(t *testing.T) {
 		require.Nil(t, deep.Equal(objStat, copyStat))
 
 		// get back info
-		statResp, err := client.StatObjectWithResponse(ctx, repo, "main", &apigen.StatObjectParams{Path: destPath})
+		statResp, err := client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.StatObjectParams{Path: destPath})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, statResp.StatusCode())
 		require.Nil(t, deep.Equal(statResp.JSON200, copyStat))
@@ -89,7 +89,7 @@ func TestCopyObject(t *testing.T) {
 			false,
 		)
 
-		res, err := client.StatObjectWithResponse(ctx, repo, ingestionBranch, &apigen.StatObjectParams{
+		res, err := client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), ingestionBranch, &apigen.StatObjectParams{
 			Path: largeObject,
 		})
 		require.NoError(t, err)
@@ -108,7 +108,7 @@ func TestCopyObject(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			copyResp, copyErr = client.CopyObjectWithResponse(cancelCtx, repo, "main", &apigen.CopyObjectParams{
+			copyResp, copyErr = client.CopyObjectWithResponse(cancelCtx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CopyObjectParams{
 				DestPath: destPath,
 			}, apigen.CopyObjectJSONRequestBody{
 				SrcPath: largeObject,
@@ -123,7 +123,7 @@ func TestCopyObject(t *testing.T) {
 		require.Nil(t, copyResp)
 
 		// Verify object doesn't exist
-		statResp, err := client.StatObjectWithResponse(ctx, repo, "main", &apigen.StatObjectParams{Path: destPath})
+		statResp, err := client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.StatObjectParams{Path: destPath})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNotFound, statResp.StatusCode())
 	})
@@ -153,7 +153,7 @@ func TestCopyObject(t *testing.T) {
 			true,
 		)
 
-		res, err := client.StatObjectWithResponse(ctx, repoName, ingestionBranch, &apigen.StatObjectParams{
+		res, err := client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), ingestionBranch, &apigen.StatObjectParams{
 			Path: largeObject,
 		})
 		require.NoError(t, err)
@@ -162,7 +162,7 @@ func TestCopyObject(t *testing.T) {
 		objStat := res.JSON200
 		destPath := "foo"
 		srcBranch := ingestionBranch
-		copyResp, err := client.CopyObjectWithResponse(ctx, repoName, "main", &apigen.CopyObjectParams{
+		copyResp, err := client.CopyObjectWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "main", &apigen.CopyObjectParams{
 			DestPath: destPath,
 		}, apigen.CopyObjectJSONRequestBody{
 			SrcPath: largeObject,
@@ -173,7 +173,7 @@ func TestCopyObject(t *testing.T) {
 			t.Fatalf("expected 403 forbidden error for CopyObject on read-only repository, got %d status code instead", copyResp.StatusCode())
 		}
 
-		copyResp, err = client.CopyObjectWithResponse(ctx, repoName, "main", &apigen.CopyObjectParams{
+		copyResp, err = client.CopyObjectWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "main", &apigen.CopyObjectParams{
 			DestPath: destPath,
 		}, apigen.CopyObjectJSONRequestBody{
 			SrcPath: largeObject,
@@ -196,7 +196,7 @@ func TestCopyObject(t *testing.T) {
 		require.Nil(t, deep.Equal(objStat, copyStat))
 
 		// get back info
-		statResp, err := client.StatObjectWithResponse(ctx, repoName, "main", &apigen.StatObjectParams{Path: destPath})
+		statResp, err := client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "main", &apigen.StatObjectParams{Path: destPath})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, statResp.StatusCode())
 		require.Nil(t, deep.Equal(statResp.JSON200, copyStat))

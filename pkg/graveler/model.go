@@ -2,6 +2,7 @@ package graveler
 
 import (
 	"fmt"
+	"net/url"
 
 	"github.com/invergent-ai/surogate-hub/pkg/kv"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -29,7 +30,7 @@ func init() {
 }
 
 func RepoPath(repoID RepositoryID) string {
-	return kv.FormatPath(reposPrefix, repoID.String())
+	return kv.FormatPath(reposPrefix, url.PathEscape(repoID.String()))
 }
 
 // RepositoriesPartition - The common partition under which all repositories exist

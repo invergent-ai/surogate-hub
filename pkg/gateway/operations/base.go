@@ -15,6 +15,7 @@ import (
 	"github.com/invergent-ai/surogate-hub/pkg/catalog"
 	gwerrors "github.com/invergent-ai/surogate-hub/pkg/gateway/errors"
 	"github.com/invergent-ai/surogate-hub/pkg/gateway/multipart"
+	gatewaypath "github.com/invergent-ai/surogate-hub/pkg/gateway/path"
 	"github.com/invergent-ai/surogate-hub/pkg/httputil"
 	"github.com/invergent-ai/surogate-hub/pkg/kv"
 	"github.com/invergent-ai/surogate-hub/pkg/logging"
@@ -195,9 +196,9 @@ func (o *RepoOperation) EncodeError(w http.ResponseWriter, req *http.Request, or
 	writeErr := EncodeResponse(w, gwerrors.APIErrorResponse{
 		Code:       err.Code,
 		Message:    err.Description,
-		BucketName: o.Repository.Name,
+		BucketName: gatewaypath.RepositoryIDToBucket(o.Repository.Name),
 		Key:        "",
-		Resource:   o.Repository.Name,
+		Resource:   gatewaypath.RepositoryIDToBucket(o.Repository.Name),
 		Region:     o.Region,
 		RequestID:  rid,
 		HostID:     generateHostID(),
@@ -227,9 +228,9 @@ func (o *PathOperation) EncodeError(w http.ResponseWriter, req *http.Request, or
 	writeErr := EncodeResponse(w, gwerrors.APIErrorResponse{
 		Code:       err.Code,
 		Message:    err.Description,
-		BucketName: o.Repository.Name,
+		BucketName: gatewaypath.RepositoryIDToBucket(o.Repository.Name),
 		Key:        o.Path,
-		Resource:   fmt.Sprintf("%s@%s", o.Reference, o.Repository.Name),
+		Resource:   fmt.Sprintf("%s@%s", o.Reference, gatewaypath.RepositoryIDToBucket(o.Repository.Name)),
 		Region:     o.Region,
 		RequestID:  rid,
 		HostID:     generateHostID(),

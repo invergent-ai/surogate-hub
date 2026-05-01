@@ -84,7 +84,7 @@ var logCmd = &cobra.Command{
 	Use:               "log <branch URI>",
 	Short:             "Show log of commits",
 	Long:              "Show log of commits for a given branch",
-	Example:           "hubctl log --dot sg://example-repository/main | dot -Tsvg > graph.svg",
+	Example:           "hubctl log --dot sg://my-user/example-repository/main | dot -Tsvg > graph.svg",
 	Args:              cobra.ExactArgs(1),
 	ValidArgsFunction: ValidArgsRepository,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -148,7 +148,7 @@ var logCmd = &cobra.Command{
 		}
 
 		for pagination.HasMore {
-			resp, err := client.LogCommitsWithResponse(cmd.Context(), branchURI.Repository, branchURI.Ref, logCommitsParams)
+			resp, err := client.LogCommitsWithResponse(cmd.Context(), apigen.RepositoryOwner(branchURI.Repository), apigen.RepositoryName(branchURI.Repository), branchURI.Ref, logCommitsParams)
 			DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)
 			if resp.JSON200 == nil {
 				Die("Bad response from server", 1)

@@ -27,7 +27,7 @@ func removeBranches(ctx context.Context, client *apigen.ClientWithResponses, par
 	go func() {
 		defer close(toDelete)
 		for {
-			resp, err := client.ListBranchesWithResponse(ctx, repo, &apigen.ListBranchesParams{
+			resp, err := client.ListBranchesWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListBranchesParams{
 				Prefix: &pfx,
 				After:  &after,
 			})
@@ -53,7 +53,7 @@ func removeBranches(ctx context.Context, client *apigen.ClientWithResponses, par
 	for i := 0; i < parallelism; i++ {
 		go func() {
 			for branch := range toDelete {
-				resp, err := client.DeleteBranchWithResponse(ctx, repo, branch, &apigen.DeleteBranchParams{})
+				resp, err := client.DeleteBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.DeleteBranchParams{})
 				if err != nil {
 					fmt.Printf("Failed to request %s deletion: %s\n", branch, err)
 					continue
@@ -98,7 +98,7 @@ var abuseMergeCmd = &cobra.Command{
 
 		defer removeBranches(cmd.Context(), client, parallelism, u.Repository, branchPrefix)
 
-		resp, err := client.GetRepositoryWithResponse(cmd.Context(), u.Repository)
+		resp, err := client.GetRepositoryWithResponse(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository))
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)
 		if resp.JSON200 == nil {
 			DieFmt("Bad response from server: %+v", resp)
@@ -123,11 +123,10 @@ var abuseMergeCmd = &cobra.Command{
 }
 
 func mergeSomething(ctx context.Context, client *apigen.ClientWithResponses, base *uri.URI, name string) error {
-	createBranchResponse, err := client.CreateBranchWithResponse(ctx, base.Repository,
-		apigen.CreateBranchJSONRequestBody{
-			Name:   name,
-			Source: base.Ref,
-		},
+	createBranchResponse, err := client.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(base.Repository), apigen.RepositoryName(base.Repository), apigen.CreateBranchJSONRequestBody{
+		Name:   name,
+		Source: base.Ref,
+	},
 	)
 	if err != nil || !apiutil.IsStatusCodeOK(createBranchResponse.StatusCode()) {
 		if err == nil {
@@ -141,7 +140,7 @@ func mergeSomething(ctx context.Context, client *apigen.ClientWithResponses, bas
 	path := fmt.Sprintf("object-%s", name)
 	u.Path = &path
 
-	getResponse, err := client.GetPhysicalAddressWithResponse(ctx, u.Repository, u.Ref, &apigen.GetPhysicalAddressParams{Path: *u.Path})
+	getResponse, err := client.GetPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), u.Ref, &apigen.GetPhysicalAddressParams{Path: *u.Path})
 	if err != nil || getResponse.JSON200 == nil {
 		if err == nil {
 			err = helpers.ResponseAsError(getResponse)
@@ -151,7 +150,7 @@ func mergeSomething(ctx context.Context, client *apigen.ClientWithResponses, bas
 	// Link the object but do not actually upload anything - it is not
 	// important for merging, and would only reduce load.
 	stagingLocation := getResponse.JSON200
-	linkResponse, err := client.LinkPhysicalAddressWithResponse(ctx, u.Repository, u.Ref,
+	linkResponse, err := client.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), u.Ref,
 		&apigen.LinkPhysicalAddressParams{
 			Path: *u.Path,
 		},
@@ -169,7 +168,7 @@ func mergeSomething(ctx context.Context, client *apigen.ClientWithResponses, bas
 		return fmt.Errorf("link physical address for %s: %w", name, err)
 	}
 
-	commitResponse, err := client.CommitWithResponse(ctx, u.Repository, u.Ref, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{Message: fmt.Sprintf("commit %s", name)})
+	commitResponse, err := client.CommitWithResponse(ctx, apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), u.Ref, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{Message: fmt.Sprintf("commit %s", name)})
 	if err != nil || commitResponse.JSON201 == nil {
 		if err == nil {
 			err = helpers.ResponseAsError(commitResponse)
@@ -177,7 +176,7 @@ func mergeSomething(ctx context.Context, client *apigen.ClientWithResponses, bas
 		return fmt.Errorf("commit for %s: %w", name, err)
 	}
 
-	mergeResponse, err := client.MergeIntoBranchWithResponse(ctx, u.Repository, u.Ref, base.Ref, apigen.MergeIntoBranchJSONRequestBody{})
+	mergeResponse, err := client.MergeIntoBranchWithResponse(ctx, apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), u.Ref, base.Ref, apigen.MergeIntoBranchJSONRequestBody{})
 	if err != nil || mergeResponse.JSON200 == nil {
 		if err == nil {
 			err = helpers.ResponseAsError(mergeResponse)

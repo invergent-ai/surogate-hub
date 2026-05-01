@@ -18,6 +18,7 @@ import (
 func TestDeleteObjects(t *testing.T) {
 	ctx, _, repo := setupTest(t)
 	defer tearDownTest(repo)
+	bucket := s3BucketName(repo)
 	const numOfObjects = 10
 
 	identifiers := make([]types.ObjectIdentifier, 0, numOfObjects)
@@ -31,7 +32,7 @@ func TestDeleteObjects(t *testing.T) {
 	}
 
 	listOut, err := svc.ListObjects(ctx, &s3.ListObjectsInput{
-		Bucket: aws.String(repo),
+		Bucket: aws.String(bucket),
 		Prefix: aws.String(mainBranch + "/"),
 	})
 
@@ -39,7 +40,7 @@ func TestDeleteObjects(t *testing.T) {
 	require.Len(t, listOut.Contents, numOfObjects)
 
 	deleteOut, err := svc.DeleteObjects(ctx, &s3.DeleteObjectsInput{
-		Bucket: aws.String(repo),
+		Bucket: aws.String(bucket),
 		Delete: &types.Delete{
 			Objects: identifiers,
 		},
@@ -49,7 +50,7 @@ func TestDeleteObjects(t *testing.T) {
 	assert.Len(t, deleteOut.Deleted, numOfObjects)
 
 	listOut, err = svc.ListObjects(ctx, &s3.ListObjectsInput{
-		Bucket: aws.String(repo),
+		Bucket: aws.String(bucket),
 		Prefix: aws.String(mainBranch + "/"),
 	})
 
@@ -62,6 +63,7 @@ func TestDeleteObjects_Viewer(t *testing.T) {
 	t.SkipNow()
 	ctx, _, repo := setupTest(t)
 	defer tearDownTest(repo)
+	bucket := s3BucketName(repo)
 
 	// setup data
 	const filename = "delete-me"
@@ -93,13 +95,14 @@ func TestDeleteObjects_Viewer(t *testing.T) {
 
 	// delete objects using viewer
 	deleteOut, err := s3Client.DeleteObjects(ctx, &s3.DeleteObjectsInput{
-		Bucket: aws.String(repo),
+		Bucket: aws.String(bucket),
 		Delete: &types.Delete{
 			Objects: []types.ObjectIdentifier{
 				{Key: aws.String(mainBranch + "/" + filename)},
 			},
 		},
 	})
+
 	// make sure we got an error we fail to delete the file
 	assert.NoError(t, err)
 	assert.Len(t, deleteOut.Errors, 1, "error we fail to delete")
@@ -107,7 +110,7 @@ func TestDeleteObjects_Viewer(t *testing.T) {
 
 	// verify that viewer can't delete the file
 	listOut, err := svc.ListObjects(ctx, &s3.ListObjectsInput{
-		Bucket: aws.String(repo),
+		Bucket: aws.String(bucket),
 		Prefix: aws.String(mainBranch + "/"),
 	})
 	assert.NoError(t, err)

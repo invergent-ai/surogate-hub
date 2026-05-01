@@ -28,7 +28,7 @@ func TestSanityAPI(t *testing.T) {
 
 	log.Debug("verify upload content")
 	for i, p := range paths {
-		resp, err := client.GetObjectWithResponse(ctx, repo, mainBranch, &apigen.GetObjectParams{Path: p})
+		resp, err := client.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.GetObjectParams{Path: p})
 		require.NoError(t, err, "get object for", p)
 		require.Equal(t, http.StatusOK, resp.StatusCode())
 		content := string(resp.Body)
@@ -40,7 +40,7 @@ func TestSanityAPI(t *testing.T) {
 	require.Len(t, entries, numOfFiles, "repository should have files")
 
 	log.Debug("commit changes")
-	commitResp, err := client.CommitWithResponse(ctx, repo, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err := client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "first commit",
 	})
 	require.NoError(t, err, "initial commit")
@@ -51,7 +51,7 @@ func TestSanityAPI(t *testing.T) {
 	require.Len(t, entries, numOfFiles, "repository should have files")
 
 	log.Debug("create 'branch1' based on 'main'")
-	createBranchResp, err := client.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+	createBranchResp, err := client.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 		Name:   "branch1",
 		Source: mainBranch,
 	})
@@ -61,7 +61,7 @@ func TestSanityAPI(t *testing.T) {
 	require.NotEmpty(t, branchRef, "reference to new branch")
 
 	log.Debug("list branches")
-	branchesResp, err := client.ListBranchesWithResponse(ctx, repo, &apigen.ListBranchesParams{})
+	branchesResp, err := client.ListBranchesWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListBranchesParams{})
 	require.NoError(t, err, "list branches")
 	require.Equal(t, http.StatusOK, branchesResp.StatusCode())
 
@@ -82,7 +82,7 @@ func TestSanityAPI(t *testing.T) {
 	_, _ = uploadFileRandomData(ctx, t, repo, "branch1", "file0")
 
 	log.Debug("branch1 - delete file1")
-	deleteResp, err := client.DeleteObjectWithResponse(ctx, repo, "branch1", &apigen.DeleteObjectParams{Path: "file1"})
+	deleteResp, err := client.DeleteObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "branch1", &apigen.DeleteObjectParams{Path: "file1"})
 	require.NoError(t, err, "delete object")
 	require.Equal(t, http.StatusNoContent, deleteResp.StatusCode())
 
@@ -108,20 +108,20 @@ func TestSanityAPI(t *testing.T) {
 	require.EqualValues(t, pathsBranch1, mainPaths)
 
 	log.Debug("branch1 - diff changes with main")
-	diffResp, err := client.DiffRefsWithResponse(ctx, repo, mainBranch, "branch1", &apigen.DiffRefsParams{})
+	diffResp, err := client.DiffRefsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, "branch1", &apigen.DiffRefsParams{})
 	require.NoError(t, err, "diff between branch1 and main")
 	require.Equal(t, http.StatusOK, diffResp.StatusCode())
 	require.Len(t, diffResp.JSON200.Results, 0, "no changes should be found as we didn't commit anything")
 
 	log.Debug("branch1 - commit changes")
-	commitResp, err = client.CommitWithResponse(ctx, repo, "branch1", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err = client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "branch1", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "3 changes",
 	})
 	require.NoError(t, err, "commit 3 changes")
 	require.Equal(t, http.StatusCreated, commitResp.StatusCode())
 
 	log.Debug("branch1 - diff changes with main")
-	diffResp, err = client.DiffRefsWithResponse(ctx, repo, mainBranch, "branch1", &apigen.DiffRefsParams{
+	diffResp, err = client.DiffRefsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, "branch1", &apigen.DiffRefsParams{
 		Amount: apiutil.Ptr(apigen.PaginationAmount(-1)),
 	})
 	require.NoError(t, err, "diff between branch1 and main")
@@ -134,25 +134,25 @@ func TestSanityAPI(t *testing.T) {
 	})
 
 	log.Debug("branch1 - merge changes to main")
-	mergeResp, err := client.MergeIntoBranchWithResponse(ctx, repo, "branch1", mainBranch, apigen.MergeIntoBranchJSONRequestBody{})
+	mergeResp, err := client.MergeIntoBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "branch1", mainBranch, apigen.MergeIntoBranchJSONRequestBody{})
 	require.NoError(t, err, "merge branch1 to main")
 	require.Equal(t, http.StatusOK, mergeResp.StatusCode())
 	require.NotEmpty(t, mergeResp.JSON200.Reference, "merge should return a commit reference")
 
 	log.Debug("branch1 - diff after merge")
-	diffResp, err = client.DiffRefsWithResponse(ctx, repo, mainBranch, "branch1", &apigen.DiffRefsParams{})
+	diffResp, err = client.DiffRefsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, "branch1", &apigen.DiffRefsParams{})
 	require.NoError(t, err, "diff between branch1 and main")
 	require.Equal(t, http.StatusOK, diffResp.StatusCode())
 	require.Len(t, diffResp.JSON200.Results, 0, "no diff between branch1 and main")
 
 	log.Debug("main - diff with branch1")
-	diffResp, err = client.DiffRefsWithResponse(ctx, repo, "branch1", mainBranch, &apigen.DiffRefsParams{})
+	diffResp, err = client.DiffRefsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "branch1", mainBranch, &apigen.DiffRefsParams{})
 	require.NoError(t, err, "diff between main and branch1")
 	require.Equal(t, http.StatusOK, diffResp.StatusCode())
 	require.Len(t, diffResp.JSON200.Results, 0, "no diff between main and branch1")
 
 	log.Debug("delete test repository")
-	deleteRepoResp, err := client.DeleteRepositoryWithResponse(ctx, repo, &apigen.DeleteRepositoryParams{})
+	deleteRepoResp, err := client.DeleteRepositoryWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.DeleteRepositoryParams{})
 	require.NoError(t, err, "failed to delete repository")
 	require.Equal(t, http.StatusNoContent, deleteRepoResp.StatusCode())
 }

@@ -43,16 +43,26 @@ type ResolvedAbsolutePath struct {
 }
 
 func ResolveAbsolutePath(encodedPath string) (ResolvedAbsolutePath, error) {
-	const encodedPartsCount = 3
+	const encodedPartsCount = 4
 	encodedPath = strings.TrimLeft(encodedPath, "/")
+	bucketParts := strings.SplitN(encodedPath, "/", 3) //nolint:mnd
+	if len(bucketParts) == 3 {
+		if repo, ok := BucketToRepositoryID(bucketParts[0]); ok {
+			return ResolvedAbsolutePath{
+				Repo:      repo,
+				Reference: bucketParts[1],
+				Path:      bucketParts[2],
+			}, nil
+		}
+	}
 	parts := strings.SplitN(encodedPath, "/", encodedPartsCount)
 	if len(parts) != encodedPartsCount {
 		return ResolvedAbsolutePath{}, ErrPathMalformed
 	}
 	return ResolvedAbsolutePath{
-		Repo:      parts[0],
-		Reference: parts[1],
-		Path:      parts[2],
+		Repo:      parts[0] + Separator + parts[1],
+		Reference: parts[2],
+		Path:      parts[3],
 	}, nil
 }
 

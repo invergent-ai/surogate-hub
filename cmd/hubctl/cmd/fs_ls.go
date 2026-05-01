@@ -38,7 +38,7 @@ var fsLsCmd = &cobra.Command{
 				After:     apiutil.Ptr(apigen.PaginationAfter(from)),
 				Delimiter: &paramsDelimiter,
 			}
-			resp, err := client.ListObjectsWithResponse(cmd.Context(), pathURI.Repository, pathURI.Ref, params)
+			resp, err := client.ListObjectsWithResponse(cmd.Context(), apigen.RepositoryOwner(pathURI.Repository), apigen.RepositoryName(pathURI.Repository), pathURI.Ref, params)
 			DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)
 			if resp.JSON200 == nil {
 				Die("Bad response from server", 1)

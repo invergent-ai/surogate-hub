@@ -18,7 +18,7 @@ func TestHubctlDoctor(t *testing.T) {
 	require.NoError(t, err)
 	vars := map[string]string{
 		"SGHUB_ENDPOINT": endPointURL,
-		"HOST":            fmt.Sprintf("%s://%s", u.Scheme, u.Host),
+		"HOST":           fmt.Sprintf("%s://%s", u.Scheme, u.Host),
 	}
 
 	RunCmdAndVerifySuccessWithFile(t, HubctlWithParams(accessKeyID, secretAccessKey, endPointURL)+" doctor", false, "hubctl_doctor_ok", vars)

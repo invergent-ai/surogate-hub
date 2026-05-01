@@ -98,13 +98,13 @@ func TestPutFileRefWritesOneKeyPerTuple(t *testing.T) {
 
 	err := registry.PutFileRef(ctx, FileRef{
 		FileHash: "file-a",
-		Repo:     "repo-a",
-		Ref:      "main",
+		Repo:     "test-user/repo-a",
+		Ref:      "feature/xet",
 		Path:     "models/checkpoint.bin",
 	})
 	require.NoError(t, err)
 
-	requireKVValue(t, ctx, kvStore, "xet/file_refs/file-a/repo-a/main/models/checkpoint.bin", []byte{})
+	requireKVValue(t, ctx, kvStore, "xet/file_refs/file-a/test-user%2Frepo-a/feature%2Fxet/models%2Fcheckpoint.bin", []byte{})
 }
 
 func TestListFileRefsScansOneFileHashPrefix(t *testing.T) {
@@ -113,13 +113,13 @@ func TestListFileRefsScansOneFileHashPrefix(t *testing.T) {
 	registry := NewRegistry(kvStore)
 	require.NoError(t, registry.PutFileRef(ctx, FileRef{
 		FileHash: "file-a",
-		Repo:     "repo-a",
+		Repo:     "test-user/repo-a",
 		Ref:      "main",
 		Path:     "models/a.bin",
 	}))
 	require.NoError(t, registry.PutFileRef(ctx, FileRef{
 		FileHash: "file-a",
-		Repo:     "repo-b",
+		Repo:     "test-user/repo-b",
 		Ref:      "dev",
 		Path:     "models/b.bin",
 	}))
@@ -134,8 +134,8 @@ func TestListFileRefsScansOneFileHashPrefix(t *testing.T) {
 
 	require.NoError(t, err)
 	require.ElementsMatch(t, []FileRef{
-		{FileHash: "file-a", Repo: "repo-a", Ref: "main", Path: "models/a.bin"},
-		{FileHash: "file-a", Repo: "repo-b", Ref: "dev", Path: "models/b.bin"},
+		{FileHash: "file-a", Repo: "test-user/repo-a", Ref: "main", Path: "models/a.bin"},
+		{FileHash: "file-a", Repo: "test-user/repo-b", Ref: "dev", Path: "models/b.bin"},
 	}, refs)
 }
 

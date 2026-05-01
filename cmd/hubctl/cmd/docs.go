@@ -112,7 +112,7 @@ func printOptions(buf *bytes.Buffer, cmd *cobra.Command) error {
 	if cmd == rootCmd {
 		buf.WriteString("**note:** The `base-uri` option can be controlled with the `HUBCTL_BASE_URI` environment variable.\n{: .note .note-warning }\n\n")
 		buf.WriteString("#### Example usage\n{:.no_toc}\n\n")
-		buf.WriteString("```shell\n$ export HUBCTL_BASE_URI=\"sg://my-repo/my-branch\"\n# Once set, use relative sg URI's:\n$ hubctl fs ls /path\n```")
+		buf.WriteString("```shell\n$ export HUBCTL_BASE_URI=\"sg://my-user/my-repo/my-branch\"\n# Once set, use relative sg URI's:\n$ hubctl fs ls /path\n```")
 	}
 	return nil
 }

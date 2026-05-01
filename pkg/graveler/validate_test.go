@@ -88,31 +88,35 @@ func TestValidateBranchID(t *testing.T) {
 func TestValidateRepositoryID(t *testing.T) {
 	tests := []struct {
 		name    string
-		tag     RepositoryID
+		id      RepositoryID
 		wantErr error
 	}{
-		{name: "empty", tag: "", wantErr: ErrRequiredValue},
-		{name: "tilda", tag: "~tag", wantErr: ErrInvalidRepositoryID},
-		{name: "valid1", tag: "tag", wantErr: nil},
-		{name: "valid2", tag: "v1.0", wantErr: nil},
-		{name: "Qwen0.6B-AWQ", tag: "v1.0", wantErr: nil},
-		{name: "ends with dot", tag: "tag.", wantErr: ErrInvalidRepositoryID},
-		{name: "ends with lock", tag: "tag.lock", wantErr: ErrInvalidRepositoryID},
-		{name: "space", tag: "a tag", wantErr: ErrInvalidRepositoryID},
-		{name: "invalid control", tag: "a\x01tag", wantErr: ErrInvalidRepositoryID},
-		{name: "single slash", tag: "more/tags", wantErr: ErrInvalidRepositoryID},
-		{name: "double slash", tag: "more//tags", wantErr: ErrInvalidRepositoryID},
-		{name: "double dot", tag: "more..tags", wantErr: ErrInvalidRepositoryID},
-		{name: "template", tag: "more@{tags}", wantErr: ErrInvalidRepositoryID},
-		{name: "invalid value", tag: "@", wantErr: ErrInvalidRepositoryID},
-		{name: "question mark", tag: "tag?", wantErr: ErrInvalidRepositoryID},
-		{name: "column", tag: "tag:tag", wantErr: ErrInvalidRepositoryID},
-		{name: "back slash", tag: "tag\\tag", wantErr: ErrInvalidRepositoryID},
-		{name: "open square brackets", tag: "ta[g]", wantErr: ErrInvalidRepositoryID},
+		{name: "empty", id: "", wantErr: ErrRequiredValue},
+		{name: "valid", id: "alice/model", wantErr: nil},
+		{name: "valid with dash and dot", id: "alice-dev/Qwen3-0.6B-AWQ", wantErr: nil},
+		{name: "single segment", id: "repo", wantErr: ErrInvalidRepositoryID},
+		{name: "missing owner", id: "/repo", wantErr: ErrInvalidRepositoryID},
+		{name: "missing name", id: "alice/", wantErr: ErrInvalidRepositoryID},
+		{name: "extra segment", id: "alice/model/extra", wantErr: ErrInvalidRepositoryID},
+		{name: "tilda", id: "~tag/model", wantErr: ErrInvalidRepositoryID},
+		{name: "owner ends with dot", id: "alice./model", wantErr: ErrInvalidRepositoryID},
+		{name: "repo ends with dot", id: "alice/model.", wantErr: ErrInvalidRepositoryID},
+		{name: "owner ends with lock", id: "alice.lock/model", wantErr: ErrInvalidRepositoryID},
+		{name: "repo ends with lock", id: "alice/model.lock", wantErr: ErrInvalidRepositoryID},
+		{name: "space", id: "alice/a tag", wantErr: ErrInvalidRepositoryID},
+		{name: "invalid control", id: "alice/a\x01tag", wantErr: ErrInvalidRepositoryID},
+		{name: "double slash", id: "alice//model", wantErr: ErrInvalidRepositoryID},
+		{name: "double dot", id: "alice/more..tags", wantErr: ErrInvalidRepositoryID},
+		{name: "template", id: "alice/more@{tags}", wantErr: ErrInvalidRepositoryID},
+		{name: "invalid value", id: "alice/@", wantErr: ErrInvalidRepositoryID},
+		{name: "question mark", id: "alice/tag?", wantErr: ErrInvalidRepositoryID},
+		{name: "column", id: "alice/tag:tag", wantErr: ErrInvalidRepositoryID},
+		{name: "back slash", id: "alice/tag\\tag", wantErr: ErrInvalidRepositoryID},
+		{name: "open square brackets", id: "alice/ta[g]", wantErr: ErrInvalidRepositoryID},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateRepositoryID(tt.tag)
+			err := ValidateRepositoryID(tt.id)
 			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("ValidateRepositoryID() error = %v, wantErr %v (%v)", err, tt.wantErr, tt.name)
 			}

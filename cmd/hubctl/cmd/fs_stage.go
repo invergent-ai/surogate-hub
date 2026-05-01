@@ -31,7 +31,7 @@ The object location must be outside the repository's storage namespace`,
 		if mtimeSeconds != 0 {
 			mtime = &mtimeSeconds
 		}
-		repoResp, err := client.GetRepositoryWithResponse(cmd.Context(), pathURI.Repository)
+		repoResp, err := client.GetRepositoryWithResponse(cmd.Context(), apigen.RepositoryOwner(pathURI.Repository), apigen.RepositoryName(pathURI.Repository))
 		DieOnErrorOrUnexpectedStatusCode(repoResp, err, http.StatusOK)
 		ns := strings.TrimSuffix(repoResp.JSON200.StorageNamespace, "/") + "/"
 		if strings.HasPrefix(location, ns) {
@@ -51,7 +51,7 @@ The object location must be outside the repository's storage namespace`,
 			obj.Metadata = &metadata
 		}
 
-		resp, err := client.StageObjectWithResponse(cmd.Context(), pathURI.Repository, pathURI.Ref, &apigen.StageObjectParams{
+		resp, err := client.StageObjectWithResponse(cmd.Context(), apigen.RepositoryOwner(pathURI.Repository), apigen.RepositoryName(pathURI.Repository), pathURI.Ref, &apigen.StageObjectParams{
 			Path: *pathURI.Path,
 		}, apigen.StageObjectJSONRequestBody(obj))
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusCreated)

@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"net/url"
 	"strings"
 
 	"github.com/invergent-ai/surogate-hub/pkg/kv"
@@ -220,7 +221,7 @@ func chunkKey(chunkID string) []byte {
 }
 
 func fileRefKey(ref FileRef) []byte {
-	return []byte(fileRefPrefix(ref.FileHash) + ref.Repo + "/" + ref.Ref + "/" + ref.Path)
+	return []byte(fileRefPrefix(ref.FileHash) + escapeFileRefField(ref.Repo) + "/" + escapeFileRefField(ref.Ref) + "/" + escapeFileRefField(ref.Path))
 }
 
 func fileRefPrefix(fileHash string) string {
@@ -236,10 +237,30 @@ func parseFileRefKey(key string) (FileRef, bool) {
 	if len(parts) != 4 || parts[0] == "" || parts[1] == "" || parts[2] == "" || parts[3] == "" {
 		return FileRef{}, false
 	}
+	repo, err := unescapeFileRefField(parts[1])
+	if err != nil {
+		return FileRef{}, false
+	}
+	ref, err := unescapeFileRefField(parts[2])
+	if err != nil {
+		return FileRef{}, false
+	}
+	path, err := unescapeFileRefField(parts[3])
+	if err != nil {
+		return FileRef{}, false
+	}
 	return FileRef{
 		FileHash: parts[0],
-		Repo:     parts[1],
-		Ref:      parts[2],
-		Path:     parts[3],
+		Repo:     repo,
+		Ref:      ref,
+		Path:     path,
 	}, true
+}
+
+func escapeFileRefField(field string) string {
+	return url.PathEscape(field)
+}
+
+func unescapeFileRefField(field string) (string, error) {
+	return url.PathUnescape(field)
 }

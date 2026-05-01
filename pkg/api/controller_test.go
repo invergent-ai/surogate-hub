@@ -104,7 +104,7 @@ func TestController_LinkXETPhysicalAddressWritesFileRef(t *testing.T) {
 	require.NoError(t, err)
 
 	physicalAddress := "xet://" + fileHash
-	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, repo, branch, &apigen.LinkPhysicalAddressParams{
+	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.LinkPhysicalAddressParams{
 		Path: path,
 	}, apigen.LinkPhysicalAddressJSONRequestBody{
 		Checksum:  "checksum-a",
@@ -120,7 +120,8 @@ func TestController_LinkXETPhysicalAddressWritesFileRef(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, physicalAddress, entry.PhysicalAddress)
 
-	fileRef, err := deps.catalog.KVStore.Get(ctx, []byte(xetstore.Partition), []byte("xet/file_refs/file-a/"+repo+"/"+branch+"/"+path))
+	fileRefKey := "xet/file_refs/file-a/" + url.PathEscape(repo) + "/" + url.PathEscape(branch) + "/" + url.PathEscape(path)
+	fileRef, err := deps.catalog.KVStore.Get(ctx, []byte(xetstore.Partition), []byte(fileRefKey))
 	require.NoError(t, err)
 	require.Equal(t, []byte{}, fileRef.Value)
 }
@@ -134,7 +135,7 @@ func TestController_LinkXETPhysicalAddressRejectsMissingShard(t *testing.T) {
 	require.NoError(t, err)
 
 	physicalAddress := "xet://missing-file"
-	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, repo, branch, &apigen.LinkPhysicalAddressParams{
+	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.LinkPhysicalAddressParams{
 		Path: "models/checkpoint.bin",
 	}, apigen.LinkPhysicalAddressJSONRequestBody{
 		Checksum:  "checksum-a",
@@ -167,7 +168,7 @@ func TestController_StatObjectXETPhysicalAddress(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	resp, err := clt.StatObjectWithResponse(ctx, repo, branch, &apigen.StatObjectParams{Path: path})
+	resp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.StatObjectParams{Path: path})
 	require.NoError(t, err)
 	require.Equalf(t, http.StatusOK, resp.StatusCode(), "body: %s", string(resp.Body))
 	require.NotNil(t, resp.JSON200)
@@ -206,7 +207,7 @@ func TestController_LinkXETPhysicalAddressCrashAfterGravelerWrite(t *testing.T) 
 	failingStore := &failOnceFileRefSetStore{Store: deps.catalog.KVStore}
 	deps.catalog.KVStore = failingStore
 	physicalAddress := "xet://" + fileHash
-	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, repo, branch, &apigen.LinkPhysicalAddressParams{
+	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.LinkPhysicalAddressParams{
 		Path: path,
 	}, apigen.LinkPhysicalAddressJSONRequestBody{
 		Checksum:  "checksum-a",
@@ -225,7 +226,7 @@ func TestController_LinkXETPhysicalAddressCrashAfterGravelerWrite(t *testing.T) 
 	require.NoError(t, err)
 	require.Empty(t, refs)
 
-	getResp, err := clt.GetObjectWithResponse(ctx, repo, branch, &apigen.GetObjectParams{Path: path})
+	getResp, err := clt.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.GetObjectParams{Path: path})
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, getResp.StatusCode(), "body: %s", string(getResp.Body))
 	require.Equal(t, chunk, getResp.Body)
@@ -289,7 +290,7 @@ func TestController_GetObjectXETPhysicalAddressRange(t *testing.T) {
 	require.NoError(t, err)
 
 	rng := "bytes=3-8"
-	resp, err := clt.GetObjectWithResponse(ctx, repo, branch, &apigen.GetObjectParams{
+	resp, err := clt.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.GetObjectParams{
 		Path:  path,
 		Range: &rng,
 	})
@@ -346,11 +347,11 @@ func TestController_ListRepositoriesHandler(t *testing.T) {
 	t.Run("list some repos", func(t *testing.T) {
 		// write some repos
 		ctx := context.Background()
-		_, err := deps.catalog.CreateRepository(ctx, "foo1", "", onBlock(deps, "foo1"), "main", false)
+		_, err := deps.catalog.CreateRepository(ctx, "test-user/foo1", "", onBlock(deps, "test-user/foo1"), "main", false)
 		testutil.Must(t, err)
-		_, err = deps.catalog.CreateRepository(ctx, "foo2", "", onBlock(deps, "foo1"), "main", false)
+		_, err = deps.catalog.CreateRepository(ctx, "test-user/foo2", "", onBlock(deps, "test-user/foo1"), "main", false)
 		testutil.Must(t, err)
-		_, err = deps.catalog.CreateRepository(ctx, "foo3", "", onBlock(deps, "foo1"), "main", false)
+		_, err = deps.catalog.CreateRepository(ctx, "test-user/foo3", "", onBlock(deps, "test-user/foo1"), "main", false)
 		testutil.Must(t, err)
 
 		resp, err := clt.ListRepositoriesWithResponse(ctx, &apigen.ListRepositoriesParams{})
@@ -389,7 +390,7 @@ func TestController_ListRepositoriesHandler(t *testing.T) {
 
 	t.Run("paginate repos after", func(t *testing.T) {
 		resp, err := clt.ListRepositoriesWithResponse(ctx, &apigen.ListRepositoriesParams{
-			After:  apiutil.Ptr[apigen.PaginationAfter]("foo2"),
+			After:  apiutil.Ptr[apigen.PaginationAfter]("test-user/foo2"),
 			Amount: apiutil.Ptr[apigen.PaginationAmount](2),
 		})
 		if err != nil {
@@ -407,7 +408,7 @@ func TestController_ListRepositoriesHandler(t *testing.T) {
 			t.Fatalf("expected no more results from paginator")
 		}
 
-		if resp.JSON200.Results[0].Id != "foo3" {
+		if resp.JSON200.Results[0].Id != "test-user/foo3" {
 			t.Fatalf("expected last pagination result to be foo3, got %s instead",
 				resp.JSON200.Results[0].Id)
 		}
@@ -418,7 +419,7 @@ func TestController_GetRepoHandler(t *testing.T) {
 	clt, deps := setupClientWithAdmin(t)
 	ctx := context.Background()
 	t.Run("get missing repo", func(t *testing.T) {
-		resp, err := clt.GetRepositoryWithResponse(ctx, "foo1")
+		resp, err := clt.GetRepositoryWithResponse(ctx, apigen.RepositoryOwner("test-user/foo1"), apigen.RepositoryName("test-user/foo1"))
 		testutil.Must(t, err)
 		if resp == nil {
 			t.Fatal("GetRepository missing response")
@@ -430,10 +431,10 @@ func TestController_GetRepoHandler(t *testing.T) {
 
 	t.Run("get existing repo", func(t *testing.T) {
 		const testBranchName = "non-default"
-		_, err := deps.catalog.CreateRepository(context.Background(), "foo1", "", onBlock(deps, "foo1"), testBranchName, false)
+		_, err := deps.catalog.CreateRepository(context.Background(), "test-user/foo1", "", onBlock(deps, "test-user/foo1"), testBranchName, false)
 		testutil.Must(t, err)
 
-		resp, err := clt.GetRepositoryWithResponse(ctx, "foo1")
+		resp, err := clt.GetRepositoryWithResponse(ctx, apigen.RepositoryOwner("test-user/foo1"), apigen.RepositoryName("test-user/foo1"))
 		verifyResponseOK(t, resp, err)
 
 		repository := resp.JSON200
@@ -487,7 +488,7 @@ func TestController_LogCommitsMissingBranch(t *testing.T) {
 	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "ns1"), "main", false)
 	testutil.Must(t, err)
 
-	resp, err := clt.LogCommitsWithResponse(ctx, repo, "otherbranch", &apigen.LogCommitsParams{})
+	resp, err := clt.LogCommitsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "otherbranch", &apigen.LogCommitsParams{})
 	testutil.Must(t, err)
 	if resp.JSON404 == nil {
 		t.Fatalf("expected error getting a branch that doesn't exist")
@@ -564,7 +565,7 @@ func TestController_LogCommitsHandler(t *testing.T) {
 				params.Limit = &tt.limit
 				params.Amount = apiutil.Ptr(apigen.PaginationAmount(1))
 			}
-			resp, err := clt.LogCommitsWithResponse(ctx, repo, "main", params)
+			resp, err := clt.LogCommitsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", params)
 			verifyResponseOK(t, resp, err)
 
 			commitsLog := resp.JSON200.Results
@@ -606,7 +607,7 @@ func TestController_LogCommitsParallelHandler(t *testing.T) {
 		params := &apigen.LogCommitsParams{Objects: &objects}
 		log := logRef
 		g.Go(func() error {
-			resp, err := clt.LogCommitsWithResponse(ctx, repo, "main", params)
+			resp, err := clt.LogCommitsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", params)
 			verifyResponseOK(t, resp, err)
 
 			commitsLog := resp.JSON200.Results
@@ -765,7 +766,7 @@ func TestController_LogCommitsPredefinedData(t *testing.T) {
 				params.StopAt = &tt.stopAt
 			}
 
-			resp, err := clt.LogCommitsWithResponse(ctx, repo, "main", params)
+			resp, err := clt.LogCommitsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", params)
 			verifyResponseOK(t, resp, err)
 			commitsLog := resp.JSON200.Results
 			// compare by commit messages
@@ -954,7 +955,7 @@ func TestController_CommitsGetBranchCommitLogByPath(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			resp, err := clt.LogCommitsWithResponse(ctx, repo, "main", &apigen.LogCommitsParams{Objects: c.objectList, Prefixes: c.prefixList})
+			resp, err := clt.LogCommitsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.LogCommitsParams{Objects: c.objectList, Prefixes: c.prefixList})
 			verifyResponseOK(t, resp, err)
 
 			commitsLog := resp.JSON200.Results
@@ -974,7 +975,7 @@ func TestController_GetCommitHandler(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("get missing commit", func(t *testing.T) {
-		resp, err := clt.GetCommitWithResponse(ctx, "foo1", "b0a989d946dca26496b8280ca2bb0a96131a48b362e72f1789e498815992fffa")
+		resp, err := clt.GetCommitWithResponse(ctx, apigen.RepositoryOwner("test-user/foo1"), apigen.RepositoryName("test-user/foo1"), "b0a989d946dca26496b8280ca2bb0a96131a48b362e72f1789e498815992fffa")
 		testutil.Must(t, err)
 		if resp == nil {
 			t.Fatal("expect get missing commit response")
@@ -987,19 +988,19 @@ func TestController_GetCommitHandler(t *testing.T) {
 
 	t.Run("get existing commit", func(t *testing.T) {
 		ctx := context.Background()
-		_, err := deps.catalog.CreateRepository(ctx, "foo1", "", onBlock(deps, "foo1"), "main", false)
+		_, err := deps.catalog.CreateRepository(ctx, "test-user/foo1", "", onBlock(deps, "test-user/foo1"), "main", false)
 		testutil.Must(t, err)
-		testutil.MustDo(t, "create entry bar1", deps.catalog.CreateEntry(ctx, "foo1", "main", catalog.DBEntry{Path: "foo/bar1", PhysicalAddress: "bar1addr", CreationDate: time.Now(), Size: 1, Checksum: "cksum1"}))
-		commit1, err := deps.catalog.Commit(ctx, "foo1", "main", "some message", DefaultUserID, nil, nil, nil, false)
+		testutil.MustDo(t, "create entry bar1", deps.catalog.CreateEntry(ctx, "test-user/foo1", "main", catalog.DBEntry{Path: "foo/bar1", PhysicalAddress: "bar1addr", CreationDate: time.Now(), Size: 1, Checksum: "cksum1"}))
+		commit1, err := deps.catalog.Commit(ctx, "test-user/foo1", "main", "some message", DefaultUserID, nil, nil, nil, false)
 		testutil.Must(t, err)
-		reference1, err := deps.catalog.GetBranchReference(ctx, "foo1", "main")
+		reference1, err := deps.catalog.GetBranchReference(ctx, "test-user/foo1", "main")
 		if err != nil {
 			t.Fatal(err)
 		}
 		if reference1 != commit1.Reference {
 			t.Fatalf("Commit reference %v, not equals to branch reference %s", commit1, reference1)
 		}
-		resp, err := clt.GetCommitWithResponse(ctx, "foo1", commit1.Reference)
+		resp, err := clt.GetCommitWithResponse(ctx, apigen.RepositoryOwner("test-user/foo1"), apigen.RepositoryName("test-user/foo1"), commit1.Reference)
 		verifyResponseOK(t, resp, err)
 
 		committer := resp.JSON200.Committer
@@ -1023,7 +1024,7 @@ func TestController_GetCommitHandler(t *testing.T) {
 		if reference1 != commit1.Reference {
 			t.Fatalf("Commit reference %v, not equals to branch reference %s", commit1, reference1)
 		}
-		resp, err := clt.GetCommitWithResponse(ctx, repo, "main")
+		resp, err := clt.GetCommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main")
 		verifyResponseOK(t, resp, err)
 		if resp.JSON200 == nil {
 			t.Fatal("GetCommit expected to return 200 with response")
@@ -1048,7 +1049,7 @@ func TestController_GetCommitHandler(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		resp, err := clt.GetCommitWithResponse(ctx, repo, "tag1")
+		resp, err := clt.GetCommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "tag1")
 		verifyResponseOK(t, resp, err)
 		if resp.JSON200 == nil {
 			t.Fatal("GetCommit expected to return 200 with response")
@@ -1064,9 +1065,9 @@ func TestController_GetCommitHandler(t *testing.T) {
 	t.Run("initial commit", func(t *testing.T) {
 		// validate a new repository's initial commit existence and structure
 		ctx := context.Background()
-		_, err := deps.catalog.CreateRepository(ctx, "foo2", "", onBlock(deps, "foo2"), "main", false)
+		_, err := deps.catalog.CreateRepository(ctx, "test-user/foo2", "", onBlock(deps, "test-user/foo2"), "main", false)
 		testutil.Must(t, err)
-		resp, err := clt.GetCommitWithResponse(ctx, "foo2", "main")
+		resp, err := clt.GetCommitWithResponse(ctx, apigen.RepositoryOwner("test-user/foo2"), apigen.RepositoryName("test-user/foo2"), "main")
 		verifyResponseOK(t, resp, err)
 
 		commit := resp.JSON200
@@ -1100,7 +1101,7 @@ func TestController_CommitHandler(t *testing.T) {
 
 	t.Run("commit non-existent commit", func(t *testing.T) {
 		repo := testUniqueRepoName()
-		resp, err := clt.CommitWithResponse(ctx, repo, "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+		resp, err := clt.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 			Message: "some message",
 		})
 		testutil.Must(t, err)
@@ -1118,7 +1119,7 @@ func TestController_CommitHandler(t *testing.T) {
 		_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, repo), "main", false)
 		testutil.MustDo(t, fmt.Sprintf("create repo %s", repo), err)
 		testutil.MustDo(t, fmt.Sprintf("commit bar on %s", repo), deps.catalog.CreateEntry(ctx, repo, "main", catalog.DBEntry{Path: "foo/bar", PhysicalAddress: "pa", CreationDate: time.Now(), Size: 666, Checksum: "cs", Metadata: nil}))
-		resp, err := clt.CommitWithResponse(ctx, repo, "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+		resp, err := clt.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 			Message: "some message",
 		})
 		verifyResponseOK(t, resp, err)
@@ -1132,12 +1133,12 @@ func TestController_CommitHandler(t *testing.T) {
 		_, err = deps.catalog.CreateBranch(ctx, repo, "foo-branch", "main")
 		testutil.Must(t, err)
 		testutil.MustDo(t, fmt.Sprintf("commit bar on %s", repo), deps.catalog.CreateEntry(ctx, repo, "main", catalog.DBEntry{Path: "foo/bar", PhysicalAddress: "pa", CreationDate: time.Now(), Size: 666, Checksum: "cs", Metadata: nil}))
-		resp, err := clt.CommitWithResponse(ctx, repo, "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+		resp, err := clt.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 			Message: "some message",
 		})
 		verifyResponseOK(t, resp, err)
 
-		resp, err = clt.CommitWithResponse(ctx, repo, "foo-branch", &apigen.CommitParams{SourceMetarange: &resp.JSON201.MetaRangeId}, apigen.CommitJSONRequestBody{
+		resp, err = clt.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "foo-branch", &apigen.CommitParams{SourceMetarange: &resp.JSON201.MetaRangeId}, apigen.CommitJSONRequestBody{
 			Message: "some message",
 		})
 		verifyResponseOK(t, resp, err)
@@ -1152,13 +1153,13 @@ func TestController_CommitHandler(t *testing.T) {
 		testutil.Must(t, err)
 
 		testutil.MustDo(t, fmt.Sprintf("commit bar on %s", repo), deps.catalog.CreateEntry(ctx, repo, "main", catalog.DBEntry{Path: "foo/bar", PhysicalAddress: "pa", CreationDate: time.Now(), Size: 666, Checksum: "cs", Metadata: nil}))
-		resp, err := clt.CommitWithResponse(ctx, repo, "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+		resp, err := clt.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 			Message: "some message",
 		})
 		verifyResponseOK(t, resp, err)
 
 		testutil.MustDo(t, fmt.Sprintf("commit bar on %s", repo), deps.catalog.CreateEntry(ctx, repo, "foo-branch", catalog.DBEntry{Path: "foo/bar/2", PhysicalAddress: "pa", CreationDate: time.Now(), Size: 666, Checksum: "cs", Metadata: nil}))
-		resp, err = clt.CommitWithResponse(ctx, repo, "foo-branch", &apigen.CommitParams{SourceMetarange: &resp.JSON201.MetaRangeId}, apigen.CommitJSONRequestBody{
+		resp, err = clt.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "foo-branch", &apigen.CommitParams{SourceMetarange: &resp.JSON201.MetaRangeId}, apigen.CommitJSONRequestBody{
 			Message: "some message",
 		})
 
@@ -1176,7 +1177,7 @@ func TestController_CommitHandler(t *testing.T) {
 		_, err = deps.catalog.CreateBranch(ctx, repo, "foo-branch", "main")
 		testutil.Must(t, err)
 
-		resp, err := clt.CommitWithResponse(ctx, repo, "foo-branch", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+		resp, err := clt.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "foo-branch", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 			Message: "some message",
 		})
 
@@ -1192,7 +1193,7 @@ func TestController_CommitHandler(t *testing.T) {
 		testutil.MustDo(t, fmt.Sprintf("create repo %s", repo), err)
 		testutil.MustDo(t, fmt.Sprintf("commit bar on %s", repo), deps.catalog.CreateEntry(ctx, repo, "main", catalog.DBEntry{Path: "foo/bar", PhysicalAddress: "pa", CreationDate: time.Now(), Size: 666, Checksum: "cs", Metadata: nil}))
 		date := int64(1642626109)
-		resp, err := clt.CommitWithResponse(ctx, repo, "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+		resp, err := clt.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 			Message: "some message",
 			Date:    &date,
 		})
@@ -1219,7 +1220,7 @@ func TestController_CommitHandler(t *testing.T) {
 		testutil.MustDo(t, "protection rule", err)
 		err = deps.catalog.CreateEntry(ctx, repo, "main", catalog.DBEntry{Path: "foo/bar", PhysicalAddress: "pa", CreationDate: time.Now(), Size: 666, Checksum: "cs", Metadata: nil})
 		testutil.MustDo(t, "commit to protected branch", err)
-		resp, err := clt.CommitWithResponse(ctx, repo, "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+		resp, err := clt.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 			Message: "committed to protected branch",
 		})
 		testutil.Must(t, err)
@@ -1235,14 +1236,14 @@ func TestController_CommitHandler(t *testing.T) {
 		require.Error(t, err, "read-only repository")
 		err = deps.catalog.CreateEntry(ctx, repo, "main", catalog.DBEntry{Path: "foo/bar", PhysicalAddress: "pa", CreationDate: time.Now(), Size: 666, Checksum: "cs", Metadata: nil}, graveler.WithForce(true))
 		testutil.MustDo(t, "create entry", err)
-		resp, err := clt.CommitWithResponse(ctx, repo, "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+		resp, err := clt.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 			Message: "committed to read-only repository",
 		})
 		testutil.Must(t, err)
 		if resp.StatusCode() != http.StatusForbidden {
 			t.Fatalf("Commit to read-only repository should be forbidden (403), got %s", resp.Status())
 		}
-		resp, err = clt.CommitWithResponse(ctx, repo, "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+		resp, err = clt.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 			Message: "committed to read-only repository",
 			Force:   swag.Bool(true),
 		})
@@ -1315,7 +1316,7 @@ func TestController_CreateRepositoryHandler(t *testing.T) {
 
 	t.Run("create repo duplicate", func(t *testing.T) {
 		repo := testUniqueRepoName()
-		_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "foo1"), "main", false)
+		_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "test-user/foo1"), "main", false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1386,14 +1387,14 @@ func TestController_DeleteRepositoryHandler(t *testing.T) {
 
 	t.Run("delete repo success", func(t *testing.T) {
 		repo := testUniqueRepoName()
-		_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "foo1"), "main", false)
+		_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "test-user/foo1"), "main", false)
 		testutil.Must(t, err)
 
-		resp, err := clt.DeleteRepositoryWithResponse(ctx, repo, &apigen.DeleteRepositoryParams{})
+		resp, err := clt.DeleteRepositoryWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.DeleteRepositoryParams{})
 		verifyResponseOK(t, resp, err)
 
 		// delete again to expect repository not found
-		resp, err = clt.DeleteRepositoryWithResponse(ctx, repo, &apigen.DeleteRepositoryParams{})
+		resp, err = clt.DeleteRepositoryWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.DeleteRepositoryParams{})
 		testutil.Must(t, err)
 		if resp.JSON404 == nil {
 			t.Fatalf("expected repository to be gone (404), instead got status: %s", resp.Status())
@@ -1402,7 +1403,7 @@ func TestController_DeleteRepositoryHandler(t *testing.T) {
 
 	t.Run("delete repo doesnt exist", func(t *testing.T) {
 		repo := testUniqueRepoName()
-		resp, err := clt.DeleteRepositoryWithResponse(ctx, repo, &apigen.DeleteRepositoryParams{})
+		resp, err := clt.DeleteRepositoryWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.DeleteRepositoryParams{})
 		testutil.Must(t, err)
 		if resp.StatusCode() == http.StatusOK {
 			t.Fatalf("DeleteRepository should fail on non existing repository, got %d", resp.StatusCode())
@@ -1410,17 +1411,17 @@ func TestController_DeleteRepositoryHandler(t *testing.T) {
 	})
 
 	t.Run("delete repo doesnt delete other repos", func(t *testing.T) {
-		names := []string{"rr0", "rr1", "rr11", "rr2"}
+		names := []string{"test-user/rr0", "test-user/rr1", "test-user/rr11", "test-user/rr2"}
 		for _, name := range names {
-			_, err := deps.catalog.CreateRepository(ctx, name, "", onBlock(deps, "foo1"), "main", false)
+			_, err := deps.catalog.CreateRepository(ctx, name, "", onBlock(deps, "test-user/foo1"), "main", false)
 			testutil.Must(t, err)
 		}
 
 		// delete one repository and check that all rest are there
-		resp, err := clt.DeleteRepositoryWithResponse(ctx, "rr1", &apigen.DeleteRepositoryParams{})
+		resp, err := clt.DeleteRepositoryWithResponse(ctx, apigen.RepositoryOwner("test-user/rr1"), apigen.RepositoryName("test-user/rr1"), &apigen.DeleteRepositoryParams{})
 		verifyResponseOK(t, resp, err)
 		for _, name := range names {
-			if name == "rr1" {
+			if name == "test-user/rr1" {
 				continue
 			}
 			_, err = deps.catalog.GetRepository(ctx, name)
@@ -1432,18 +1433,18 @@ func TestController_DeleteRepositoryHandler(t *testing.T) {
 
 	t.Run("delete read-only repository", func(t *testing.T) {
 		repo := testUniqueRepoName()
-		_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "foo1"), "main", true)
+		_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "test-user/foo1"), "main", true)
 		testutil.Must(t, err)
 
 		// deleting a read-only repo without Force should be rejected
-		resp, err := clt.DeleteRepositoryWithResponse(ctx, repo, &apigen.DeleteRepositoryParams{})
+		resp, err := clt.DeleteRepositoryWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.DeleteRepositoryParams{})
 		testutil.Must(t, err)
 		if resp.StatusCode() != http.StatusForbidden {
 			t.Fatalf("expected status code 403 for deleting a read-only repository, got %d instead", resp.StatusCode())
 		}
 
 		// deleting with Force should succeed
-		resp, err = clt.DeleteRepositoryWithResponse(ctx, repo, &apigen.DeleteRepositoryParams{Force: swag.Bool(true)})
+		resp, err = clt.DeleteRepositoryWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.DeleteRepositoryParams{Force: swag.Bool(true)})
 		verifyResponseOK(t, resp, err)
 	})
 }
@@ -1474,14 +1475,14 @@ func TestController_SetRepositoryMetadataHandler(t *testing.T) {
 			{
 				name:        "append new",
 				properties:  map[string]string{"foo": "bar"},
-				appendProps: map[string]string{"foo1": "bar1"},
-				expected:    map[string]string{"foo": "bar", "foo1": "bar1"},
+				appendProps: map[string]string{"test-user/foo1": "bar1"},
+				expected:    map[string]string{"foo": "bar", "test-user/foo1": "bar1"},
 			},
 			{
 				name:        "append multiple",
 				properties:  map[string]string{"foo": "bar"},
-				appendProps: map[string]string{"foo1": "bar1", "foo2": "bar2", "foo3": "bar3", "foo4": "bar4"},
-				expected:    map[string]string{"foo": "bar", "foo1": "bar1", "foo2": "bar2", "foo3": "bar3", "foo4": "bar4"},
+				appendProps: map[string]string{"test-user/foo1": "bar1", "test-user/foo2": "bar2", "test-user/foo3": "bar3", "foo4": "bar4"},
+				expected:    map[string]string{"foo": "bar", "test-user/foo1": "bar1", "test-user/foo2": "bar2", "test-user/foo3": "bar3", "foo4": "bar4"},
 			},
 			{
 				name:        "append override",
@@ -1506,13 +1507,13 @@ func TestController_SetRepositoryMetadataHandler(t *testing.T) {
 				})
 				verifyResponseOK(t, createResp, err)
 
-				resp, err := clt.SetRepositoryMetadataWithResponse(ctx, repoName, apigen.SetRepositoryMetadataJSONRequestBody{Metadata: apigen.RepositoryMetadataSet_Metadata{AdditionalProperties: tt1.properties}})
+				resp, err := clt.SetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.SetRepositoryMetadataJSONRequestBody{Metadata: apigen.RepositoryMetadataSet_Metadata{AdditionalProperties: tt1.properties}})
 				verifyResponseOK(t, resp, err)
 
-				resp, err = clt.SetRepositoryMetadataWithResponse(ctx, repoName, apigen.SetRepositoryMetadataJSONRequestBody{Metadata: apigen.RepositoryMetadataSet_Metadata{AdditionalProperties: tt1.appendProps}})
+				resp, err = clt.SetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.SetRepositoryMetadataJSONRequestBody{Metadata: apigen.RepositoryMetadataSet_Metadata{AdditionalProperties: tt1.appendProps}})
 				verifyResponseOK(t, resp, err)
 
-				getResp, err := clt.GetRepositoryMetadataWithResponse(ctx, repoName)
+				getResp, err := clt.GetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName))
 				verifyResponseOK(t, resp, err)
 				if diff := deep.Equal(getResp.JSON200.AdditionalProperties, tt1.expected); diff != nil {
 					t.Fatal("Get repository metadata results diff:", diff)
@@ -1534,13 +1535,13 @@ func TestController_SetRepositoryMetadataHandler(t *testing.T) {
 			})
 		verifyResponseOK(t, createResp, err)
 
-		resp, err := clt.SetRepositoryMetadataWithResponse(ctx, repoName, apigen.SetRepositoryMetadataJSONRequestBody{Metadata: apigen.RepositoryMetadataSet_Metadata{AdditionalProperties: map[string]string{"foo": "bar"}}})
+		resp, err := clt.SetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.SetRepositoryMetadataJSONRequestBody{Metadata: apigen.RepositoryMetadataSet_Metadata{AdditionalProperties: map[string]string{"foo": "bar"}}})
 		verifyResponseOK(t, resp, err)
 	})
 
 	t.Run("set repository metadata not exist", func(t *testing.T) {
 		repoName := testUniqueRepoName()
-		resp, err := clt.SetRepositoryMetadataWithResponse(ctx, repoName, apigen.SetRepositoryMetadataJSONRequestBody{Metadata: apigen.RepositoryMetadataSet_Metadata{AdditionalProperties: map[string]string{"foo": "bar"}}})
+		resp, err := clt.SetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.SetRepositoryMetadataJSONRequestBody{Metadata: apigen.RepositoryMetadataSet_Metadata{AdditionalProperties: map[string]string{"foo": "bar"}}})
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON404)
 	})
@@ -1558,7 +1559,7 @@ func TestController_SetRepositoryMetadataHandler(t *testing.T) {
 		creds := createUserWithDefaultGroup(t, clt)
 		// create a client with the user
 		regClt := setupClientByEndpoint(t, deps.server.URL, creds.AccessKeyID, creds.SecretAccessKey)
-		resp, err := regClt.SetRepositoryMetadataWithResponse(ctx, repoName, apigen.SetRepositoryMetadataJSONRequestBody{Metadata: apigen.RepositoryMetadataSet_Metadata{AdditionalProperties: map[string]string{"foo": "bar"}}})
+		resp, err := regClt.SetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.SetRepositoryMetadataJSONRequestBody{Metadata: apigen.RepositoryMetadataSet_Metadata{AdditionalProperties: map[string]string{"foo": "bar"}}})
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON401)
 	})
@@ -1589,8 +1590,8 @@ func TestController_DeleteRepositoryMetadataHandler(t *testing.T) {
 			},
 			{
 				name:        "delete one",
-				properties:  map[string]string{"foo": "bar", "foo1": "bar1"},
-				deleteProps: []string{"foo1"},
+				properties:  map[string]string{"foo": "bar", "test-user/foo1": "bar1"},
+				deleteProps: []string{"test-user/foo1"},
 				expected:    map[string]string{"foo": "bar"},
 			},
 			{
@@ -1610,13 +1611,13 @@ func TestController_DeleteRepositoryMetadataHandler(t *testing.T) {
 				})
 				verifyResponseOK(t, createResp, err)
 
-				resp, err := clt.SetRepositoryMetadataWithResponse(ctx, repoName, apigen.SetRepositoryMetadataJSONRequestBody{Metadata: apigen.RepositoryMetadataSet_Metadata{AdditionalProperties: tt.properties}})
+				resp, err := clt.SetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.SetRepositoryMetadataJSONRequestBody{Metadata: apigen.RepositoryMetadataSet_Metadata{AdditionalProperties: tt.properties}})
 				verifyResponseOK(t, resp, err)
 
-				deleteResp, err := clt.DeleteRepositoryMetadataWithResponse(ctx, repoName, apigen.DeleteRepositoryMetadataJSONRequestBody{Keys: tt.deleteProps})
+				deleteResp, err := clt.DeleteRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.DeleteRepositoryMetadataJSONRequestBody{Keys: tt.deleteProps})
 				verifyResponseOK(t, deleteResp, err)
 
-				getResp, err := clt.GetRepositoryMetadataWithResponse(ctx, repoName)
+				getResp, err := clt.GetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName))
 				verifyResponseOK(t, getResp, err)
 				if diff := deep.Equal(getResp.JSON200.AdditionalProperties, tt.expected); diff != nil {
 					t.Fatal("Get repository metadata results diff:", diff)
@@ -1638,13 +1639,13 @@ func TestController_DeleteRepositoryMetadataHandler(t *testing.T) {
 			})
 		verifyResponseOK(t, createResp, err)
 
-		resp, err := clt.SetRepositoryMetadataWithResponse(ctx, repoName, apigen.SetRepositoryMetadataJSONRequestBody{Metadata: apigen.RepositoryMetadataSet_Metadata{AdditionalProperties: map[string]string{"foo": "bar"}}})
+		resp, err := clt.SetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.SetRepositoryMetadataJSONRequestBody{Metadata: apigen.RepositoryMetadataSet_Metadata{AdditionalProperties: map[string]string{"foo": "bar"}}})
 		verifyResponseOK(t, resp, err)
 	})
 
 	t.Run("delete repository metadata, repository not exist", func(t *testing.T) {
 		repoName := testUniqueRepoName()
-		resp, err := clt.SetRepositoryMetadataWithResponse(ctx, repoName, apigen.SetRepositoryMetadataJSONRequestBody{Metadata: apigen.RepositoryMetadataSet_Metadata{AdditionalProperties: map[string]string{"foo": "bar"}}})
+		resp, err := clt.SetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.SetRepositoryMetadataJSONRequestBody{Metadata: apigen.RepositoryMetadataSet_Metadata{AdditionalProperties: map[string]string{"foo": "bar"}}})
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON404)
 	})
@@ -1662,7 +1663,7 @@ func TestController_DeleteRepositoryMetadataHandler(t *testing.T) {
 		creds := createUserWithDefaultGroup(t, clt)
 		// create a client with the user
 		regClt := setupClientByEndpoint(t, deps.server.URL, creds.AccessKeyID, creds.SecretAccessKey)
-		resp, err := regClt.DeleteRepositoryMetadataWithResponse(ctx, repoName, apigen.DeleteRepositoryMetadataJSONRequestBody{Keys: []string{"foo"}})
+		resp, err := regClt.DeleteRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.DeleteRepositoryMetadataJSONRequestBody{Keys: []string{"foo"}})
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON401)
 	})
@@ -1681,7 +1682,7 @@ func TestController_GetRepositoryMetadataHandler(t *testing.T) {
 		})
 		verifyResponseOK(t, createResp, err)
 
-		resp, err := clt.GetRepositoryMetadataWithResponse(ctx, repoName)
+		resp, err := clt.GetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName))
 		verifyResponseOK(t, resp, err)
 		require.NotNil(t, resp.JSON200)
 		require.Nil(t, resp.JSON200.AdditionalProperties)
@@ -1700,7 +1701,7 @@ func TestController_GetRepositoryMetadataHandler(t *testing.T) {
 			})
 		verifyResponseOK(t, createResp, err)
 
-		resp, err := clt.GetRepositoryMetadataWithResponse(ctx, repoName)
+		resp, err := clt.GetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName))
 		verifyResponseOK(t, resp, err)
 		require.NotNil(t, resp.JSON200)
 		require.Nil(t, resp.JSON200.AdditionalProperties)
@@ -1708,7 +1709,7 @@ func TestController_GetRepositoryMetadataHandler(t *testing.T) {
 
 	t.Run("get repository metadata not exist", func(t *testing.T) {
 		repoName := testUniqueRepoName()
-		resp, err := clt.GetRepositoryMetadataWithResponse(ctx, repoName)
+		resp, err := clt.GetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName))
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON404)
 	})
@@ -1726,7 +1727,7 @@ func TestController_GetRepositoryMetadataHandler(t *testing.T) {
 		creds := createUserWithDefaultGroup(t, clt)
 		// create a client with the user
 		regClt := setupClientByEndpoint(t, deps.server.URL, creds.AccessKeyID, creds.SecretAccessKey)
-		resp, err := regClt.GetRepositoryMetadataWithResponse(ctx, repoName)
+		resp, err := regClt.GetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName))
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON401)
 	})
@@ -1739,9 +1740,9 @@ func TestController_ListBranchesHandler(t *testing.T) {
 	t.Run("list branches only default", func(t *testing.T) {
 		ctx := context.Background()
 		repo := testUniqueRepoName()
-		_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "foo1"), "main", false)
+		_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "test-user/foo1"), "main", false)
 		testutil.Must(t, err)
-		resp, err := clt.ListBranchesWithResponse(ctx, repo, &apigen.ListBranchesParams{
+		resp, err := clt.ListBranchesWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListBranchesParams{
 			Amount: apiutil.Ptr(apigen.PaginationAmount(-1)),
 		})
 		verifyResponseOK(t, resp, err)
@@ -1756,7 +1757,7 @@ func TestController_ListBranchesHandler(t *testing.T) {
 	t.Run("list branches pagination", func(t *testing.T) {
 		ctx := context.Background()
 		repo := testUniqueRepoName()
-		_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "foo2"), "main", false)
+		_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "test-user/foo2"), "main", false)
 		testutil.Must(t, err)
 
 		// create the first "dummy" commit on main so that we can create branches from it
@@ -1769,7 +1770,7 @@ func TestController_ListBranchesHandler(t *testing.T) {
 			_, err := deps.catalog.CreateBranch(ctx, repo, branchName, "main", graveler.WithHidden(i%2 != 0))
 			testutil.MustDo(t, "create branch "+branchName, err)
 		}
-		resp, err := clt.ListBranchesWithResponse(ctx, repo, &apigen.ListBranchesParams{
+		resp, err := clt.ListBranchesWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListBranchesParams{
 			Amount: apiutil.Ptr(apigen.PaginationAmount(2)),
 		})
 		verifyResponseOK(t, resp, err)
@@ -1777,7 +1778,7 @@ func TestController_ListBranchesHandler(t *testing.T) {
 			t.Fatalf("expected 2 branches to return, got %d", len(resp.JSON200.Results))
 		}
 
-		resp, err = clt.ListBranchesWithResponse(ctx, repo, &apigen.ListBranchesParams{
+		resp, err = clt.ListBranchesWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListBranchesParams{
 			After:  apiutil.Ptr[apigen.PaginationAfter]("main1"),
 			Amount: apiutil.Ptr[apigen.PaginationAmount](2),
 		})
@@ -1791,7 +1792,7 @@ func TestController_ListBranchesHandler(t *testing.T) {
 		require.Equal(t, expectedRefs, gotRefs)
 
 		// List all branches
-		resp, err = clt.ListBranchesWithResponse(ctx, repo, &apigen.ListBranchesParams{
+		resp, err = clt.ListBranchesWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListBranchesParams{
 			After:      apiutil.Ptr[apigen.PaginationAfter]("main1"),
 			Amount:     apiutil.Ptr[apigen.PaginationAmount](2),
 			ShowHidden: swag.Bool(true),
@@ -1807,7 +1808,7 @@ func TestController_ListBranchesHandler(t *testing.T) {
 	})
 
 	t.Run("list branches repo doesnt exist", func(t *testing.T) {
-		resp, err := clt.ListBranchesWithResponse(ctx, "repo666", &apigen.ListBranchesParams{
+		resp, err := clt.ListBranchesWithResponse(ctx, apigen.RepositoryOwner("test-user/repo666"), apigen.RepositoryName("test-user/repo666"), &apigen.ListBranchesParams{
 			Amount: apiutil.Ptr(apigen.PaginationAmount(2)),
 		})
 		testutil.Must(t, err)
@@ -1826,7 +1827,7 @@ func TestController_ListTagsHandler(t *testing.T) {
 
 	// setup test data
 	repo := testUniqueRepoName()
-	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "foo1"), "main", false)
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "test-user/foo1"), "main", false)
 	testutil.Must(t, err)
 	testutil.Must(t, deps.catalog.CreateEntry(ctx, repo, "main", catalog.DBEntry{Path: "obj1"}))
 	commitLog, err := deps.catalog.Commit(ctx, repo, "main", "first commit", "test", nil, nil, nil, false)
@@ -1836,7 +1837,7 @@ func TestController_ListTagsHandler(t *testing.T) {
 	for i := 0; i < createTagLen; i++ {
 		tagID := "tag" + strconv.Itoa(i)
 		commitID := commitLog.Reference
-		_, err := clt.CreateTagWithResponse(ctx, repo, apigen.CreateTagJSONRequestBody{
+		_, err := clt.CreateTagWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateTagJSONRequestBody{
 			Id:  tagID,
 			Ref: commitID,
 		})
@@ -1848,7 +1849,7 @@ func TestController_ListTagsHandler(t *testing.T) {
 	}
 
 	t.Run("default", func(t *testing.T) {
-		resp, err := clt.ListTagsWithResponse(ctx, repo, &apigen.ListTagsParams{
+		resp, err := clt.ListTagsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListTagsParams{
 			Amount: apiutil.Ptr(apigen.PaginationAmount(-1)),
 		})
 		verifyResponseOK(t, resp, err)
@@ -1869,7 +1870,7 @@ func TestController_ListTagsHandler(t *testing.T) {
 		var calls int
 		for {
 			calls++
-			resp, err := clt.ListTagsWithResponse(ctx, repo, &apigen.ListTagsParams{
+			resp, err := clt.ListTagsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListTagsParams{
 				After:  apiutil.Ptr(apigen.PaginationAfter(after)),
 				Amount: apiutil.Ptr(apigen.PaginationAmount(pageSize)),
 			})
@@ -1894,7 +1895,7 @@ func TestController_ListTagsHandler(t *testing.T) {
 	})
 
 	t.Run("no repository", func(t *testing.T) {
-		resp, err := clt.ListTagsWithResponse(ctx, "repo666", &apigen.ListTagsParams{})
+		resp, err := clt.ListTagsWithResponse(ctx, apigen.RepositoryOwner("test-user/repo666"), apigen.RepositoryName("test-user/repo666"), &apigen.ListTagsParams{})
 		testutil.Must(t, err)
 		if resp.JSON404 == nil {
 			t.Fatal("ListTags should return not found error")
@@ -1908,7 +1909,7 @@ func TestController_GetBranchHandler(t *testing.T) {
 
 	const testBranch = "main"
 	repo := testUniqueRepoName()
-	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "foo1"), testBranch, false)
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "test-user/foo1"), testBranch, false)
 	testutil.Must(t, err)
 
 	t.Run("get default branch", func(t *testing.T) {
@@ -1917,7 +1918,7 @@ func TestController_GetBranchHandler(t *testing.T) {
 		_, err = deps.catalog.Commit(ctx, repo, testBranch, "first commit", "test", nil, nil, nil, false)
 		testutil.Must(t, err)
 
-		resp, err := clt.GetBranchWithResponse(ctx, repo, testBranch)
+		resp, err := clt.GetBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), testBranch)
 		verifyResponseOK(t, resp, err)
 		reference := resp.JSON200
 		if reference == nil || reference.CommitId == "" {
@@ -1926,7 +1927,7 @@ func TestController_GetBranchHandler(t *testing.T) {
 	})
 
 	t.Run("get missing branch", func(t *testing.T) {
-		resp, err := clt.GetBranchWithResponse(ctx, repo, "main333")
+		resp, err := clt.GetBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main333")
 		if err != nil {
 			t.Fatal("GetBranch error", err)
 		}
@@ -1937,7 +1938,7 @@ func TestController_GetBranchHandler(t *testing.T) {
 
 	t.Run("get branch for missing repo", func(t *testing.T) {
 		missingRepo := testUniqueRepoName()
-		resp, err := clt.GetBranchWithResponse(ctx, missingRepo, "main")
+		resp, err := clt.GetBranchWithResponse(ctx, apigen.RepositoryOwner(missingRepo), apigen.RepositoryName(missingRepo), "main")
 		if err != nil {
 			t.Fatal("GetBranch error", err)
 		}
@@ -1952,7 +1953,7 @@ func TestController_BranchesDiffBranchHandler(t *testing.T) {
 	ctx := context.Background()
 	const testBranch = "main"
 	repo := testUniqueRepoName()
-	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "foo1"), testBranch, false)
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "test-user/foo1"), testBranch, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1962,7 +1963,7 @@ func TestController_BranchesDiffBranchHandler(t *testing.T) {
 		testutil.Must(t, deps.catalog.CreateEntry(ctx, repo, testBranch, catalog.DBEntry{Path: "a/b/c"}))
 		testutil.Must(t, deps.catalog.DeleteEntry(ctx, repo, testBranch, "a/b/c"))
 
-		resp, err := clt.DiffBranchWithResponse(ctx, repo, testBranch, &apigen.DiffBranchParams{})
+		resp, err := clt.DiffBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), testBranch, &apigen.DiffBranchParams{})
 		verifyResponseOK(t, resp, err)
 		changes := len(resp.JSON200.Results)
 		if changes != 0 {
@@ -1974,7 +1975,7 @@ func TestController_BranchesDiffBranchHandler(t *testing.T) {
 		testutil.Must(t, deps.catalog.CreateEntry(ctx, repo, testBranch, catalog.DBEntry{Path: "a/b"}))
 		testutil.Must(t, deps.catalog.CreateEntry(ctx, repo, testBranch, catalog.DBEntry{Path: "a/b/c"}))
 		testutil.Must(t, deps.catalog.DeleteEntry(ctx, repo, testBranch, "a/b/c"))
-		resp, err := clt.DiffBranchWithResponse(ctx, repo, testBranch, &apigen.DiffBranchParams{})
+		resp, err := clt.DiffBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), testBranch, &apigen.DiffBranchParams{})
 		verifyResponseOK(t, resp, err)
 		results := resp.JSON200.Results
 		if len(results) != 1 {
@@ -1987,7 +1988,7 @@ func TestController_BranchesDiffBranchHandler(t *testing.T) {
 	})
 
 	t.Run("diff branch that doesn't exist", func(t *testing.T) {
-		resp, err := clt.DiffBranchWithResponse(ctx, repo, "some-other-missing-branch", &apigen.DiffBranchParams{})
+		resp, err := clt.DiffBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "some-other-missing-branch", &apigen.DiffBranchParams{})
 		if err != nil {
 			t.Fatal("DiffBranch failed:", err)
 		}
@@ -2004,14 +2005,14 @@ func TestController_CreateBranchHandler(t *testing.T) {
 		t.Run(fmt.Sprintf("hidden=%v", hidden), func(t *testing.T) {
 			t.Run("create branch and diff refs success", func(t *testing.T) {
 				repo := testUniqueRepoName()
-				_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "foo1"), "main", false)
+				_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "test-user/foo1"), "main", false)
 				testutil.Must(t, err)
 				testutil.Must(t, deps.catalog.CreateEntry(ctx, repo, "main", catalog.DBEntry{Path: "a/b"}))
 				_, err = deps.catalog.Commit(ctx, repo, "main", "first commit", "test", nil, nil, nil, false)
 				testutil.Must(t, err)
 
 				const newBranchName = "main2"
-				resp, err := clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+				resp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 					Name:   newBranchName,
 					Source: "main",
 					Hidden: swag.Bool(hidden),
@@ -2030,7 +2031,7 @@ func TestController_CreateBranchHandler(t *testing.T) {
 				if _, err := deps.catalog.Commit(ctx, repo, "main2", "commit 1", "some_user", nil, nil, nil, false); err != nil {
 					t.Fatalf("failed to commit 'repo1': %s", err)
 				}
-				resp2, err := clt.DiffRefsWithResponse(ctx, repo, "main", newBranchName, &apigen.DiffRefsParams{})
+				resp2, err := clt.DiffRefsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", newBranchName, &apigen.DiffRefsParams{})
 				verifyResponseOK(t, resp2, err)
 				results := resp2.JSON200.Results
 				if len(results) != 1 {
@@ -2043,9 +2044,9 @@ func TestController_CreateBranchHandler(t *testing.T) {
 
 			t.Run("create branch missing commit", func(t *testing.T) {
 				repo := testUniqueRepoName()
-				_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "foo1"), "main", false)
+				_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "test-user/foo1"), "main", false)
 				testutil.Must(t, err)
-				resp, err := clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+				resp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 					Name:   "main3",
 					Source: "a948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447",
 					Hidden: swag.Bool(hidden),
@@ -2060,7 +2061,7 @@ func TestController_CreateBranchHandler(t *testing.T) {
 
 			t.Run("create branch missing repo", func(t *testing.T) {
 				repo := testUniqueRepoName()
-				resp, err := clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+				resp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 					Name:   "main8",
 					Source: "main",
 					Hidden: swag.Bool(hidden),
@@ -2075,10 +2076,10 @@ func TestController_CreateBranchHandler(t *testing.T) {
 
 			t.Run("create branch conflict with branch", func(t *testing.T) {
 				repo := testUniqueRepoName()
-				_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "foo1"), "main", false)
+				_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "test-user/foo1"), "main", false)
 				testutil.Must(t, err)
 
-				resp, err := clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+				resp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 					Name:   "main",
 					Source: "main",
 					Hidden: swag.Bool(hidden),
@@ -2093,14 +2094,14 @@ func TestController_CreateBranchHandler(t *testing.T) {
 
 			t.Run("create branch conflict with tag", func(t *testing.T) {
 				repo := testUniqueRepoName()
-				_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "foo1"), "main", false)
+				_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "test-user/foo1"), "main", false)
 				testutil.Must(t, err)
 
 				name := "tag123"
 				_, err = deps.catalog.CreateTag(ctx, repo, name, "main")
 				testutil.Must(t, err)
 
-				resp, err := clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+				resp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 					Name:   name,
 					Source: "main",
 					Hidden: swag.Bool(hidden),
@@ -2115,13 +2116,13 @@ func TestController_CreateBranchHandler(t *testing.T) {
 
 			t.Run("create branch conflict with commit", func(t *testing.T) {
 				repo := testUniqueRepoName()
-				_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "foo1"), "main", false)
+				_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "test-user/foo1"), "main", false)
 				testutil.Must(t, err)
 
 				log, err := deps.catalog.GetCommit(ctx, repo, "main")
 				testutil.Must(t, err)
 
-				resp, err := clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+				resp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 					Name:   log.Reference,
 					Source: "main",
 					Hidden: swag.Bool(hidden),
@@ -2136,14 +2137,14 @@ func TestController_CreateBranchHandler(t *testing.T) {
 
 			t.Run("read-only repository", func(t *testing.T) {
 				repo := testUniqueRepoName()
-				_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "foo1"), "main", true)
+				_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "test-user/foo1"), "main", true)
 				testutil.Must(t, err)
 				testutil.Must(t, deps.catalog.CreateEntry(ctx, repo, "main", catalog.DBEntry{Path: "a/b"}, graveler.WithForce(true)))
 				_, err = deps.catalog.Commit(ctx, repo, "main", "first commit", "test", nil, nil, nil, false, graveler.WithForce(true))
 				testutil.Must(t, err)
 
 				const newBranchName = "main2"
-				resp, err := clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+				resp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 					Name:   newBranchName,
 					Source: "main",
 					Hidden: swag.Bool(hidden),
@@ -2152,7 +2153,7 @@ func TestController_CreateBranchHandler(t *testing.T) {
 				if resp.StatusCode() != http.StatusForbidden {
 					t.Fatal("CreateBranch expected 403 forbidden, got", resp.Status())
 				}
-				resp, err = clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+				resp, err = clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 					Name:   newBranchName,
 					Source: "main",
 					Force:  swag.Bool(true),
@@ -2171,10 +2172,10 @@ func TestController_DiffRefsHandler(t *testing.T) {
 	t.Run("diff prefix with and without delimiter", func(t *testing.T) {
 		repoName := testUniqueRepoName()
 		const newBranchName = "main2"
-		_, err := deps.catalog.CreateRepository(ctx, repoName, "", onBlock(deps, "foo1"), "main", false)
+		_, err := deps.catalog.CreateRepository(ctx, repoName, "", onBlock(deps, "test-user/foo1"), "main", false)
 		testutil.Must(t, err)
 
-		resp, err := clt.CreateBranchWithResponse(ctx, repoName, apigen.CreateBranchJSONRequestBody{
+		resp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.CreateBranchJSONRequestBody{
 			Name:   newBranchName,
 			Source: "main",
 		})
@@ -2194,7 +2195,7 @@ func TestController_DiffRefsHandler(t *testing.T) {
 		if _, err := deps.catalog.Commit(ctx, repoName, newBranchName, "commit 1", "some_user", nil, nil, nil, false); err != nil {
 			t.Fatalf("failed to commit 'repo1': %s", err)
 		}
-		resp2, err := clt.DiffRefsWithResponse(ctx, repoName, "main", newBranchName, &apigen.DiffRefsParams{})
+		resp2, err := clt.DiffRefsWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "main", newBranchName, &apigen.DiffRefsParams{})
 		verifyResponseOK(t, resp2, err)
 		results := resp2.JSON200.Results
 		if len(results) != 1 {
@@ -2208,7 +2209,7 @@ func TestController_DiffRefsHandler(t *testing.T) {
 		}
 
 		delimiter := apigen.PaginationDelimiter("/")
-		resp2, err = clt.DiffRefsWithResponse(ctx, repoName, "main", newBranchName, &apigen.DiffRefsParams{Delimiter: &delimiter})
+		resp2, err = clt.DiffRefsWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "main", newBranchName, &apigen.DiffRefsParams{Delimiter: &delimiter})
 		verifyResponseOK(t, resp2, err)
 		results = resp2.JSON200.Results
 		if len(results) != 1 {
@@ -2239,7 +2240,7 @@ func uploadObjectHelper(t testing.TB, ctx context.Context, clt apigen.ClientWith
 		t.Fatal("Close multipart writer:", err)
 	}
 
-	return clt.UploadObjectWithBodyWithResponse(ctx, repo, branch, &apigen.UploadObjectParams{
+	return clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.UploadObjectParams{
 		Path: path,
 	}, w.FormDataContentType(), &b)
 }
@@ -2257,13 +2258,13 @@ func TestController_UploadObjectHandler(t *testing.T) {
 	clt, deps := setupClientWithAdmin(t)
 	ctx := context.Background()
 
-	_, err := deps.catalog.CreateRepository(ctx, "my-new-repo", "", onBlock(deps, "foo1"), "main", false)
+	_, err := deps.catalog.CreateRepository(ctx, "test-user/my-new-repo", "", onBlock(deps, "test-user/foo1"), "main", false)
 	testutil.Must(t, err)
 
 	t.Run("upload object", func(t *testing.T) {
 		// write
 		contentType, buf := writeMultipart("content", "bar", "hello world!")
-		b, err := clt.UploadObjectWithBodyWithResponse(ctx, "my-new-repo", "main", &apigen.UploadObjectParams{
+		b, err := clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner("test-user/my-new-repo"), apigen.RepositoryName("test-user/my-new-repo"), "main", &apigen.UploadObjectParams{
 			Path: "foo/bar",
 		}, contentType, buf)
 
@@ -2279,7 +2280,7 @@ func TestController_UploadObjectHandler(t *testing.T) {
 	t.Run("overwrite", func(t *testing.T) {
 		// write first
 		contentType, buf := writeMultipart("content", "baz1", "hello world!")
-		b, err := clt.UploadObjectWithBodyWithResponse(ctx, "my-new-repo", "main", &apigen.UploadObjectParams{
+		b, err := clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner("test-user/my-new-repo"), apigen.RepositoryName("test-user/my-new-repo"), "main", &apigen.UploadObjectParams{
 			Path: "foo/baz1",
 		}, contentType, buf)
 		testutil.Must(t, err)
@@ -2288,7 +2289,7 @@ func TestController_UploadObjectHandler(t *testing.T) {
 		}
 		// overwrite
 		contentType, buf = writeMultipart("content", "baz1", "something else!")
-		b, err = clt.UploadObjectWithBodyWithResponse(ctx, "my-new-repo", "main", &apigen.UploadObjectParams{
+		b, err = clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner("test-user/my-new-repo"), apigen.RepositoryName("test-user/my-new-repo"), "main", &apigen.UploadObjectParams{
 			Path: "foo/baz1",
 		}, contentType, buf)
 
@@ -2301,7 +2302,7 @@ func TestController_UploadObjectHandler(t *testing.T) {
 	t.Run("disable overwrite with if-none-match (uncommitted entry)", func(t *testing.T) {
 		// write first
 		contentType, buf := writeMultipart("content", "baz2", "hello world!")
-		b, err := clt.UploadObjectWithBodyWithResponse(ctx, "my-new-repo", "main", &apigen.UploadObjectParams{
+		b, err := clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner("test-user/my-new-repo"), apigen.RepositoryName("test-user/my-new-repo"), "main", &apigen.UploadObjectParams{
 			Path: "foo/baz2",
 		}, contentType, buf)
 		testutil.Must(t, err)
@@ -2311,7 +2312,7 @@ func TestController_UploadObjectHandler(t *testing.T) {
 		// overwrite
 		contentType, buf = writeMultipart("content", "baz2", "something else!")
 		all := apigen.IfNoneMatch("*")
-		b, err = clt.UploadObjectWithBodyWithResponse(ctx, "my-new-repo", "main", &apigen.UploadObjectParams{
+		b, err = clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner("test-user/my-new-repo"), apigen.RepositoryName("test-user/my-new-repo"), "main", &apigen.UploadObjectParams{
 			Path:        "foo/baz2",
 			IfNoneMatch: &all,
 		}, contentType, buf)
@@ -2323,12 +2324,12 @@ func TestController_UploadObjectHandler(t *testing.T) {
 	})
 
 	t.Run("disable overwrite with if-none-match (committed entry)", func(t *testing.T) {
-		_, err := deps.catalog.CreateBranch(ctx, "my-new-repo", "another-branch", "main")
+		_, err := deps.catalog.CreateBranch(ctx, "test-user/my-new-repo", "another-branch", "main")
 		testutil.Must(t, err)
 
 		// write first
 		contentType, buf := writeMultipart("content", "baz3", "hello world!")
-		b, err := clt.UploadObjectWithBodyWithResponse(ctx, "my-new-repo", "another-branch", &apigen.UploadObjectParams{
+		b, err := clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner("test-user/my-new-repo"), apigen.RepositoryName("test-user/my-new-repo"), "another-branch", &apigen.UploadObjectParams{
 			Path: "foo/baz3",
 		}, contentType, buf)
 		testutil.Must(t, err)
@@ -2337,13 +2338,13 @@ func TestController_UploadObjectHandler(t *testing.T) {
 		}
 
 		// commit
-		_, err = deps.catalog.Commit(ctx, "my-new-repo", "another-branch", "a commit!", "user1", nil, nil, nil, false)
+		_, err = deps.catalog.Commit(ctx, "test-user/my-new-repo", "another-branch", "a commit!", "user1", nil, nil, nil, false)
 		testutil.Must(t, err)
 
 		// overwrite after commit
 		all := apigen.IfNoneMatch("*")
 		contentType, buf = writeMultipart("content", "baz3", "something else!")
-		b, err = clt.UploadObjectWithBodyWithResponse(ctx, "my-new-repo", "another-branch", &apigen.UploadObjectParams{
+		b, err = clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner("test-user/my-new-repo"), apigen.RepositoryName("test-user/my-new-repo"), "another-branch", &apigen.UploadObjectParams{
 			Path:        "foo/baz3",
 			IfNoneMatch: &all,
 		}, contentType, buf)
@@ -2357,7 +2358,7 @@ func TestController_UploadObjectHandler(t *testing.T) {
 	t.Run("disable overwrite with if-none-match (no entry)", func(t *testing.T) {
 		ifNoneMatch := apigen.IfNoneMatch("*")
 		contentType, buf := writeMultipart("content", "baz4", "something else!")
-		resp, err := clt.UploadObjectWithBodyWithResponse(ctx, "my-new-repo", "main", &apigen.UploadObjectParams{
+		resp, err := clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner("test-user/my-new-repo"), apigen.RepositoryName("test-user/my-new-repo"), "main", &apigen.UploadObjectParams{
 			Path:        "foo/baz4",
 			IfNoneMatch: &ifNoneMatch,
 		}, contentType, buf)
@@ -2372,7 +2373,7 @@ func TestController_UploadObjectHandler(t *testing.T) {
 	t.Run("invalid if non match value", func(t *testing.T) {
 		ifNoneMatch := apigen.IfNoneMatch("invalid")
 		contentType, buf := writeMultipart("content", "baz4", "something else!")
-		resp, err := clt.UploadObjectWithBodyWithResponse(ctx, "my-new-repo", "main", &apigen.UploadObjectParams{
+		resp, err := clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner("test-user/my-new-repo"), apigen.RepositoryName("test-user/my-new-repo"), "main", &apigen.UploadObjectParams{
 			Path:        "foo/baz4",
 			IfNoneMatch: &ifNoneMatch,
 		}, contentType, buf)
@@ -2387,7 +2388,7 @@ func TestController_UploadObjectHandler(t *testing.T) {
 	t.Run("upload object missing 'content' key", func(t *testing.T) {
 		// write
 		contentType, buf := writeMultipart("this-is-not-content", "bar", "hello world!")
-		b, err := clt.UploadObjectWithBodyWithResponse(ctx, "my-new-repo", "main", &apigen.UploadObjectParams{
+		b, err := clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner("test-user/my-new-repo"), apigen.RepositoryName("test-user/my-new-repo"), "main", &apigen.UploadObjectParams{
 			Path: "foo/bar",
 		}, contentType, buf)
 
@@ -2401,12 +2402,12 @@ func TestController_UploadObjectHandler(t *testing.T) {
 	})
 
 	t.Run("read-only repository", func(t *testing.T) {
-		repoName := "my-new-read-only-repo"
-		_, err := deps.catalog.CreateRepository(ctx, repoName, "", onBlock(deps, "foo2"), "main", true)
+		repoName := "test-user/my-new-read-only-repo"
+		_, err := deps.catalog.CreateRepository(ctx, repoName, "", onBlock(deps, "test-user/foo2"), "main", true)
 		testutil.Must(t, err)
 		// write
 		contentType, buf := writeMultipart("content", "bar", "hello world!")
-		b, err := clt.UploadObjectWithBodyWithResponse(ctx, repoName, "main", &apigen.UploadObjectParams{
+		b, err := clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "main", &apigen.UploadObjectParams{
 			Path: "foo/bar",
 		}, contentType, buf)
 		testutil.Must(t, err)
@@ -2414,7 +2415,7 @@ func TestController_UploadObjectHandler(t *testing.T) {
 			t.Fatalf("expected 403 forbidden for UploadObject, got %d", b.StatusCode())
 		}
 		contentType, buf = writeMultipart("content", "bar", "hello world!")
-		b, err = clt.UploadObjectWithBodyWithResponse(ctx, repoName, "main", &apigen.UploadObjectParams{
+		b, err = clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "main", &apigen.UploadObjectParams{
 			Path:  "foo/bar",
 			Force: swag.Bool(true),
 		}, contentType, buf)
@@ -2433,30 +2434,30 @@ func TestController_DeleteBranchHandler(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("delete branch success", func(t *testing.T) {
-		_, err := deps.catalog.CreateRepository(ctx, "my-new-repo", "", onBlock(deps, "foo1"), "main", false)
+		_, err := deps.catalog.CreateRepository(ctx, "test-user/my-new-repo", "", onBlock(deps, "test-user/foo1"), "main", false)
 		testutil.Must(t, err)
-		testutil.Must(t, deps.catalog.CreateEntry(ctx, "my-new-repo", "main", catalog.DBEntry{Path: "a/b"}))
-		_, err = deps.catalog.Commit(ctx, "my-new-repo", "main", "first commit", "test", nil, nil, nil, false)
+		testutil.Must(t, deps.catalog.CreateEntry(ctx, "test-user/my-new-repo", "main", catalog.DBEntry{Path: "a/b"}))
+		_, err = deps.catalog.Commit(ctx, "test-user/my-new-repo", "main", "first commit", "test", nil, nil, nil, false)
 		testutil.Must(t, err)
 
-		_, err = deps.catalog.CreateBranch(ctx, "my-new-repo", "main2", "main")
+		_, err = deps.catalog.CreateBranch(ctx, "test-user/my-new-repo", "main2", "main")
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		delResp, err := clt.DeleteBranchWithResponse(ctx, "my-new-repo", "main2", &apigen.DeleteBranchParams{})
+		delResp, err := clt.DeleteBranchWithResponse(ctx, apigen.RepositoryOwner("test-user/my-new-repo"), apigen.RepositoryName("test-user/my-new-repo"), "main2", &apigen.DeleteBranchParams{})
 		verifyResponseOK(t, delResp, err)
 
-		_, err = deps.catalog.GetBranchReference(ctx, "my-new-repo", "main2")
+		_, err = deps.catalog.GetBranchReference(ctx, "test-user/my-new-repo", "main2")
 		if !errors.Is(err, graveler.ErrNotFound) {
 			t.Fatalf("expected branch to be gone, instead got error: %s", err)
 		}
 	})
 
 	t.Run("delete default branch", func(t *testing.T) {
-		_, err := deps.catalog.CreateRepository(ctx, "my-new-repo2", "", onBlock(deps, "foo2"), "main", false)
+		_, err := deps.catalog.CreateRepository(ctx, "test-user/my-new-repo2", "", onBlock(deps, "test-user/foo2"), "main", false)
 		testutil.Must(t, err)
-		resp, err := clt.DeleteBranchWithResponse(ctx, "my-new-repo2", "main", &apigen.DeleteBranchParams{})
+		resp, err := clt.DeleteBranchWithResponse(ctx, apigen.RepositoryOwner("test-user/my-new-repo2"), apigen.RepositoryName("test-user/my-new-repo2"), "main", &apigen.DeleteBranchParams{})
 		if err != nil {
 			t.Fatal("DeleteBranch error:", err)
 		}
@@ -2466,7 +2467,7 @@ func TestController_DeleteBranchHandler(t *testing.T) {
 	})
 
 	t.Run("delete branch doesnt exist", func(t *testing.T) {
-		resp, err := clt.DeleteBranchWithResponse(ctx, "my-new-repo", "main5", &apigen.DeleteBranchParams{})
+		resp, err := clt.DeleteBranchWithResponse(ctx, apigen.RepositoryOwner("test-user/my-new-repo"), apigen.RepositoryName("test-user/my-new-repo"), "main5", &apigen.DeleteBranchParams{})
 		if err != nil {
 			t.Fatal("DeleteBranch error:", err)
 		}
@@ -2476,8 +2477,8 @@ func TestController_DeleteBranchHandler(t *testing.T) {
 	})
 
 	t.Run("read-only repository", func(t *testing.T) {
-		repoName := "read-only-repo"
-		_, err := deps.catalog.CreateRepository(ctx, repoName, "", onBlock(deps, "foo1"), "main", true)
+		repoName := "test-user/read-only-repo"
+		_, err := deps.catalog.CreateRepository(ctx, repoName, "", onBlock(deps, "test-user/foo1"), "main", true)
 		testutil.Must(t, err)
 		testutil.Must(t, deps.catalog.CreateEntry(ctx, repoName, "main", catalog.DBEntry{Path: "a/b"}, graveler.WithForce(true)))
 		_, err = deps.catalog.Commit(ctx, repoName, "main", "first commit", "test", nil, nil, nil, false, graveler.WithForce(true))
@@ -2488,12 +2489,12 @@ func TestController_DeleteBranchHandler(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		delResp, err := clt.DeleteBranchWithResponse(ctx, repoName, "main2", &apigen.DeleteBranchParams{})
+		delResp, err := clt.DeleteBranchWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "main2", &apigen.DeleteBranchParams{})
 		testutil.Must(t, err)
 		if delResp.JSON403 == nil {
 			t.Fatalf("expected 403 forbidden for DeleteBranch, got %d", delResp.StatusCode())
 		}
-		delResp, err = clt.DeleteBranchWithResponse(ctx, repoName, "main2", &apigen.DeleteBranchParams{Force: swag.Bool(true)})
+		delResp, err = clt.DeleteBranchWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "main2", &apigen.DeleteBranchParams{Force: swag.Bool(true)})
 		verifyResponseOK(t, delResp, err)
 
 		_, err = deps.catalog.GetBranchReference(ctx, repoName, "main2")
@@ -2524,7 +2525,7 @@ func TestController_ObjectsStatObjectHandler(t *testing.T) {
 		}
 		testutil.Must(t, deps.catalog.CreateEntry(ctx, repo, "main", entry))
 
-		resp, err := clt.StatObjectWithResponse(ctx, repo, "main", &apigen.StatObjectParams{Path: objPath})
+		resp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.StatObjectParams{Path: objPath})
 		verifyResponseOK(t, resp, err)
 		if resp.JSON200 == nil {
 			t.Fatalf("expected to get back object stats, got status %s", resp.Status())
@@ -2545,7 +2546,7 @@ func TestController_ObjectsStatObjectHandler(t *testing.T) {
 		}
 		testutil.Must(t, deps.catalog.CreateEntry(ctx, repo, "main", entry))
 
-		resp, err := clt.StatObjectWithResponse(ctx, repo, "main", &apigen.StatObjectParams{Path: "foo/bar"})
+		resp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.StatObjectParams{Path: "foo/bar"})
 		verifyResponseOK(t, resp, err)
 		objectStats := resp.JSON200
 
@@ -2569,7 +2570,7 @@ func TestController_ObjectsStatObjectHandler(t *testing.T) {
 
 		// verify get stat without metadata works
 		getUserMetadata := false
-		resp, err = clt.StatObjectWithResponse(ctx, repo, "main", &apigen.StatObjectParams{Path: "foo/bar", UserMetadata: &getUserMetadata})
+		resp, err = clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.StatObjectParams{Path: "foo/bar", UserMetadata: &getUserMetadata})
 		verifyResponseOK(t, resp, err)
 		objectStatsNoMetadata := resp.JSON200
 		if objectStatsNoMetadata.Metadata == nil || len(objectStatsNoMetadata.Metadata.AdditionalProperties) != 0 {
@@ -2588,7 +2589,7 @@ func TestController_ObjectsStatObjectHandler(t *testing.T) {
 		}
 		testutil.Must(t, deps.catalog.CreateEntry(ctx, repo, "main", entry))
 
-		resp, err := clt.StatObjectWithResponse(ctx, repo, "main", &apigen.StatObjectParams{Path: "foo/bar2"})
+		resp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.StatObjectParams{Path: "foo/bar2"})
 		verifyResponseOK(t, resp, err)
 		objectStats := resp.JSON200
 
@@ -2656,14 +2657,14 @@ func TestController_UpdateObjectUserMetadataHander(t *testing.T) {
 					},
 				}
 
-				resp, err := clt.UpdateObjectUserMetadataWithResponse(ctx, repo, "main",
+				resp, err := clt.UpdateObjectUserMetadataWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main",
 					&apigen.UpdateObjectUserMetadataParams{Path: objPath},
 					body,
 				)
 				verifyResponseOK(t, resp, err)
 
 				// Verify that it was set
-				statResp, err := clt.StatObjectWithResponse(ctx, repo, "main",
+				statResp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main",
 					&apigen.StatObjectParams{
 						Path:         objPath,
 						UserMetadata: swag.Bool(true),
@@ -2692,7 +2693,7 @@ func TestController_UpdateObjectUserMetadataHander(t *testing.T) {
 			},
 		}
 
-		resp, err := clt.UpdateObjectUserMetadataWithResponse(ctx, repo, "main",
+		resp, err := clt.UpdateObjectUserMetadataWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main",
 			&apigen.UpdateObjectUserMetadataParams{Path: objPath},
 			body,
 		)
@@ -2752,7 +2753,7 @@ func TestController_ObjectsListObjectsHandler(t *testing.T) {
 
 	t.Run("get object list", func(t *testing.T) {
 		prefix := apigen.PaginationPrefix("foo/")
-		resp, err := clt.ListObjectsWithResponse(ctx, repo, "main", &apigen.ListObjectsParams{
+		resp, err := clt.ListObjectsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.ListObjectsParams{
 			Prefix: &prefix,
 		})
 		verifyResponseOK(t, resp, err)
@@ -2765,7 +2766,7 @@ func TestController_ObjectsListObjectsHandler(t *testing.T) {
 	t.Run("get object list without user-defined metadata", func(t *testing.T) {
 		prefix := apigen.PaginationPrefix("foo/")
 		getUserMetadata := false
-		resp, err := clt.ListObjectsWithResponse(ctx, repo, "main", &apigen.ListObjectsParams{
+		resp, err := clt.ListObjectsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.ListObjectsParams{
 			Prefix:       &prefix,
 			UserMetadata: &getUserMetadata,
 		})
@@ -2780,7 +2781,7 @@ func TestController_ObjectsListObjectsHandler(t *testing.T) {
 
 	t.Run("get object list paginated", func(t *testing.T) {
 		prefix := apigen.PaginationPrefix("foo/")
-		resp, err := clt.ListObjectsWithResponse(ctx, repo, "main", &apigen.ListObjectsParams{
+		resp, err := clt.ListObjectsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.ListObjectsParams{
 			Prefix: &prefix,
 			Amount: apiutil.Ptr(apigen.PaginationAmount(2)),
 		})
@@ -2843,7 +2844,7 @@ func TestController_ObjectsHeadObjectHandler(t *testing.T) {
 	expectedEtag := "\"" + blob.Checksum + "\""
 
 	t.Run("head object", func(t *testing.T) {
-		resp, err := clt.HeadObjectWithResponse(ctx, repo, "main", &apigen.HeadObjectParams{Path: "foo/bar"})
+		resp, err := clt.HeadObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.HeadObjectParams{Path: "foo/bar"})
 		require.Nil(t, err)
 		require.Equal(t, http.StatusOK, resp.HTTPResponse.StatusCode)
 		require.Equal(t, int64(37), resp.HTTPResponse.ContentLength)
@@ -2853,7 +2854,7 @@ func TestController_ObjectsHeadObjectHandler(t *testing.T) {
 
 	t.Run("head object byte range", func(t *testing.T) {
 		rng := "bytes=0-9"
-		resp, err := clt.HeadObjectWithResponse(ctx, repo, "main", &apigen.HeadObjectParams{
+		resp, err := clt.HeadObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.HeadObjectParams{
 			Path:  "foo/bar",
 			Range: &rng,
 		})
@@ -2866,7 +2867,7 @@ func TestController_ObjectsHeadObjectHandler(t *testing.T) {
 
 	t.Run("head object bad byte range", func(t *testing.T) {
 		rng := "bytes=380-390"
-		resp, err := clt.HeadObjectWithResponse(ctx, repo, "main", &apigen.HeadObjectParams{
+		resp, err := clt.HeadObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.HeadObjectParams{
 			Path:  "foo/bar",
 			Range: &rng,
 		})
@@ -2924,7 +2925,7 @@ func TestController_ObjectsGetObjectHandler(t *testing.T) {
 	expectedEtag := "\"" + blob.Checksum + "\""
 
 	t.Run("get object", func(t *testing.T) {
-		resp, err := clt.GetObjectWithResponse(ctx, repo, "main", &apigen.GetObjectParams{Path: "foo/bar"})
+		resp, err := clt.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.GetObjectParams{Path: "foo/bar"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2946,7 +2947,7 @@ func TestController_ObjectsGetObjectHandler(t *testing.T) {
 
 	t.Run("get object byte range", func(t *testing.T) {
 		rng := "bytes=0-9"
-		resp, err := clt.GetObjectWithResponse(ctx, repo, "main", &apigen.GetObjectParams{
+		resp, err := clt.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.GetObjectParams{
 			Path:  "foo/bar",
 			Range: &rng,
 		})
@@ -2972,7 +2973,7 @@ func TestController_ObjectsGetObjectHandler(t *testing.T) {
 
 	t.Run("get object bad byte range", func(t *testing.T) {
 		rng := "bytes=380-390"
-		resp, err := clt.GetObjectWithResponse(ctx, repo, "main", &apigen.GetObjectParams{
+		resp, err := clt.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.GetObjectParams{
 			Path:  "foo/bar",
 			Range: &rng,
 		})
@@ -2985,7 +2986,7 @@ func TestController_ObjectsGetObjectHandler(t *testing.T) {
 	})
 
 	t.Run("get properties", func(t *testing.T) {
-		resp, err := clt.GetUnderlyingPropertiesWithResponse(ctx, repo, "main", &apigen.GetUnderlyingPropertiesParams{Path: "foo/bar"})
+		resp, err := clt.GetUnderlyingPropertiesWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.GetUnderlyingPropertiesParams{Path: "foo/bar"})
 		if err != nil {
 			t.Fatalf("expected to get underlying properties, got %v", err)
 		}
@@ -3001,7 +3002,7 @@ func TestController_ObjectsGetObjectHandler(t *testing.T) {
 
 	t.Run("get object returns expected response with different etag", func(t *testing.T) {
 		eTagInput := "\"11ee22ff33445566778899\""
-		resp, err := clt.GetObjectWithResponse(ctx, repo, "main", &apigen.GetObjectParams{
+		resp, err := clt.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.GetObjectParams{
 			Path:        "foo/bar",
 			IfNoneMatch: &eTagInput,
 		})
@@ -3012,7 +3013,7 @@ func TestController_ObjectsGetObjectHandler(t *testing.T) {
 	})
 
 	t.Run("get object returns not modified with same etag", func(t *testing.T) {
-		resp, err := clt.GetObjectWithResponse(ctx, repo, "main", &apigen.GetObjectParams{
+		resp, err := clt.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.GetObjectParams{
 			Path:        "foo/bar",
 			IfNoneMatch: &expectedEtag,
 		})
@@ -3023,7 +3024,7 @@ func TestController_ObjectsGetObjectHandler(t *testing.T) {
 	})
 
 	t.Run("get object returns expected response for empty etag", func(t *testing.T) {
-		resp, err := clt.GetObjectWithResponse(ctx, repo, "main", &apigen.GetObjectParams{
+		resp, err := clt.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.GetObjectParams{
 			Path: "foo/empty-etag",
 		})
 		require.Nil(t, err)
@@ -3033,7 +3034,7 @@ func TestController_ObjectsGetObjectHandler(t *testing.T) {
 	})
 	t.Run("get object with if-none-match returns expected response for empty etag", func(t *testing.T) {
 		eTagInput := "\"\""
-		resp, err := clt.GetObjectWithResponse(ctx, repo, "main", &apigen.GetObjectParams{
+		resp, err := clt.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.GetObjectParams{
 			Path:        "foo/empty-etag",
 			IfNoneMatch: &eTagInput,
 		})
@@ -3067,7 +3068,7 @@ func TestController_ObjectsUploadObjectHandler(t *testing.T) {
 		}
 
 		// download it
-		rresp, err := clt.GetObjectWithResponse(ctx, repo, "main", &apigen.GetObjectParams{Path: "foo/bar"})
+		rresp, err := clt.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.GetObjectParams{Path: "foo/bar"})
 		verifyResponseOK(t, rresp, err)
 		result := string(rresp.Body)
 		if len(result) != expectedSize {
@@ -3089,7 +3090,7 @@ func TestController_ObjectsUploadObjectHandler(t *testing.T) {
 	})
 
 	t.Run("upload object missing repo", func(t *testing.T) {
-		resp, err := uploadObjectHelper(t, ctx, clt, "foo/bar", strings.NewReader(content), "repo55555", "main")
+		resp, err := uploadObjectHelper(t, ctx, clt, "foo/bar", strings.NewReader(content), "test-user/repo55555", "main")
 		testutil.Must(t, err)
 		if resp.JSON404 == nil {
 			t.Fatal("Missing repository should return not found")
@@ -3098,7 +3099,7 @@ func TestController_ObjectsUploadObjectHandler(t *testing.T) {
 
 	t.Run("upload object missing content type", func(t *testing.T) {
 		const contentType = ""
-		resp, err := clt.UploadObjectWithBodyWithResponse(ctx, repo, "main", &apigen.UploadObjectParams{
+		resp, err := clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.UploadObjectParams{
 			Path: "foo/bar-no-content-type",
 		}, contentType, strings.NewReader(content))
 		testutil.Must(t, err)
@@ -3133,7 +3134,7 @@ func TestController_ObjectsUploadObjectHandler(t *testing.T) {
 			t.Fatal("Close multipart writer:", err)
 		}
 
-		resp, err = clt.UploadObjectWithBodyWithResponse(ctx, readOnlyRepo, "main", &apigen.UploadObjectParams{
+		resp, err = clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepo), apigen.RepositoryName(readOnlyRepo), "main", &apigen.UploadObjectParams{
 			Path: path,
 		}, w.FormDataContentType(), &b)
 		testutil.Must(t, err)
@@ -3151,7 +3152,7 @@ func TestController_ObjectsUploadObjectHandler(t *testing.T) {
 		if err := w.Close(); err != nil {
 			t.Fatal("Close multipart writer:", err)
 		}
-		resp, err = clt.UploadObjectWithBodyWithResponse(ctx, readOnlyRepo, "main", &apigen.UploadObjectParams{
+		resp, err = clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepo), apigen.RepositoryName(readOnlyRepo), "main", &apigen.UploadObjectParams{
 			Path:  path,
 			Force: swag.Bool(true),
 		}, w.FormDataContentType(), &b)
@@ -3164,7 +3165,7 @@ func TestController_ObjectsUploadObjectHandler(t *testing.T) {
 		}
 
 		// download it
-		rresp, err := clt.GetObjectWithResponse(ctx, readOnlyRepo, "main", &apigen.GetObjectParams{Path: path})
+		rresp, err := clt.GetObjectWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepo), apigen.RepositoryName(readOnlyRepo), "main", &apigen.GetObjectParams{Path: path})
 		verifyResponseOK(t, rresp, err)
 		result := string(rresp.Body)
 		if len(result) != expectedSize {
@@ -3190,7 +3191,7 @@ func TestController_ObjectsStageObjectHandler(t *testing.T) {
 
 	t.Run("stage object", func(t *testing.T) {
 		const expectedSizeBytes = 38
-		resp, err := clt.StageObjectWithResponse(ctx, repo, "main", &apigen.StageObjectParams{Path: "foo/bar"}, apigen.StageObjectJSONRequestBody{
+		resp, err := clt.StageObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.StageObjectParams{Path: "foo/bar"}, apigen.StageObjectJSONRequestBody{
 			Checksum:        "afb0689fe58b82c5f762991453edbbec",
 			PhysicalAddress: onBlock(deps, "another-bucket/some/location"),
 			SizeBytes:       expectedSizeBytes,
@@ -3203,7 +3204,7 @@ func TestController_ObjectsStageObjectHandler(t *testing.T) {
 		}
 
 		// get back info
-		statResp, err := clt.StatObjectWithResponse(ctx, repo, "main", &apigen.StatObjectParams{Path: "foo/bar"})
+		statResp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.StatObjectParams{Path: "foo/bar"})
 		verifyResponseOK(t, statResp, err)
 		objectStat := statResp.JSON200
 		if objectStat.PhysicalAddress != onBlock(deps, "another-bucket/some/location") {
@@ -3212,13 +3213,13 @@ func TestController_ObjectsStageObjectHandler(t *testing.T) {
 	})
 
 	t.Run("stage object in storage ns", func(t *testing.T) {
-		linkResp, err := clt.GetPhysicalAddressWithResponse(ctx, repo, "main", &apigen.GetPhysicalAddressParams{Path: "foo/bar2"})
+		linkResp, err := clt.GetPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.GetPhysicalAddressParams{Path: "foo/bar2"})
 		verifyResponseOK(t, linkResp, err)
 		if linkResp.JSON200 == nil {
 			t.Fatalf("GetPhysicalAddress non 200 response - status code %d", linkResp.StatusCode())
 		}
 		const expectedSizeBytes = 38
-		resp, err := clt.LinkPhysicalAddressWithResponse(ctx, repo, "main", &apigen.LinkPhysicalAddressParams{
+		resp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.LinkPhysicalAddressParams{
 			Path: "foo/bar2",
 		}, apigen.LinkPhysicalAddressJSONRequestBody{
 			Checksum:  "afb0689fe58b82c5f762991453edbbec",
@@ -3235,7 +3236,7 @@ func TestController_ObjectsStageObjectHandler(t *testing.T) {
 		}
 
 		// get back info
-		statResp, err := clt.StatObjectWithResponse(ctx, repo, "main", &apigen.StatObjectParams{Path: "foo/bar2"})
+		statResp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.StatObjectParams{Path: "foo/bar2"})
 		verifyResponseOK(t, statResp, err)
 		if statResp.JSON200 == nil {
 			t.Fatalf("StatObject non 200 - status code %d", statResp.StatusCode())
@@ -3247,7 +3248,7 @@ func TestController_ObjectsStageObjectHandler(t *testing.T) {
 	})
 
 	t.Run("upload object missing branch", func(t *testing.T) {
-		resp, err := clt.StageObjectWithResponse(ctx, repo, "main1234", &apigen.StageObjectParams{Path: "foo/bar"},
+		resp, err := clt.StageObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main1234", &apigen.StageObjectParams{Path: "foo/bar"},
 			apigen.StageObjectJSONRequestBody{
 				Checksum:        "afb0689fe58b82c5f762991453edbbec",
 				PhysicalAddress: onBlock(deps, "another-bucket/some/location"),
@@ -3259,7 +3260,7 @@ func TestController_ObjectsStageObjectHandler(t *testing.T) {
 	})
 
 	t.Run("wrong storage adapter", func(t *testing.T) {
-		resp, err := clt.StageObjectWithResponse(ctx, repo, "main1234", &apigen.StageObjectParams{
+		resp, err := clt.StageObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main1234", &apigen.StageObjectParams{
 			Path: "foo/bar",
 		}, apigen.StageObjectJSONRequestBody{
 			Checksum:        "afb0689fe58b82c5f762991453edbbec",
@@ -3278,7 +3279,7 @@ func TestController_ObjectsStageObjectHandler(t *testing.T) {
 			t.Fatal(err)
 		}
 		const expectedSizeBytes = 38
-		resp, err := clt.StageObjectWithResponse(ctx, readOnlyRepo, "main", &apigen.StageObjectParams{Path: "foo/bar"}, apigen.StageObjectJSONRequestBody{
+		resp, err := clt.StageObjectWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepo), apigen.RepositoryName(readOnlyRepo), "main", &apigen.StageObjectParams{Path: "foo/bar"}, apigen.StageObjectJSONRequestBody{
 			Checksum:        "afb0689fe58b82c5f762991453edbbec",
 			PhysicalAddress: onBlock(deps, "another-bucket/some/location"),
 			SizeBytes:       expectedSizeBytes,
@@ -3288,7 +3289,7 @@ func TestController_ObjectsStageObjectHandler(t *testing.T) {
 			t.Fatalf("expected 403 forbidden status for StageObject for read-only repository, got %d", resp.StatusCode())
 		}
 
-		resp, err = clt.StageObjectWithResponse(ctx, readOnlyRepo, "main", &apigen.StageObjectParams{Path: "foo/bar"}, apigen.StageObjectJSONRequestBody{
+		resp, err = clt.StageObjectWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepo), apigen.RepositoryName(readOnlyRepo), "main", &apigen.StageObjectParams{Path: "foo/bar"}, apigen.StageObjectJSONRequestBody{
 			Checksum:        "afb0689fe58b82c5f762991453edbbec",
 			PhysicalAddress: onBlock(deps, "another-bucket/some/location"),
 			SizeBytes:       expectedSizeBytes,
@@ -3302,7 +3303,7 @@ func TestController_ObjectsStageObjectHandler(t *testing.T) {
 		}
 
 		// get back info
-		statResp, err := clt.StatObjectWithResponse(ctx, readOnlyRepo, "main", &apigen.StatObjectParams{Path: "foo/bar"})
+		statResp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepo), apigen.RepositoryName(readOnlyRepo), "main", &apigen.StatObjectParams{Path: "foo/bar"})
 		verifyResponseOK(t, statResp, err)
 		objectStat := statResp.JSON200
 		if objectStat.PhysicalAddress != onBlock(deps, "another-bucket/some/location") {
@@ -3312,7 +3313,7 @@ func TestController_ObjectsStageObjectHandler(t *testing.T) {
 
 	t.Run("missing signature", func(t *testing.T) {
 		address := fmt.Sprintf("%s/%s", ns, upload.DefaultPathProvider.NewPath())
-		resp, err := clt.LinkPhysicalAddressWithResponse(ctx, repo, "main", &apigen.LinkPhysicalAddressParams{
+		resp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.LinkPhysicalAddressParams{
 			Path: "foo/bar",
 		}, apigen.LinkPhysicalAddressJSONRequestBody{
 			Checksum:  "afb0689fe58b82c5f762991453edbbec",
@@ -3327,7 +3328,7 @@ func TestController_ObjectsStageObjectHandler(t *testing.T) {
 	})
 	t.Run("malformed signature", func(t *testing.T) {
 		address := fmt.Sprintf("%s/%s,someBadSig?=", ns, upload.DefaultPathProvider.NewPath())
-		resp, err := clt.LinkPhysicalAddressWithResponse(ctx, repo, "main", &apigen.LinkPhysicalAddressParams{
+		resp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.LinkPhysicalAddressParams{
 			Path: "foo/bar",
 		}, apigen.LinkPhysicalAddressJSONRequestBody{
 			Checksum:  "afb0689fe58b82c5f762991453edbbec",
@@ -3348,7 +3349,7 @@ func TestController_ObjectsStageObjectHandler(t *testing.T) {
 		sig := base64.RawURLEncoding.EncodeToString(secret)
 
 		address := fmt.Sprintf("%s/%s,%s", ns, upload.DefaultPathProvider.NewPath(), sig)
-		resp, err := clt.LinkPhysicalAddressWithResponse(ctx, repo, "main", &apigen.LinkPhysicalAddressParams{
+		resp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.LinkPhysicalAddressParams{
 			Path: "foo/bar",
 		}, apigen.LinkPhysicalAddressJSONRequestBody{
 			Checksum:  "afb0689fe58b82c5f762991453edbbec",
@@ -3386,7 +3387,7 @@ func TestController_ObjectsDeleteObjectHandler(t *testing.T) {
 		}
 
 		// download it
-		rresp, err := clt.GetObjectWithResponse(ctx, repo, branch, &apigen.GetObjectParams{Path: "foo/bar"})
+		rresp, err := clt.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.GetObjectParams{Path: "foo/bar"})
 		verifyResponseOK(t, rresp, err)
 		result := string(rresp.Body)
 		if len(result) != 38 {
@@ -3399,11 +3400,11 @@ func TestController_ObjectsDeleteObjectHandler(t *testing.T) {
 		}
 
 		// delete it
-		delResp, err := clt.DeleteObjectWithResponse(ctx, repo, branch, &apigen.DeleteObjectParams{Path: "foo/bar"})
+		delResp, err := clt.DeleteObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.DeleteObjectParams{Path: "foo/bar"})
 		verifyResponseOK(t, delResp, err)
 
 		// get it
-		statResp, err := clt.StatObjectWithResponse(ctx, repo, branch, &apigen.StatObjectParams{Path: "foo/bar"})
+		statResp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.StatObjectParams{Path: "foo/bar"})
 		testutil.Must(t, err)
 		if statResp == nil {
 			t.Fatal("StatObject missing response")
@@ -3426,7 +3427,7 @@ func TestController_ObjectsDeleteObjectHandler(t *testing.T) {
 		}
 
 		// delete objects
-		delResp, err := clt.DeleteObjectsWithResponse(ctx, repo, branch, &apigen.DeleteObjectsParams{}, apigen.DeleteObjectsJSONRequestBody{Paths: paths})
+		delResp, err := clt.DeleteObjectsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.DeleteObjectsParams{}, apigen.DeleteObjectsJSONRequestBody{Paths: paths})
 		verifyResponseOK(t, delResp, err)
 		if delResp.JSON200 == nil {
 			t.Errorf("DeleteObjects should return 200 for successful delete, got status code %d", delResp.StatusCode())
@@ -3438,7 +3439,7 @@ func TestController_ObjectsDeleteObjectHandler(t *testing.T) {
 		// check objects no longer there
 		paths = append(paths, "not-there") // include missing one
 		for _, p := range paths {
-			statResp, err := clt.StatObjectWithResponse(ctx, repo, branch, &apigen.StatObjectParams{Path: p})
+			statResp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.StatObjectParams{Path: p})
 			testutil.Must(t, err)
 			if statResp == nil {
 				t.Fatalf("StatObject missing response for '%s'", p)
@@ -3449,7 +3450,7 @@ func TestController_ObjectsDeleteObjectHandler(t *testing.T) {
 		}
 
 		// delete objects again - make sure we do not fail or get any error
-		delResp2, err := clt.DeleteObjectsWithResponse(ctx, repo, branch, &apigen.DeleteObjectsParams{}, apigen.DeleteObjectsJSONRequestBody{Paths: paths})
+		delResp2, err := clt.DeleteObjectsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.DeleteObjectsParams{}, apigen.DeleteObjectsJSONRequestBody{Paths: paths})
 		verifyResponseOK(t, delResp2, err)
 		if delResp2.JSON200 == nil {
 			t.Errorf("DeleteObjects (round 2) should return 200 for successful delete, got status code %d", delResp2.StatusCode())
@@ -3469,7 +3470,7 @@ func TestController_ObjectsDeleteObjectHandler(t *testing.T) {
 		}
 
 		// delete objects
-		delResp, err := clt.DeleteObjectsWithResponse(ctx, repo, branch, &apigen.DeleteObjectsParams{}, apigen.DeleteObjectsJSONRequestBody{Paths: paths})
+		delResp, err := clt.DeleteObjectsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.DeleteObjectsParams{}, apigen.DeleteObjectsJSONRequestBody{Paths: paths})
 		testutil.Must(t, err)
 		const expectedStatusCode = http.StatusInternalServerError
 		if delResp.StatusCode() != expectedStatusCode {
@@ -3506,7 +3507,7 @@ func TestController_ObjectsDeleteObjectHandler(t *testing.T) {
 		testutil.Must(t, err)
 
 		// delete objects
-		delResp, err := clt.DeleteObjectsWithResponse(ctx, repo, "protected", &apigen.DeleteObjectsParams{}, apigen.DeleteObjectsJSONRequestBody{Paths: paths})
+		delResp, err := clt.DeleteObjectsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "protected", &apigen.DeleteObjectsParams{}, apigen.DeleteObjectsJSONRequestBody{Paths: paths})
 		verifyResponseOK(t, delResp, err)
 		if delResp.StatusCode() != http.StatusOK {
 			t.Fatalf("DeleteObjects status code %d, expected %d", delResp.StatusCode(), http.StatusOK)
@@ -3551,7 +3552,7 @@ func TestController_ObjectsDeleteObjectHandler(t *testing.T) {
 			t.Fatal("Close multipart writer:", err)
 		}
 
-		resp, err := clt.UploadObjectWithBodyWithResponse(ctx, readOnlyRepo, "main", &apigen.UploadObjectParams{
+		resp, err := clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepo), apigen.RepositoryName(readOnlyRepo), "main", &apigen.UploadObjectParams{
 			Path:  "foo/bar",
 			Force: swag.Bool(true),
 		}, w.FormDataContentType(), &b)
@@ -3563,7 +3564,7 @@ func TestController_ObjectsDeleteObjectHandler(t *testing.T) {
 		}
 
 		// download it
-		rresp, err := clt.GetObjectWithResponse(ctx, readOnlyRepo, branch, &apigen.GetObjectParams{Path: "foo/bar"})
+		rresp, err := clt.GetObjectWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepo), apigen.RepositoryName(readOnlyRepo), branch, &apigen.GetObjectParams{Path: "foo/bar"})
 		verifyResponseOK(t, rresp, err)
 		result := string(rresp.Body)
 		if len(result) != 38 {
@@ -3576,20 +3577,20 @@ func TestController_ObjectsDeleteObjectHandler(t *testing.T) {
 		}
 
 		// delete it
-		delResp, err := clt.DeleteObjectWithResponse(ctx, readOnlyRepo, branch, &apigen.DeleteObjectParams{Path: "foo/bar"})
+		delResp, err := clt.DeleteObjectWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepo), apigen.RepositoryName(readOnlyRepo), branch, &apigen.DeleteObjectParams{Path: "foo/bar"})
 		testutil.Must(t, err)
 		if delResp.JSON403 == nil {
 			t.Fatalf("expected DeleteObject to fail with 403 forbidden, got %d", delResp.StatusCode())
 		}
 
-		delResp, err = clt.DeleteObjectWithResponse(ctx, readOnlyRepo, branch, &apigen.DeleteObjectParams{
+		delResp, err = clt.DeleteObjectWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepo), apigen.RepositoryName(readOnlyRepo), branch, &apigen.DeleteObjectParams{
 			Path:  "foo/bar",
 			Force: swag.Bool(true),
 		})
 		verifyResponseOK(t, delResp, err)
 
 		// get it
-		statResp, err := clt.StatObjectWithResponse(ctx, readOnlyRepo, branch, &apigen.StatObjectParams{Path: "foo/bar"})
+		statResp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepo), apigen.RepositoryName(readOnlyRepo), branch, &apigen.StatObjectParams{Path: "foo/bar"})
 		testutil.Must(t, err)
 		if statResp == nil {
 			t.Fatal("StatObject missing response")
@@ -3611,7 +3612,7 @@ func TestController_CreatePolicyHandler(t *testing.T) {
 				{
 					Action:   []string{"fs:ReadObject"},
 					Effect:   "allow",
-					Resource: "arn:sghub:fs:::repository/foo/object/*",
+					Resource: "arn:sghub:fs:::repository/test-user/foo/object/*",
 				},
 			},
 		})
@@ -3626,7 +3627,7 @@ func TestController_CreatePolicyHandler(t *testing.T) {
 				{
 					Action:   []string{"fsx:ReadObject"},
 					Effect:   "allow",
-					Resource: "arn:sghub:fs:::repository/foo/object/*",
+					Resource: "arn:sghub:fs:::repository/test-user/foo/object/*",
 				},
 			},
 		})
@@ -3644,7 +3645,7 @@ func TestController_CreatePolicyHandler(t *testing.T) {
 				{
 					Action:   []string{"fs:ReadObject"},
 					Effect:   "Allow",
-					Resource: "arn:sghub:fs:::repository/foo/object/*",
+					Resource: "arn:sghub:fs:::repository/test-user/foo/object/*",
 				},
 			},
 		})
@@ -3951,12 +3952,12 @@ func TestController_ListRepositoryRuns(t *testing.T) {
 	uploadResp, err := uploadObjectHelper(t, ctx, clt, "_hub_actions/pre_commit.yaml", strings.NewReader(actionContent), repo, "main")
 	verifyResponseOK(t, uploadResp, err)
 	// commit
-	respCommit, err := clt.CommitWithResponse(ctx, repo, "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	respCommit, err := clt.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "pre-commit action",
 	})
 	verifyResponseOK(t, respCommit, err)
 	// work branch
-	branchResp, err := clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+	branchResp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 		Name:   "work",
 		Source: "main",
 	})
@@ -3968,13 +3969,13 @@ func TestController_ListRepositoryRuns(t *testing.T) {
 		content := fmt.Sprintf("content-%d", i)
 		uploadResp, err := uploadObjectHelper(t, ctx, clt, content, strings.NewReader(content), repo, "work")
 		verifyResponseOK(t, uploadResp, err)
-		respCommit, err := clt.CommitWithResponse(ctx, repo, "work", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{Message: content})
+		respCommit, err := clt.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "work", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{Message: content})
 		verifyResponseOK(t, respCommit, err)
 		commitIDs = append(commitIDs, respCommit.JSON201.Id)
 	}
 
 	t.Run("total", func(t *testing.T) {
-		respList, err := clt.ListRepositoryRunsWithResponse(ctx, repo, &apigen.ListRepositoryRunsParams{
+		respList, err := clt.ListRepositoryRunsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListRepositoryRunsParams{
 			Amount: apiutil.Ptr(apigen.PaginationAmount(100)),
 		})
 		verifyResponseOK(t, respList, err)
@@ -3985,7 +3986,7 @@ func TestController_ListRepositoryRuns(t *testing.T) {
 	})
 
 	t.Run("on branch", func(t *testing.T) {
-		respList, err := clt.ListRepositoryRunsWithResponse(ctx, repo, &apigen.ListRepositoryRunsParams{
+		respList, err := clt.ListRepositoryRunsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListRepositoryRunsParams{
 			Branch: apiutil.Ptr("work"),
 			Amount: apiutil.Ptr(apigen.PaginationAmount(100)),
 		})
@@ -3997,7 +3998,7 @@ func TestController_ListRepositoryRuns(t *testing.T) {
 	})
 
 	t.Run("on branch and commit", func(t *testing.T) {
-		respList, err := clt.ListRepositoryRunsWithResponse(ctx, repo, &apigen.ListRepositoryRunsParams{
+		respList, err := clt.ListRepositoryRunsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListRepositoryRunsParams{
 			Branch: apiutil.Ptr("someBranch"),
 			Commit: apiutil.Ptr("someCommit"),
 			Amount: apiutil.Ptr(apigen.PaginationAmount(100)),
@@ -4009,10 +4010,10 @@ func TestController_ListRepositoryRuns(t *testing.T) {
 
 	t.Run("on deleted branch", func(t *testing.T) {
 		// delete work branch and list them again
-		delResp, err := clt.DeleteBranchWithResponse(ctx, repo, "work", &apigen.DeleteBranchParams{})
+		delResp, err := clt.DeleteBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "work", &apigen.DeleteBranchParams{})
 		verifyResponseOK(t, delResp, err)
 
-		respList, err := clt.ListRepositoryRunsWithResponse(ctx, repo, &apigen.ListRepositoryRunsParams{
+		respList, err := clt.ListRepositoryRunsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListRepositoryRunsParams{
 			Branch: apiutil.Ptr("work"),
 			Amount: apiutil.Ptr(apigen.PaginationAmount(100)),
 		})
@@ -4036,18 +4037,18 @@ func TestController_MergeInvalidStrategy(t *testing.T) {
 	})
 	verifyResponseOK(t, repoResp, err)
 
-	branchResp, err := clt.CreateBranchWithResponse(ctx, repoName, apigen.CreateBranchJSONRequestBody{Name: "work", Source: "main"})
+	branchResp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.CreateBranchJSONRequestBody{Name: "work", Source: "main"})
 	verifyResponseOK(t, branchResp, err)
 
 	const content = "awesome content"
 	resp, err := uploadObjectHelper(t, ctx, clt, "file1", strings.NewReader(content), repoName, "work")
 	verifyResponseOK(t, resp, err)
 
-	commitResp, err := clt.CommitWithResponse(ctx, repoName, "work", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{Message: "file 1 commit to work"})
+	commitResp, err := clt.CommitWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "work", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{Message: "file 1 commit to work"})
 	verifyResponseOK(t, commitResp, err)
 
 	strategy := "bad strategy"
-	mergeResp, err := clt.MergeIntoBranchWithResponse(ctx, repoName, "work", "main", apigen.MergeIntoBranchJSONRequestBody{
+	mergeResp, err := clt.MergeIntoBranchWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "work", "main", apigen.MergeIntoBranchJSONRequestBody{
 		Message:  apiutil.Ptr("merge work to main"),
 		Strategy: &strategy,
 	})
@@ -4067,22 +4068,22 @@ func TestController_MergeDiffWithParent(t *testing.T) {
 	})
 	verifyResponseOK(t, repoResp, err)
 
-	branchResp, err := clt.CreateBranchWithResponse(ctx, repoName, apigen.CreateBranchJSONRequestBody{Name: "work", Source: "main"})
+	branchResp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.CreateBranchJSONRequestBody{Name: "work", Source: "main"})
 	verifyResponseOK(t, branchResp, err)
 
 	const content = "awesome content"
 	resp, err := uploadObjectHelper(t, ctx, clt, "file1", strings.NewReader(content), repoName, "work")
 	verifyResponseOK(t, resp, err)
 
-	commitResp, err := clt.CommitWithResponse(ctx, repoName, "work", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{Message: "file 1 commit to work"})
+	commitResp, err := clt.CommitWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "work", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{Message: "file 1 commit to work"})
 	verifyResponseOK(t, commitResp, err)
 
-	mergeResp, err := clt.MergeIntoBranchWithResponse(ctx, repoName, "work", "main", apigen.MergeIntoBranchJSONRequestBody{
+	mergeResp, err := clt.MergeIntoBranchWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "work", "main", apigen.MergeIntoBranchJSONRequestBody{
 		Message: apiutil.Ptr("merge work to main"),
 	})
 	verifyResponseOK(t, mergeResp, err)
 
-	diffResp, err := clt.DiffRefsWithResponse(ctx, repoName, "main~1", "main", &apigen.DiffRefsParams{})
+	diffResp, err := clt.DiffRefsWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "main~1", "main", &apigen.DiffRefsParams{})
 	verifyResponseOK(t, diffResp, err)
 	expectedSize := int64(len(content))
 	expectedResults := []apigen.Diff{
@@ -4119,7 +4120,7 @@ func TestController_MergeIntoExplicitBranch(t *testing.T) {
 	for _, tt := range table {
 		t.Run(tt.Name, func(t *testing.T) {
 			destinationBranch := "main" + string(tt.Mod)
-			resp, err := clt.MergeIntoBranchWithResponse(ctx, repo, "branch1", destinationBranch, apigen.MergeIntoBranchJSONRequestBody{})
+			resp, err := clt.MergeIntoBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "branch1", destinationBranch, apigen.MergeIntoBranchJSONRequestBody{})
 			testutil.MustDo(t, "perform merge into branch", err)
 			if resp.StatusCode() != http.StatusBadRequest {
 				t.Fatalf("merge to branch with modifier should fail with status %d, got code: %v", http.StatusBadRequest, resp.StatusCode())
@@ -4183,7 +4184,7 @@ func TestController_MergeSquashing(t *testing.T) {
 			_, err := deps.catalog.CreateBranch(ctx, repo, destinationBranch, "main")
 			testutil.Must(t, err)
 
-			mergeResp, err := clt.MergeIntoBranchWithResponse(ctx, repo, "branch", destinationBranch, apigen.MergeIntoBranchJSONRequestBody{SquashMerge: tc.Squash})
+			mergeResp, err := clt.MergeIntoBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "branch", destinationBranch, apigen.MergeIntoBranchJSONRequestBody{SquashMerge: tc.Squash})
 			testutil.MustDo(t, "perform merge into branch", err)
 			if !apiutil.IsStatusCodeOK(mergeResp.StatusCode()) {
 				t.Fatal("merge request failed", mergeResp.Status())
@@ -4223,7 +4224,7 @@ func TestController_MergeDirtyBranch(t *testing.T) {
 	testutil.Must(t, err)
 
 	// merge branch1 to main (dirty)
-	resp, err := clt.MergeIntoBranchWithResponse(ctx, repo, "branch1", "main", apigen.MergeIntoBranchJSONRequestBody{})
+	resp, err := clt.MergeIntoBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "branch1", "main", apigen.MergeIntoBranchJSONRequestBody{})
 	testutil.MustDo(t, "perform merge into dirty branch", err)
 	if resp.JSON400 == nil || resp.JSON400.Message != graveler.ErrDirtyBranch.Error() {
 		t.Errorf("Merge dirty branch should fail with ErrDirtyBranch, got %+v", resp)
@@ -4242,13 +4243,13 @@ func TestController_MergeBranchWithNoChanges(t *testing.T) {
 	})
 	verifyResponseOK(t, repoResp, err)
 
-	branch1Resp, err := clt.CreateBranchWithResponse(ctx, repoName, apigen.CreateBranchJSONRequestBody{Name: "branch1", Source: "main"})
+	branch1Resp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.CreateBranchJSONRequestBody{Name: "branch1", Source: "main"})
 	verifyResponseOK(t, branch1Resp, err)
 
-	branch2Resp, err := clt.CreateBranchWithResponse(ctx, repoName, apigen.CreateBranchJSONRequestBody{Name: "branch2", Source: "main"})
+	branch2Resp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.CreateBranchJSONRequestBody{Name: "branch2", Source: "main"})
 	verifyResponseOK(t, branch2Resp, err)
 
-	mergeResp, err := clt.MergeIntoBranchWithResponse(ctx, repoName, "branch2", "branch1", apigen.MergeIntoBranchJSONRequestBody{
+	mergeResp, err := clt.MergeIntoBranchWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "branch2", "branch1", apigen.MergeIntoBranchJSONRequestBody{
 		Message: apiutil.Ptr("Merge branch2 to branch1"),
 	})
 	testutil.MustDo(t, "perform merge with no changes", err)
@@ -4256,13 +4257,13 @@ func TestController_MergeBranchWithNoChanges(t *testing.T) {
 		t.Errorf("Merge branches with no changes should fail with ErrNoChanges, got %+v", mergeResp)
 	}
 
-	mergeWithAllowEmptyFlagResp, err := clt.MergeIntoBranchWithResponse(ctx, repoName, "branch2", "branch1", apigen.MergeIntoBranchJSONRequestBody{
+	mergeWithAllowEmptyFlagResp, err := clt.MergeIntoBranchWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "branch2", "branch1", apigen.MergeIntoBranchJSONRequestBody{
 		Message:    apiutil.Ptr("Merge branch2 to branch1"),
 		AllowEmpty: swag.Bool(true),
 	})
 	verifyResponseOK(t, mergeWithAllowEmptyFlagResp, err)
 
-	mergeWithForceFlagResp, err := clt.MergeIntoBranchWithResponse(ctx, repoName, "branch2", "branch1", apigen.MergeIntoBranchJSONRequestBody{
+	mergeWithForceFlagResp, err := clt.MergeIntoBranchWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), "branch2", "branch1", apigen.MergeIntoBranchJSONRequestBody{
 		Message: apiutil.Ptr("Merge branch2 to branch1"),
 		Force:   swag.Bool(true),
 	})
@@ -4281,7 +4282,7 @@ func TestController_CreateTag(t *testing.T) {
 	testutil.Must(t, err)
 
 	t.Run("ref", func(t *testing.T) {
-		tagResp, err := clt.CreateTagWithResponse(ctx, repo, apigen.CreateTagJSONRequestBody{
+		tagResp, err := clt.CreateTagWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateTagJSONRequestBody{
 			Id:  "tag1",
 			Ref: commit1.Reference,
 		})
@@ -4289,7 +4290,7 @@ func TestController_CreateTag(t *testing.T) {
 	})
 
 	t.Run("branch", func(t *testing.T) {
-		tagResp, err := clt.CreateTagWithResponse(ctx, repo, apigen.CreateTagJSONRequestBody{
+		tagResp, err := clt.CreateTagWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateTagJSONRequestBody{
 			Id:  "tag2",
 			Ref: "main",
 		})
@@ -4297,7 +4298,7 @@ func TestController_CreateTag(t *testing.T) {
 	})
 
 	t.Run("branch_with_latest_modifier", func(t *testing.T) {
-		tagResp, err := clt.CreateTagWithResponse(ctx, repo, apigen.CreateTagJSONRequestBody{
+		tagResp, err := clt.CreateTagWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateTagJSONRequestBody{
 			Id:  "tag3",
 			Ref: "main@",
 		})
@@ -4305,7 +4306,7 @@ func TestController_CreateTag(t *testing.T) {
 	})
 
 	t.Run("branch_with_staging_modifier", func(t *testing.T) {
-		tagResp, err := clt.CreateTagWithResponse(ctx, repo, apigen.CreateTagJSONRequestBody{
+		tagResp, err := clt.CreateTagWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateTagJSONRequestBody{
 			Id:  "tag4",
 			Ref: "main$",
 		})
@@ -4316,12 +4317,12 @@ func TestController_CreateTag(t *testing.T) {
 	})
 
 	t.Run("tag_tag", func(t *testing.T) {
-		tagResp, err := clt.CreateTagWithResponse(ctx, repo, apigen.CreateTagJSONRequestBody{
+		tagResp, err := clt.CreateTagWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateTagJSONRequestBody{
 			Id:  "tag5",
 			Ref: "main",
 		})
 		verifyResponseOK(t, tagResp, err)
-		tagTagResp, err := clt.CreateTagWithResponse(ctx, repo, apigen.CreateTagJSONRequestBody{
+		tagTagResp, err := clt.CreateTagWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateTagJSONRequestBody{
 			Id:  "tag6",
 			Ref: "tag5",
 		})
@@ -4329,7 +4330,7 @@ func TestController_CreateTag(t *testing.T) {
 	})
 
 	t.Run("not_exists", func(t *testing.T) {
-		tagResp, err := clt.CreateTagWithResponse(ctx, repo, apigen.CreateTagJSONRequestBody{
+		tagResp, err := clt.CreateTagWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateTagJSONRequestBody{
 			Id:  "tag6",
 			Ref: "unknown",
 		})
@@ -4340,12 +4341,12 @@ func TestController_CreateTag(t *testing.T) {
 	})
 
 	t.Run("tag_with_conflicting_tag", func(t *testing.T) {
-		tagResp, err := clt.CreateTagWithResponse(ctx, repo, apigen.CreateTagJSONRequestBody{
+		tagResp, err := clt.CreateTagWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateTagJSONRequestBody{
 			Id:  "tag7",
 			Ref: "main",
 		})
 		verifyResponseOK(t, tagResp, err)
-		tagTagResp, err := clt.CreateTagWithResponse(ctx, repo, apigen.CreateTagJSONRequestBody{
+		tagTagResp, err := clt.CreateTagWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateTagJSONRequestBody{
 			Id:  "tag7",
 			Ref: "main",
 		})
@@ -4356,7 +4357,7 @@ func TestController_CreateTag(t *testing.T) {
 	})
 
 	t.Run("tag_with_conflicting_branch", func(t *testing.T) {
-		tagResp, err := clt.CreateTagWithResponse(ctx, repo, apigen.CreateTagJSONRequestBody{
+		tagResp, err := clt.CreateTagWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateTagJSONRequestBody{
 			Id:  "main",
 			Ref: "main",
 		})
@@ -4371,7 +4372,7 @@ func TestController_CreateTag(t *testing.T) {
 		commit, err := deps.catalog.GetCommit(ctx, repo, "main")
 		testutil.Must(t, err)
 
-		tagResp, err := clt.CreateTagWithResponse(ctx, repo, apigen.CreateTagJSONRequestBody{
+		tagResp, err := clt.CreateTagWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateTagJSONRequestBody{
 			Id:  commit.Reference,
 			Ref: "main",
 		})
@@ -4389,7 +4390,7 @@ func TestController_CreateTag(t *testing.T) {
 		testutil.MustDo(t, "create entry bar1", deps.catalog.CreateEntry(ctx, readOnlyRepo, "main", catalog.DBEntry{Path: "foo/bar2", PhysicalAddress: "bar2addr", CreationDate: time.Now(), Size: 1, Checksum: "cksum1"}, graveler.WithForce(true)))
 		commit1, err := deps.catalog.Commit(ctx, readOnlyRepo, "main", "some message", DefaultUserID, nil, nil, nil, false, graveler.WithForce(true))
 		testutil.Must(t, err)
-		tagResp, err := clt.CreateTagWithResponse(ctx, readOnlyRepo, apigen.CreateTagJSONRequestBody{
+		tagResp, err := clt.CreateTagWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepo), apigen.RepositoryName(readOnlyRepo), apigen.CreateTagJSONRequestBody{
 			Id:  "tag1",
 			Ref: commit1.Reference,
 		})
@@ -4397,7 +4398,7 @@ func TestController_CreateTag(t *testing.T) {
 		if tagResp.JSON403 == nil {
 			t.Errorf("Create tag to read-only repo should fail with 403 forbidden, got (status code: %d): %s", tagResp.StatusCode(), tagResp.Body)
 		}
-		tagResp, err = clt.CreateTagWithResponse(ctx, readOnlyRepo, apigen.CreateTagJSONRequestBody{
+		tagResp, err = clt.CreateTagWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepo), apigen.RepositoryName(readOnlyRepo), apigen.CreateTagJSONRequestBody{
 			Id:    "tag1",
 			Ref:   commit1.Reference,
 			Force: swag.Bool(true),
@@ -4407,7 +4408,7 @@ func TestController_CreateTag(t *testing.T) {
 }
 
 func testUniqueRepoName() string {
-	return "repo-0.5-" + nanoid.MustGenerate("abcdef1234567890", 8)
+	return "test-user/repo-0.5-" + nanoid.MustGenerate("abcdef1234567890", 8)
 }
 
 func TestController_Revert(t *testing.T) {
@@ -4422,24 +4423,24 @@ func TestController_Revert(t *testing.T) {
 	testutil.Must(t, err)
 
 	t.Run("ref", func(t *testing.T) {
-		branchResp, err := clt.GetBranchWithResponse(ctx, repo, "main")
+		branchResp, err := clt.GetBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main")
 		verifyResponseOK(t, branchResp, err)
-		revertResp, err := clt.RevertBranchWithResponse(ctx, repo, "main", apigen.RevertBranchJSONRequestBody{Ref: branchResp.JSON200.CommitId})
+		revertResp, err := clt.RevertBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", apigen.RevertBranchJSONRequestBody{Ref: branchResp.JSON200.CommitId})
 		verifyResponseOK(t, revertResp, err)
 	})
 
 	t.Run("branch", func(t *testing.T) {
-		revertResp, err := clt.RevertBranchWithResponse(ctx, repo, "main", apigen.RevertBranchJSONRequestBody{Ref: "main"})
+		revertResp, err := clt.RevertBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", apigen.RevertBranchJSONRequestBody{Ref: "main"})
 		verifyResponseOK(t, revertResp, err)
 	})
 
 	t.Run("committed", func(t *testing.T) {
-		revertResp, err := clt.RevertBranchWithResponse(ctx, repo, "main", apigen.RevertBranchJSONRequestBody{Ref: "main@"})
+		revertResp, err := clt.RevertBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", apigen.RevertBranchJSONRequestBody{Ref: "main@"})
 		verifyResponseOK(t, revertResp, err)
 	})
 
 	t.Run("staging", func(t *testing.T) {
-		revertResp, err := clt.RevertBranchWithResponse(ctx, repo, "main", apigen.RevertBranchJSONRequestBody{Ref: "main$"})
+		revertResp, err := clt.RevertBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", apigen.RevertBranchJSONRequestBody{Ref: "main$"})
 		testutil.Must(t, err)
 		if revertResp.JSON400 == nil {
 			t.Errorf("Revert should fail with stating reference, got (status code: %d): %s", revertResp.StatusCode(), revertResp.Body)
@@ -4454,7 +4455,7 @@ func TestController_Revert(t *testing.T) {
 		testutil.Must(t, err)
 
 		// revert changes should fail
-		revertResp, err := clt.RevertBranchWithResponse(ctx, repo, "dirty", apigen.RevertBranchJSONRequestBody{Ref: createBranch.Reference})
+		revertResp, err := clt.RevertBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dirty", apigen.RevertBranchJSONRequestBody{Ref: createBranch.Reference})
 		testutil.Must(t, err)
 		if revertResp.JSON400 == nil || revertResp.JSON400.Message != graveler.ErrDirtyBranch.Error() {
 			t.Errorf("Revert dirty branch should fail with ErrDirtyBranch, got %+v", revertResp)
@@ -4482,7 +4483,7 @@ func TestController_Revert(t *testing.T) {
 		testutil.Must(t, err)
 
 		// revert changes should fail
-		revertResp, err := clt.RevertBranchWithResponse(ctx, repo, "main", apigen.RevertBranchJSONRequestBody{Ref: mergeRef})
+		revertResp, err := clt.RevertBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", apigen.RevertBranchJSONRequestBody{Ref: mergeRef})
 		testutil.Must(t, err)
 		if revertResp.JSON409 == nil || revertResp.JSON409.Message != graveler.ErrRevertMergeNoParent.Error() {
 			t.Errorf("Revert dirty merge no parent specified was expected, got %+v", revertResp)
@@ -4496,12 +4497,12 @@ func TestController_Revert(t *testing.T) {
 		testutil.MustDo(t, "create entry bar1", deps.catalog.CreateEntry(ctx, readOnlyRepository, "main", catalog.DBEntry{Path: "foo/bar2", PhysicalAddress: "bar2addr", CreationDate: time.Now(), Size: 1, Checksum: "cksum1"}, graveler.WithForce(true)))
 		_, err = deps.catalog.Commit(ctx, readOnlyRepository, "main", "some message", DefaultUserID, nil, nil, nil, false, graveler.WithForce(true))
 		testutil.Must(t, err)
-		revertResp, err := clt.RevertBranchWithResponse(ctx, readOnlyRepository, "main", apigen.RevertBranchJSONRequestBody{Ref: "main"})
+		revertResp, err := clt.RevertBranchWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepository), apigen.RepositoryName(readOnlyRepository), "main", apigen.RevertBranchJSONRequestBody{Ref: "main"})
 		testutil.Must(t, err)
 		if revertResp.JSON403 == nil {
 			t.Errorf("Revert should fail with 403 forbidden for read-only repository, got (status code: %d): %s", revertResp.StatusCode(), revertResp.Body)
 		}
-		revertResp, err = clt.RevertBranchWithResponse(ctx, readOnlyRepository, "main", apigen.RevertBranchJSONRequestBody{Ref: "main", Force: swag.Bool(true)})
+		revertResp, err = clt.RevertBranchWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepository), apigen.RepositoryName(readOnlyRepository), "main", apigen.RevertBranchJSONRequestBody{Ref: "main", Force: swag.Bool(true)})
 		verifyResponseOK(t, revertResp, err)
 	})
 }
@@ -4520,7 +4521,7 @@ func TestController_RevertConflict(t *testing.T) {
 	_, err = deps.catalog.Commit(ctx, repo, "main", "some other message", DefaultUserID, nil, nil, nil, false)
 	testutil.Must(t, err)
 
-	resp, err := clt.RevertBranchWithResponse(ctx, repo, "main", apigen.RevertBranchJSONRequestBody{Ref: firstCommit.Reference})
+	resp, err := clt.RevertBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", apigen.RevertBranchJSONRequestBody{Ref: firstCommit.Reference})
 	testutil.Must(t, err)
 	if resp.HTTPResponse.StatusCode != http.StatusConflict {
 		t.Errorf("Revert with a conflict should fail with status %d got %d", http.StatusConflict, resp.HTTPResponse.StatusCode)
@@ -4570,31 +4571,31 @@ func TestController_CherryPick(t *testing.T) {
 	testutil.Must(t, err)
 
 	t.Run("from branch", func(t *testing.T) {
-		cherryResponse, err := clt.CherryPickWithResponse(ctx, repo, "dest-branch1", apigen.CherryPickJSONRequestBody{Ref: "branch1"})
+		cherryResponse, err := clt.CherryPickWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch1", apigen.CherryPickJSONRequestBody{Ref: "branch1"})
 		verifyResponseOK(t, cherryResponse, err)
 
 		// verify that the cherry-pick worked as expected
-		resp, err := clt.GetObjectWithResponse(ctx, repo, "dest-branch1", &apigen.GetObjectParams{Path: "foo/bar2"})
+		resp, err := clt.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch1", &apigen.GetObjectParams{Path: "foo/bar2"})
 		testutil.Must(t, err)
 		if resp.JSON404 == nil {
 			t.Error("expected to not find object foo/bar2 in dest-branch1 branch")
 		}
-		respStat, err := clt.StatObjectWithResponse(ctx, repo, "dest-branch1", &apigen.StatObjectParams{Path: "foo/bar3"})
+		respStat, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch1", &apigen.StatObjectParams{Path: "foo/bar3"})
 		verifyResponseOK(t, respStat, err)
 
-		respStat, err = clt.StatObjectWithResponse(ctx, repo, "dest-branch1", &apigen.StatObjectParams{Path: "foo/bar4"})
+		respStat, err = clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch1", &apigen.StatObjectParams{Path: "foo/bar4"})
 		verifyResponseOK(t, respStat, err)
 	})
 
 	t.Run("from commit", func(t *testing.T) {
-		cherryResponse, err := clt.CherryPickWithResponse(ctx, repo, "dest-branch2", apigen.CherryPickJSONRequestBody{Ref: commit2.Reference, ParentNumber: swag.Int(1)})
+		cherryResponse, err := clt.CherryPickWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch2", apigen.CherryPickJSONRequestBody{Ref: commit2.Reference, ParentNumber: swag.Int(1)})
 		verifyResponseOK(t, cherryResponse, err)
 
 		// verify that the cherry-pick worked as expected
-		resp, err := clt.StatObjectWithResponse(ctx, repo, "dest-branch2", &apigen.StatObjectParams{Path: "foo/bar2"})
+		resp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch2", &apigen.StatObjectParams{Path: "foo/bar2"})
 		verifyResponseOK(t, resp, err)
 
-		respStat, err := clt.StatObjectWithResponse(ctx, repo, "dest-branch2", &apigen.StatObjectParams{Path: "foo/bar3"})
+		respStat, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch2", &apigen.StatObjectParams{Path: "foo/bar3"})
 		testutil.Must(t, err)
 		if respStat.JSON404 == nil {
 			t.Error("expected to not find object foo/bar3 in dest-branch2 branch")
@@ -4602,7 +4603,7 @@ func TestController_CherryPick(t *testing.T) {
 	})
 
 	t.Run("invalid parent id (too big)", func(t *testing.T) {
-		resp, err := clt.CherryPickWithResponse(ctx, repo, "dest-branch1", apigen.CherryPickJSONRequestBody{Ref: commit2.Reference, ParentNumber: swag.Int(2)})
+		resp, err := clt.CherryPickWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch1", apigen.CherryPickJSONRequestBody{Ref: commit2.Reference, ParentNumber: swag.Int(2)})
 		testutil.Must(t, err)
 		if resp.JSON400 == nil {
 			t.Error("expected to get bad request")
@@ -4610,7 +4611,7 @@ func TestController_CherryPick(t *testing.T) {
 	})
 
 	t.Run("invalid parent id (too small)", func(t *testing.T) {
-		resp, err := clt.CherryPickWithResponse(ctx, repo, "dest-branch1", apigen.CherryPickJSONRequestBody{Ref: commit2.Reference, ParentNumber: swag.Int(0)})
+		resp, err := clt.CherryPickWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch1", apigen.CherryPickJSONRequestBody{Ref: commit2.Reference, ParentNumber: swag.Int(0)})
 		testutil.Must(t, err)
 		if resp.JSON400 == nil {
 			t.Error("expected to get bad request")
@@ -4624,7 +4625,7 @@ func TestController_CherryPick(t *testing.T) {
 		err = deps.catalog.CreateEntry(ctx, repo, "dirty", catalog.DBEntry{Path: "foo/bar5", PhysicalAddress: "bar50addr", CreationDate: time.Now(), Size: 5, Checksum: "cksum5"})
 		testutil.Must(t, err)
 
-		cherryPickResp, err := clt.CherryPickWithResponse(ctx, repo, "dirty", apigen.CherryPickJSONRequestBody{Ref: "branch1"})
+		cherryPickResp, err := clt.CherryPickWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dirty", apigen.CherryPickJSONRequestBody{Ref: "branch1"})
 		testutil.Must(t, err)
 		if cherryPickResp.JSON400 == nil || cherryPickResp.JSON400.Message != graveler.ErrDirtyBranch.Error() {
 			t.Errorf("Cherry-Pick dirty branch should fail with ErrDirtyBranch, got %+v", cherryPickResp)
@@ -4632,20 +4633,20 @@ func TestController_CherryPick(t *testing.T) {
 	})
 
 	t.Run("from branch - merge commit - first parent", func(t *testing.T) {
-		cherryResponse, err := clt.CherryPickWithResponse(ctx, repo, "dest-branch4", apigen.CherryPickJSONRequestBody{Ref: "branch3", ParentNumber: swag.Int(1)})
+		cherryResponse, err := clt.CherryPickWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch4", apigen.CherryPickJSONRequestBody{Ref: "branch3", ParentNumber: swag.Int(1)})
 		verifyResponseOK(t, cherryResponse, err)
 		// verify that the cherry-pick worked as expected
 
-		resp, err := clt.StatObjectWithResponse(ctx, repo, "dest-branch4", &apigen.StatObjectParams{Path: "foo/bar2"})
+		resp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch4", &apigen.StatObjectParams{Path: "foo/bar2"})
 		verifyResponseOK(t, resp, err)
 
-		resp, err = clt.StatObjectWithResponse(ctx, repo, "dest-branch4", &apigen.StatObjectParams{Path: "foo/bar3"})
+		resp, err = clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch4", &apigen.StatObjectParams{Path: "foo/bar3"})
 		verifyResponseOK(t, resp, err)
 
-		resp, err = clt.StatObjectWithResponse(ctx, repo, "dest-branch4", &apigen.StatObjectParams{Path: "foo/bar4"})
+		resp, err = clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch4", &apigen.StatObjectParams{Path: "foo/bar4"})
 		verifyResponseOK(t, resp, err)
 
-		respStat, err := clt.StatObjectWithResponse(ctx, repo, "dest-branch4", &apigen.StatObjectParams{Path: "foo/bar8"})
+		respStat, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch4", &apigen.StatObjectParams{Path: "foo/bar8"})
 		testutil.Must(t, err)
 		if respStat.JSON404 == nil {
 			t.Error("expected to not find object foo/bar8 in dest-branch4 branch")
@@ -4653,27 +4654,27 @@ func TestController_CherryPick(t *testing.T) {
 	})
 
 	t.Run("from branch - merge commit - second parent", func(t *testing.T) {
-		cherryResponse, err := clt.CherryPickWithResponse(ctx, repo, "dest-branch3", apigen.CherryPickJSONRequestBody{Ref: "branch3", ParentNumber: swag.Int(2)})
+		cherryResponse, err := clt.CherryPickWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch3", apigen.CherryPickJSONRequestBody{Ref: "branch3", ParentNumber: swag.Int(2)})
 		verifyResponseOK(t, cherryResponse, err)
 
 		// verify that the cherry-pick worked as expected
-		resp, err := clt.StatObjectWithResponse(ctx, repo, "dest-branch3", &apigen.StatObjectParams{Path: "foo/bar2"})
+		resp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch3", &apigen.StatObjectParams{Path: "foo/bar2"})
 		testutil.Must(t, err)
 		if resp.JSON404 == nil {
 			t.Error("expected to not find object foo/bar2 in dest-branch3 branch")
 		}
-		resp, err = clt.StatObjectWithResponse(ctx, repo, "dest-branch3", &apigen.StatObjectParams{Path: "foo/bar4"})
+		resp, err = clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch3", &apigen.StatObjectParams{Path: "foo/bar4"})
 		testutil.Must(t, err)
 		if resp.JSON404 == nil {
 			t.Error("expected to not find object foo/bar6 in dest-branch3 branch")
 		}
 
-		resp, err = clt.StatObjectWithResponse(ctx, repo, "dest-branch3", &apigen.StatObjectParams{Path: "foo/bar8"})
+		resp, err = clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch3", &apigen.StatObjectParams{Path: "foo/bar8"})
 		verifyResponseOK(t, resp, err)
 	})
 
 	t.Run("invalid parent id (too big)- merge commit", func(t *testing.T) {
-		cherryResponse, err := clt.CherryPickWithResponse(ctx, repo, "dest-branch3", apigen.CherryPickJSONRequestBody{Ref: "branch3", ParentNumber: swag.Int(3)})
+		cherryResponse, err := clt.CherryPickWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "dest-branch3", apigen.CherryPickJSONRequestBody{Ref: "branch3", ParentNumber: swag.Int(3)})
 		testutil.Must(t, err)
 		if cherryResponse.JSON400 == nil {
 			t.Error("expected to get bad request")
@@ -4681,7 +4682,7 @@ func TestController_CherryPick(t *testing.T) {
 	})
 
 	t.Run("conflict", func(t *testing.T) {
-		resp, err := clt.CherryPickWithResponse(ctx, repo, "branch4", apigen.CherryPickJSONRequestBody{Ref: commit2.Reference})
+		resp, err := clt.CherryPickWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "branch4", apigen.CherryPickJSONRequestBody{Ref: commit2.Reference})
 		testutil.Must(t, err)
 		if resp.JSON409 == nil {
 			t.Error("expected to get a conflict")
@@ -4700,12 +4701,12 @@ func TestController_CherryPick(t *testing.T) {
 		_, err = deps.catalog.Commit(ctx, readOnlyRepository, "branch1", "message2", DefaultUserID, nil, nil, nil, false, graveler.WithForce(true))
 		testutil.Must(t, err)
 
-		cherryResponse, err := clt.CherryPickWithResponse(ctx, readOnlyRepository, "dest-branch1", apigen.CherryPickJSONRequestBody{Ref: "branch1"})
+		cherryResponse, err := clt.CherryPickWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepository), apigen.RepositoryName(readOnlyRepository), "dest-branch1", apigen.CherryPickJSONRequestBody{Ref: "branch1"})
 		testutil.Must(t, err)
 		if cherryResponse.JSON403 == nil {
 			t.Fatalf("expected 403 to get forbidden error, got %d instead", cherryResponse.StatusCode())
 		}
-		cherryResponse, err = clt.CherryPickWithResponse(ctx, readOnlyRepository, "dest-branch1", apigen.CherryPickJSONRequestBody{Ref: "branch1", Force: swag.Bool(true)})
+		cherryResponse, err = clt.CherryPickWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepository), apigen.RepositoryName(readOnlyRepository), "dest-branch1", apigen.CherryPickJSONRequestBody{Ref: "branch1", Force: swag.Bool(true)})
 		verifyResponseOK(t, cherryResponse, err)
 	})
 }
@@ -4822,7 +4823,7 @@ func TestController_GetPhysicalAddress(t *testing.T) {
 			params := &apigen.GetPhysicalAddressParams{
 				Path: "get-path/obj" + strconv.Itoa(i),
 			}
-			resp, err := clt.GetPhysicalAddressWithResponse(ctx, repo, branch, params)
+			resp, err := clt.GetPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, params)
 			if err != nil {
 				t.Fatalf("GetPhysicalAddressWithResponse %s, failed: %s", params.Path, err)
 			}
@@ -4868,7 +4869,7 @@ func TestController_PrepareGarbageCollectionUncommitted(t *testing.T) {
 		)
 		for {
 			calls++
-			resp, err := clt.PrepareGarbageCollectionUncommittedWithResponse(ctx, repo, apigen.PrepareGarbageCollectionUncommittedJSONRequestBody{
+			resp, err := clt.PrepareGarbageCollectionUncommittedWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.PrepareGarbageCollectionUncommittedJSONRequestBody{
 				ContinuationToken: token,
 			})
 			verifyResponseOK(t, resp, err)
@@ -4900,7 +4901,7 @@ func TestController_PrepareGarbageCollectionUncommitted(t *testing.T) {
 	}
 
 	t.Run("no_repository", func(t *testing.T) {
-		resp, err := clt.PrepareGarbageCollectionUncommittedWithResponse(ctx, "", apigen.PrepareGarbageCollectionUncommittedJSONRequestBody{})
+		resp, err := clt.PrepareGarbageCollectionUncommittedWithResponse(ctx, apigen.RepositoryOwner(""), apigen.RepositoryName(""), apigen.PrepareGarbageCollectionUncommittedJSONRequestBody{})
 		if err != nil {
 			t.Fatalf("PrepareGarbageCollectionUncommitted failed: %s", err)
 		}
@@ -4911,7 +4912,7 @@ func TestController_PrepareGarbageCollectionUncommitted(t *testing.T) {
 
 	t.Run("repository_not_exists", func(t *testing.T) {
 		repo := testUniqueRepoName()
-		resp, err := clt.PrepareGarbageCollectionUncommittedWithResponse(ctx, repo, apigen.PrepareGarbageCollectionUncommittedJSONRequestBody{})
+		resp, err := clt.PrepareGarbageCollectionUncommittedWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.PrepareGarbageCollectionUncommittedJSONRequestBody{})
 		if err != nil {
 			t.Fatalf("PrepareGarbageCollectionUncommitted failed: %s", err)
 		}
@@ -4959,7 +4960,7 @@ func TestController_PrepareGarbageCollectionUncommitted(t *testing.T) {
 			uploadResp, err := uploadObjectHelper(t, ctx, clt, objPath, strings.NewReader(objPath), repo, "main")
 			verifyResponseOK(t, uploadResp, err)
 
-			copyResp, err := clt.CopyObjectWithResponse(ctx, repo, "main",
+			copyResp, err := clt.CopyObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main",
 				&apigen.CopyObjectParams{DestPath: fmt.Sprintf("copy/obj%d", i)},
 				apigen.CopyObjectJSONRequestBody{
 					SrcPath: objPath,
@@ -4973,7 +4974,7 @@ func TestController_PrepareGarbageCollectionUncommitted(t *testing.T) {
 		repo := testUniqueRepoName()
 		_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, repo), "main", true)
 		testutil.Must(t, err)
-		resp, err := clt.PrepareGarbageCollectionUncommittedWithResponse(ctx, repo, apigen.PrepareGarbageCollectionUncommittedJSONRequestBody{})
+		resp, err := clt.PrepareGarbageCollectionUncommittedWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.PrepareGarbageCollectionUncommittedJSONRequestBody{})
 		if err != nil {
 			t.Fatalf("PrepareGarbageCollectionUncommitted failed: %s", err)
 		}
@@ -4991,7 +4992,7 @@ func TestController_PrepareGarbageCollectionCommitted(t *testing.T) {
 		repo := testUniqueRepoName()
 		_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, repo), "main", true)
 		testutil.Must(t, err)
-		resp, err := clt.PrepareGarbageCollectionCommitsWithResponse(ctx, repo)
+		resp, err := clt.PrepareGarbageCollectionCommitsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo))
 		if err != nil {
 			t.Fatalf("PrepareGarbageCollectionCommits failed: %s", err)
 		}
@@ -5034,7 +5035,7 @@ func TestController_ClientDisconnect(t *testing.T) {
 
 	// upload request
 	contentType, reader := writeMultipart("content", "file.data", "something special")
-	_, err = clt.UploadObjectWithBodyWithResponse(ctx, repo, "main", &apigen.UploadObjectParams{
+	_, err = clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.UploadObjectParams{
 		Path: "test/file.data",
 	}, contentType, reader)
 	if err == nil {
@@ -5313,7 +5314,7 @@ func TestController_CopyObjectHandler(t *testing.T) {
 			destPath = "foo/bar-shallow-copy"
 		)
 		objStat := uploadContent(t, repo, "main", srcPath)
-		copyResp, err := clt.CopyObjectWithResponse(ctx, repo, "main", &apigen.CopyObjectParams{
+		copyResp, err := clt.CopyObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CopyObjectParams{
 			DestPath: destPath,
 		}, apigen.CopyObjectJSONRequestBody{
 			SrcPath: srcPath,
@@ -5328,7 +5329,7 @@ func TestController_CopyObjectHandler(t *testing.T) {
 		require.Equal(t, destPath, copyStat.Path)
 
 		// get back info
-		statResp, err := clt.StatObjectWithResponse(ctx, repo, "main", &apigen.StatObjectParams{Path: destPath})
+		statResp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.StatObjectParams{Path: destPath})
 		verifyResponseOK(t, statResp, err)
 		require.Nil(t, deep.Equal(statResp.JSON200, copyStat))
 	})
@@ -5339,7 +5340,7 @@ func TestController_CopyObjectHandler(t *testing.T) {
 			destPath = "foo/bar-full-from-branch"
 		)
 		objStat := uploadContent(t, repo, "alt", srcPath)
-		copyResp, err := clt.CopyObjectWithResponse(ctx, repo, "main", &apigen.CopyObjectParams{
+		copyResp, err := clt.CopyObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CopyObjectParams{
 			DestPath: destPath,
 		}, apigen.CopyObjectJSONRequestBody{
 			SrcPath: srcPath,
@@ -5362,7 +5363,7 @@ func TestController_CopyObjectHandler(t *testing.T) {
 		require.Nil(t, deep.Equal(objStat, *copyStat))
 
 		// get back info
-		statResp, err := clt.StatObjectWithResponse(ctx, repo, "main", &apigen.StatObjectParams{Path: destPath})
+		statResp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.StatObjectParams{Path: destPath})
 		verifyResponseOK(t, statResp, err)
 		require.Nil(t, deep.Equal(statResp.JSON200, copyStat))
 	})
@@ -5373,13 +5374,13 @@ func TestController_CopyObjectHandler(t *testing.T) {
 			destPath = "foo/bar-full-committed"
 		)
 		objStat := uploadContent(t, repo, "main", srcPath)
-		commitResp, err := clt.CommitWithResponse(ctx, repo, "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+		commitResp, err := clt.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 			Message: "commit bar3",
 		})
 		verifyResponseOK(t, commitResp, err)
 		require.NotNil(t, commitResp.JSON201)
 
-		copyResp, err := clt.CopyObjectWithResponse(ctx, repo, "main", &apigen.CopyObjectParams{
+		copyResp, err := clt.CopyObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CopyObjectParams{
 			DestPath: destPath,
 		}, apigen.CopyObjectJSONRequestBody{
 			SrcPath: srcPath,
@@ -5402,13 +5403,13 @@ func TestController_CopyObjectHandler(t *testing.T) {
 		require.Nil(t, deep.Equal(objStat, *copyStat))
 
 		// get back info
-		statResp, err := clt.StatObjectWithResponse(ctx, repo, "main", &apigen.StatObjectParams{Path: destPath})
+		statResp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.StatObjectParams{Path: destPath})
 		verifyResponseOK(t, statResp, err)
 		require.Nil(t, deep.Equal(statResp.JSON200, copyStat))
 	})
 
 	t.Run("not_found", func(t *testing.T) {
-		resp, err := clt.CopyObjectWithResponse(ctx, repo, "main", &apigen.CopyObjectParams{
+		resp, err := clt.CopyObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CopyObjectParams{
 			DestPath: "bar/foo",
 		}, apigen.CopyObjectJSONRequestBody{
 			SrcPath: "not/found",
@@ -5418,7 +5419,7 @@ func TestController_CopyObjectHandler(t *testing.T) {
 		require.NotNil(t, resp.JSON404)
 
 		// without src ref
-		resp, err = clt.CopyObjectWithResponse(ctx, repo, "main", &apigen.CopyObjectParams{
+		resp, err = clt.CopyObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CopyObjectParams{
 			DestPath: "bar/foo",
 		}, apigen.CopyObjectJSONRequestBody{
 			SrcPath: "not/found",
@@ -5428,7 +5429,7 @@ func TestController_CopyObjectHandler(t *testing.T) {
 	})
 
 	t.Run("empty_destination", func(t *testing.T) {
-		resp, err := clt.CopyObjectWithResponse(ctx, repo, "main", &apigen.CopyObjectParams{
+		resp, err := clt.CopyObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.CopyObjectParams{
 			DestPath: "",
 		}, apigen.CopyObjectJSONRequestBody{
 			SrcPath: "foo/bar",
@@ -5464,7 +5465,7 @@ func TestController_CopyObjectHandler(t *testing.T) {
 				t.Fatal("Close multipart writer:", err)
 			}
 
-			uploadResp, err := clt.UploadObjectWithBodyWithResponse(ctx, readOnlyRepository, branch, &apigen.UploadObjectParams{
+			uploadResp, err := clt.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepository), apigen.RepositoryName(readOnlyRepository), branch, &apigen.UploadObjectParams{
 				Path:  objPath,
 				Force: swag.Bool(true),
 			}, w.FormDataContentType(), &b)
@@ -5474,7 +5475,7 @@ func TestController_CopyObjectHandler(t *testing.T) {
 			return *uploadResp.JSON201
 		}
 		objStat := uploadContentForce(t, readOnlyRepository, "main", srcPath)
-		copyResp, err := clt.CopyObjectWithResponse(ctx, readOnlyRepository, "main", &apigen.CopyObjectParams{
+		copyResp, err := clt.CopyObjectWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepository), apigen.RepositoryName(readOnlyRepository), "main", &apigen.CopyObjectParams{
 			DestPath: destPath,
 		}, apigen.CopyObjectJSONRequestBody{
 			SrcPath: srcPath,
@@ -5483,7 +5484,7 @@ func TestController_CopyObjectHandler(t *testing.T) {
 		if copyResp.StatusCode() != http.StatusForbidden {
 			t.Fatalf("expected 403 forbidden for CopyObject on read-only repository, got %d instead", copyResp.StatusCode())
 		}
-		copyResp, err = clt.CopyObjectWithResponse(ctx, readOnlyRepository, "main", &apigen.CopyObjectParams{
+		copyResp, err = clt.CopyObjectWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepository), apigen.RepositoryName(readOnlyRepository), "main", &apigen.CopyObjectParams{
 			DestPath: destPath,
 		}, apigen.CopyObjectJSONRequestBody{
 			SrcPath: srcPath,
@@ -5499,7 +5500,7 @@ func TestController_CopyObjectHandler(t *testing.T) {
 		require.Equal(t, destPath, copyStat.Path)
 
 		// get back info
-		statResp, err := clt.StatObjectWithResponse(ctx, readOnlyRepository, "main", &apigen.StatObjectParams{Path: destPath})
+		statResp, err := clt.StatObjectWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepository), apigen.RepositoryName(readOnlyRepository), "main", &apigen.StatObjectParams{Path: destPath})
 		verifyResponseOK(t, statResp, err)
 		require.Nil(t, deep.Equal(statResp.JSON200, copyStat))
 	})
@@ -5520,7 +5521,7 @@ func TestController_LocalAdapter_StageObject(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("stage_forbidden_address", func(t *testing.T) {
-		resp, err := clt.StageObjectWithResponse(ctx, repo, "main", &apigen.StageObjectParams{
+		resp, err := clt.StageObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.StageObjectParams{
 			Path: "some_path",
 		}, apigen.StageObjectJSONRequestBody{
 			PhysicalAddress: forbiddenPath,
@@ -5560,7 +5561,7 @@ func TestController_BranchProtectionRules(t *testing.T) {
 			_, err := deps.catalog.CreateRepository(currCtx, repo, "", onBlock(deps, repo), "main", false)
 			testutil.MustDo(t, "create repository", err)
 
-			respPreflight, err := tc.clt.CreateBranchProtectionRulePreflightWithResponse(currCtx, repo)
+			respPreflight, err := tc.clt.CreateBranchProtectionRulePreflightWithResponse(currCtx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -5572,7 +5573,7 @@ func TestController_BranchProtectionRules(t *testing.T) {
 			}
 
 			// the result of an actual call to the endpoint should have the same result
-			resp, err := tc.clt.InternalCreateBranchProtectionRuleWithResponse(currCtx, repo, apigen.InternalCreateBranchProtectionRuleJSONRequestBody{
+			resp, err := tc.clt.InternalCreateBranchProtectionRuleWithResponse(currCtx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.InternalCreateBranchProtectionRuleJSONRequestBody{
 				Pattern: "main",
 			})
 			if err != nil {
@@ -5593,7 +5594,7 @@ func TestController_BranchProtectionRules(t *testing.T) {
 		_, err := deps.catalog.CreateRepository(currCtx, repo, "", onBlock(deps, repo), "main", true)
 		testutil.MustDo(t, "create repository", err)
 
-		resp, err := adminClt.SetBranchProtectionRulesWithResponse(currCtx, repo, &apigen.SetBranchProtectionRulesParams{}, apigen.SetBranchProtectionRulesJSONRequestBody{})
+		resp, err := adminClt.SetBranchProtectionRulesWithResponse(currCtx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.SetBranchProtectionRulesParams{}, apigen.SetBranchProtectionRulesJSONRequestBody{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -5636,7 +5637,7 @@ func TestController_GarbageCollectionRules(t *testing.T) {
 			_, err := deps.catalog.CreateRepository(currCtx, repo, "", onBlock(deps, repo), "main", false)
 			testutil.MustDo(t, "create repository", err)
 
-			respPreflight, err := tc.clt.SetGarbageCollectionRulesPreflightWithResponse(currCtx, repo)
+			respPreflight, err := tc.clt.SetGarbageCollectionRulesPreflightWithResponse(currCtx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -5649,7 +5650,7 @@ func TestController_GarbageCollectionRules(t *testing.T) {
 			}
 
 			// the result of an actual call to the endpoint should have the same result
-			resp, err := tc.clt.SetGCRulesWithResponse(currCtx, repo, apigen.SetGCRulesJSONRequestBody{
+			resp, err := tc.clt.SetGCRulesWithResponse(currCtx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.SetGCRulesJSONRequestBody{
 				Branches: []apigen.GarbageCollectionRule{{BranchId: "main", RetentionDays: 1}}, DefaultRetentionDays: 5,
 			})
 			if err != nil {
@@ -5670,7 +5671,7 @@ func TestController_GarbageCollectionRules(t *testing.T) {
 		_, err := deps.catalog.CreateRepository(currCtx, repo, "", onBlock(deps, repo), "main", true)
 		testutil.MustDo(t, "create repository", err)
 
-		resp, err := adminClt.SetGCRulesWithResponse(currCtx, repo, apigen.SetGCRulesJSONRequestBody{
+		resp, err := adminClt.SetGCRulesWithResponse(currCtx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.SetGCRulesJSONRequestBody{
 			Branches: []apigen.GarbageCollectionRule{{BranchId: "main", RetentionDays: 1}}, DefaultRetentionDays: 5,
 		})
 		if err != nil {
@@ -5707,7 +5708,7 @@ func TestController_DumpRestoreRepository(t *testing.T) {
 	var dumpStatus *apigen.RepositoryDumpStatus
 
 	t.Run("dump", func(t *testing.T) {
-		dumpResp, err := clt.DumpSubmitWithResponse(ctx, repo)
+		dumpResp, err := clt.DumpSubmitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo))
 		testutil.MustDo(t, "dump submit", err)
 		if dumpResp.JSON202 == nil {
 			t.Fatal("Expected 202 response")
@@ -5717,7 +5718,7 @@ func TestController_DumpRestoreRepository(t *testing.T) {
 		ticker := time.NewTicker(500 * time.Millisecond)
 		started := time.Now()
 		for range ticker.C {
-			statusResp, err := clt.DumpStatusWithResponse(ctx, repo, &apigen.DumpStatusParams{TaskId: taskID})
+			statusResp, err := clt.DumpStatusWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.DumpStatusParams{TaskId: taskID})
 			testutil.MustDo(t, "dump status", err)
 			if statusResp.JSON200 == nil {
 				t.Fatal("Expected 200 response")
@@ -5741,7 +5742,7 @@ func TestController_DumpRestoreRepository(t *testing.T) {
 	})
 
 	t.Run("dump_status_invalid_id", func(t *testing.T) {
-		response, err := clt.DumpStatusWithResponse(ctx, repo, &apigen.DumpStatusParams{TaskId: "invalid"})
+		response, err := clt.DumpStatusWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.DumpStatusParams{TaskId: "invalid"})
 		testutil.MustDo(t, "dump status", err)
 		if response.JSON404 == nil {
 			t.Fatalf("Expected 404 (not found) response, got %s", response.Status())
@@ -5757,7 +5758,7 @@ func TestController_DumpRestoreRepository(t *testing.T) {
 		_, err = deps.catalog.CreateBareRepository(ctx, newRepo, "", onBlock(deps, repo), "main", false)
 		testutil.MustDo(t, "create bare repository", err)
 
-		submitResponse, err := clt.RestoreSubmitWithResponse(ctx, newRepo, apigen.RestoreSubmitJSONRequestBody{
+		submitResponse, err := clt.RestoreSubmitWithResponse(ctx, apigen.RepositoryOwner(newRepo), apigen.RepositoryName(newRepo), apigen.RestoreSubmitJSONRequestBody{
 			BranchesMetaRangeId: dumpStatus.Refs.BranchesMetaRangeId,
 			CommitsMetaRangeId:  dumpStatus.Refs.CommitsMetaRangeId,
 			TagsMetaRangeId:     dumpStatus.Refs.TagsMetaRangeId,
@@ -5782,7 +5783,7 @@ func TestController_DumpRestoreRepository(t *testing.T) {
 		_, err = deps.catalog.CreateBareRepository(ctx, newRepo, "", onBlock(deps, repo), "main", false)
 		testutil.MustDo(t, "create bare repository", err)
 
-		submitResponse, err := clt.RestoreSubmitWithResponse(ctx, newRepo, apigen.RestoreSubmitJSONRequestBody{
+		submitResponse, err := clt.RestoreSubmitWithResponse(ctx, apigen.RepositoryOwner(newRepo), apigen.RepositoryName(newRepo), apigen.RestoreSubmitJSONRequestBody{
 			BranchesMetaRangeId: "invalid",
 			CommitsMetaRangeId:  "invalid",
 			TagsMetaRangeId:     "invalid",
@@ -5805,7 +5806,7 @@ func TestController_DumpRestoreRepository(t *testing.T) {
 	})
 
 	t.Run("restore_status_invalid_id", func(t *testing.T) {
-		response, err := clt.RestoreStatusWithResponse(ctx, repo, &apigen.RestoreStatusParams{TaskId: "invalid"})
+		response, err := clt.RestoreStatusWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.RestoreStatusParams{TaskId: "invalid"})
 		testutil.MustDo(t, "restore status", err)
 		if response.JSON404 == nil {
 			t.Fatalf("Expected 404 (not found) response, got %s", response.Status())
@@ -5834,7 +5835,7 @@ func TestController_CreateCommitRecord(t *testing.T) {
 		repo := testUniqueRepoName()
 		_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, repo), "main", false)
 		testutil.Must(t, err)
-		resp, err := clt.CreateCommitRecordWithResponse(ctx, repo, body)
+		resp, err := clt.CreateCommitRecordWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), body)
 		testutil.MustDo(t, "create commit record", err)
 		if resp.StatusCode() != http.StatusNoContent {
 			t.Fatalf("Expected 204 (no content) response, got %s", resp.Status())
@@ -5863,7 +5864,7 @@ func TestController_CreateCommitRecord(t *testing.T) {
 		testutil.Must(t, err)
 		bodyCpy := body
 		bodyCpy.CommitId = "wrong"
-		resp, err := clt.CreateCommitRecordWithResponse(ctx, repo, bodyCpy)
+		resp, err := clt.CreateCommitRecordWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), bodyCpy)
 		testutil.MustDo(t, "create commit record", err)
 		if resp.StatusCode() != http.StatusBadRequest {
 			t.Fatalf("Expected 400 (bad request) response, got %s", resp.Status())
@@ -5874,13 +5875,13 @@ func TestController_CreateCommitRecord(t *testing.T) {
 		repo := testUniqueRepoName()
 		_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, repo), "main", true)
 		testutil.Must(t, err)
-		resp, err := clt.CreateCommitRecordWithResponse(ctx, repo, body)
+		resp, err := clt.CreateCommitRecordWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), body)
 		testutil.Must(t, err)
 		if resp.StatusCode() != http.StatusForbidden {
 			t.Fatalf("Create commit record in read-only repository should be forbidden (403), got %s", resp.Status())
 		}
 		body.Force = swag.Bool(true)
-		resp, err = clt.CreateCommitRecordWithResponse(ctx, repo, body)
+		resp, err = clt.CreateCommitRecordWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), body)
 		testutil.MustDo(t, "create commit record", err)
 		if resp.StatusCode() != http.StatusNoContent {
 			t.Fatalf("Expected 204 response, got: %s", resp.Status())
@@ -5891,12 +5892,12 @@ func TestController_CreateCommitRecord(t *testing.T) {
 		repo := testUniqueRepoName()
 		_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, repo), "main", false)
 		testutil.Must(t, err)
-		resp, err := clt.CreateCommitRecordWithResponse(ctx, repo, body)
+		resp, err := clt.CreateCommitRecordWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), body)
 		testutil.MustDo(t, "create commit record", err)
 		if resp.StatusCode() != http.StatusNoContent {
 			t.Fatalf("Expected 204 (no content) response, got %s", resp.Status())
 		}
-		resp, err = clt.CreateCommitRecordWithResponse(ctx, repo, body)
+		resp, err = clt.CreateCommitRecordWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), body)
 		if resp.StatusCode() != http.StatusConflict {
 			t.Fatalf("Expected 409 (conflict) response, got %s", resp.Status())
 		}
@@ -6057,7 +6058,7 @@ func TestController_CreatePullRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("invalid source", func(t *testing.T) {
-		resp, err := clt.CreatePullRequestWithResponse(ctx, repo, apigen.CreatePullRequestJSONRequestBody{
+		resp, err := clt.CreatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreatePullRequestJSONRequestBody{
 			Description:       swag.String("My description"),
 			DestinationBranch: "branch_a",
 			SourceBranch:      "bad$name",
@@ -6069,7 +6070,7 @@ func TestController_CreatePullRequest(t *testing.T) {
 	})
 
 	t.Run("invalid dest", func(t *testing.T) {
-		resp, err := clt.CreatePullRequestWithResponse(ctx, repo, apigen.CreatePullRequestJSONRequestBody{
+		resp, err := clt.CreatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreatePullRequestJSONRequestBody{
 			Description:       swag.String("My description"),
 			DestinationBranch: "bad$name",
 			SourceBranch:      "branch_a",
@@ -6081,7 +6082,7 @@ func TestController_CreatePullRequest(t *testing.T) {
 	})
 
 	t.Run("no source", func(t *testing.T) {
-		resp, err := clt.CreatePullRequestWithResponse(ctx, repo, apigen.CreatePullRequestJSONRequestBody{
+		resp, err := clt.CreatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreatePullRequestJSONRequestBody{
 			Description:       swag.String("My description"),
 			DestinationBranch: "main",
 			SourceBranch:      "branch_a",
@@ -6093,7 +6094,7 @@ func TestController_CreatePullRequest(t *testing.T) {
 	})
 
 	t.Run("no dest", func(t *testing.T) {
-		resp, err := clt.CreatePullRequestWithResponse(ctx, repo, apigen.CreatePullRequestJSONRequestBody{
+		resp, err := clt.CreatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreatePullRequestJSONRequestBody{
 			Description:       swag.String("My description"),
 			DestinationBranch: "branch_a",
 			SourceBranch:      "main",
@@ -6105,7 +6106,7 @@ func TestController_CreatePullRequest(t *testing.T) {
 	})
 
 	t.Run("same branch", func(t *testing.T) {
-		resp, err := clt.CreatePullRequestWithResponse(ctx, repo, apigen.CreatePullRequestJSONRequestBody{
+		resp, err := clt.CreatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreatePullRequestJSONRequestBody{
 			Description:       swag.String("My description"),
 			DestinationBranch: "main",
 			SourceBranch:      "main",
@@ -6123,19 +6124,19 @@ func TestController_CreatePullRequest(t *testing.T) {
 			SourceBranch:      "branch_b",
 			Title:             "My title",
 		}
-		branchResp, err := clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+		branchResp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 			Name:   body.SourceBranch,
 			Source: "main",
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, branchResp.StatusCode())
 
-		resp, err := clt.CreatePullRequestWithResponse(ctx, repo, body)
+		resp, err := clt.CreatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), body)
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON201)
 
 		// Get pull request
-		getResp, err := clt.GetPullRequestWithResponse(ctx, repo, resp.JSON201.Id)
+		getResp, err := clt.GetPullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id)
 		require.NoError(t, err)
 		require.NotNil(t, getResp.JSON200)
 		require.Equal(t, body.Title, swag.StringValue(getResp.JSON200.Title))
@@ -6162,14 +6163,14 @@ func TestController_GetPullRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("invalid xid", func(t *testing.T) {
-		resp, err := clt.GetPullRequestWithResponse(ctx, repo, "invalid-request-id")
+		resp, err := clt.GetPullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "invalid-request-id")
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON400)
 	})
 
 	t.Run("not found", func(t *testing.T) {
 		id := xid.New()
-		resp, err := clt.GetPullRequestWithResponse(ctx, repo, id.String())
+		resp, err := clt.GetPullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), id.String())
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON404, resp.Status())
 	})
@@ -6179,11 +6180,11 @@ func TestController_ListPullRequestsHandler(t *testing.T) {
 	clt, deps := setupClientWithAdmin(t)
 	ctx := context.Background()
 	repo := testUniqueRepoName()
-	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "foo1"), "main", false)
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "test-user/foo1"), "main", false)
 	require.NoError(t, err)
 
 	t.Run("no pull requests", func(t *testing.T) {
-		resp, err := clt.ListPullRequestsWithResponse(ctx, repo, &apigen.ListPullRequestsParams{
+		resp, err := clt.ListPullRequestsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListPullRequestsParams{
 			Amount: apiutil.Ptr(apigen.PaginationAmount(-1)),
 		})
 		verifyResponseOK(t, resp, err)
@@ -6191,7 +6192,7 @@ func TestController_ListPullRequestsHandler(t *testing.T) {
 	})
 
 	t.Run("repo doesnt exist", func(t *testing.T) {
-		resp, err := clt.ListPullRequestsWithResponse(ctx, "repo666", &apigen.ListPullRequestsParams{
+		resp, err := clt.ListPullRequestsWithResponse(ctx, apigen.RepositoryOwner("test-user/repo666"), apigen.RepositoryName("test-user/repo666"), &apigen.ListPullRequestsParams{
 			Amount: apiutil.Ptr(apigen.PaginationAmount(2)),
 		})
 		testutil.Must(t, err)
@@ -6208,14 +6209,14 @@ func TestController_ListPullRequestsHandler(t *testing.T) {
 			expected[i].Description = fmt.Sprintf("description_%d", i)
 			expected[i].Status = "open"
 
-			branchResp, err := clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+			branchResp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 				Name:   expected[i].SourceBranch,
 				Source: "main",
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusCreated, branchResp.StatusCode())
 
-			resp, err := clt.CreatePullRequestWithResponse(ctx, repo, apigen.CreatePullRequestJSONRequestBody{
+			resp, err := clt.CreatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreatePullRequestJSONRequestBody{
 				Description:       &expected[i].Description,
 				DestinationBranch: expected[i].DestinationBranch,
 				SourceBranch:      expected[i].SourceBranch,
@@ -6232,7 +6233,7 @@ func TestController_ListPullRequestsHandler(t *testing.T) {
 
 		// list 10
 		amount := 10
-		resp, err := clt.ListPullRequestsWithResponse(ctx, repo, &apigen.ListPullRequestsParams{
+		resp, err := clt.ListPullRequestsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListPullRequestsParams{
 			Amount: apiutil.Ptr(apigen.PaginationAmount(amount)),
 		})
 		verifyResponseOK(t, resp, err)
@@ -6245,7 +6246,7 @@ func TestController_ListPullRequestsHandler(t *testing.T) {
 		}
 
 		// List all
-		resp, err = clt.ListPullRequestsWithResponse(ctx, repo, &apigen.ListPullRequestsParams{
+		resp, err = clt.ListPullRequestsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListPullRequestsParams{
 			Amount: apiutil.Ptr(apigen.PaginationAmount(-1)),
 		})
 		verifyResponseOK(t, resp, err)
@@ -6269,7 +6270,7 @@ func TestController_ListPullRequestsHandler(t *testing.T) {
 
 		// Test out of bounds
 		after := expected[len(expected)-1].ID
-		resp, err = clt.ListPullRequestsWithResponse(ctx, repo, &apigen.ListPullRequestsParams{
+		resp, err = clt.ListPullRequestsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListPullRequestsParams{
 			Amount: apiutil.Ptr(apigen.PaginationAmount(-1)),
 			After:  apiutil.Ptr(apigen.PaginationAfter(after)),
 		})
@@ -6280,7 +6281,7 @@ func TestController_ListPullRequestsHandler(t *testing.T) {
 		afterInt := 35
 		after = expected[afterInt].ID
 		amount = 2
-		resp, err = clt.ListPullRequestsWithResponse(ctx, repo, &apigen.ListPullRequestsParams{
+		resp, err = clt.ListPullRequestsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListPullRequestsParams{
 			After:  apiutil.Ptr[apigen.PaginationAfter](apigen.PaginationAfter(after)),
 			Amount: apiutil.Ptr[apigen.PaginationAmount](apigen.PaginationAmount(amount)),
 		})
@@ -6295,14 +6296,14 @@ func TestController_ListPullRequestsHandler(t *testing.T) {
 
 		// TODO (niro): Add tests for open / closed after we implement update
 		status := "closed"
-		resp, err = clt.ListPullRequestsWithResponse(ctx, repo, &apigen.ListPullRequestsParams{
+		resp, err = clt.ListPullRequestsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListPullRequestsParams{
 			Status: &status,
 		})
 		verifyResponseOK(t, resp, err)
 		require.Equal(t, 0, len(resp.JSON200.Results))
 
 		status = "open"
-		resp, err = clt.ListPullRequestsWithResponse(ctx, repo, &apigen.ListPullRequestsParams{
+		resp, err = clt.ListPullRequestsWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.ListPullRequestsParams{
 			Status: &status,
 		})
 		verifyResponseOK(t, resp, err)
@@ -6318,7 +6319,7 @@ func TestController_UpdatePullRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("invalid xid", func(t *testing.T) {
-		resp, err := clt.UpdatePullRequestWithResponse(ctx, repo, "invalid-request-id", apigen.UpdatePullRequestJSONRequestBody{
+		resp, err := clt.UpdatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "invalid-request-id", apigen.UpdatePullRequestJSONRequestBody{
 			Description: swag.String("description"),
 			Status:      swag.String("open"),
 			Title:       swag.String("title"),
@@ -6329,7 +6330,7 @@ func TestController_UpdatePullRequest(t *testing.T) {
 
 	t.Run("not found", func(t *testing.T) {
 		id := xid.New()
-		resp, err := clt.UpdatePullRequestWithResponse(ctx, repo, id.String(), apigen.UpdatePullRequestJSONRequestBody{
+		resp, err := clt.UpdatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), id.String(), apigen.UpdatePullRequestJSONRequestBody{
 			Description: swag.String("description"),
 			Status:      swag.String("open"),
 			Title:       swag.String("title"),
@@ -6345,19 +6346,19 @@ func TestController_UpdatePullRequest(t *testing.T) {
 			SourceBranch:      "branch_b",
 			Title:             "My title",
 		}
-		branchResp, err := clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+		branchResp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 			Name:   body.SourceBranch,
 			Source: "main",
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, branchResp.StatusCode())
 
-		resp, err := clt.CreatePullRequestWithResponse(ctx, repo, body)
+		resp, err := clt.CreatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), body)
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON201)
 
 		// Update with wrong status
-		updateResp, err := clt.UpdatePullRequestWithResponse(ctx, repo, resp.JSON201.Id, apigen.UpdatePullRequestJSONRequestBody{
+		updateResp, err := clt.UpdatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id, apigen.UpdatePullRequestJSONRequestBody{
 			Description: swag.String("description"),
 			Status:      swag.String("invalid"),
 			Title:       swag.String("title"),
@@ -6366,7 +6367,7 @@ func TestController_UpdatePullRequest(t *testing.T) {
 		require.NotNil(t, updateResp.JSON400, updateResp.Status())
 
 		// Get pull request
-		getResp, err := clt.GetPullRequestWithResponse(ctx, repo, resp.JSON201.Id)
+		getResp, err := clt.GetPullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id)
 		require.NoError(t, err)
 		require.NotNil(t, getResp.JSON200)
 
@@ -6385,14 +6386,14 @@ func TestController_UpdatePullRequest(t *testing.T) {
 			MergedCommitId:    pr.MergedCommitId,
 			SourceBranch:      pr.SourceBranch,
 		}
-		updateResp, err = clt.UpdatePullRequestWithResponse(ctx, repo, resp.JSON201.Id, apigen.UpdatePullRequestJSONRequestBody{
+		updateResp, err = clt.UpdatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id, apigen.UpdatePullRequestJSONRequestBody{
 			Description: expected.Description,
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusNoContent, updateResp.StatusCode())
 
 		// Verify update
-		getResp, err = clt.GetPullRequestWithResponse(ctx, repo, resp.JSON201.Id)
+		getResp, err = clt.GetPullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id)
 		require.NoError(t, err)
 		require.NotNil(t, getResp.JSON200)
 		if diff := deep.Equal(expected, getResp.JSON200); diff != nil {
@@ -6403,7 +6404,7 @@ func TestController_UpdatePullRequest(t *testing.T) {
 		expected.Description = swag.String("Other description")
 		expected.Title = swag.String("New title")
 		expected.Status = swag.String("closed")
-		updateResp, err = clt.UpdatePullRequestWithResponse(ctx, repo, resp.JSON201.Id, apigen.UpdatePullRequestJSONRequestBody{
+		updateResp, err = clt.UpdatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id, apigen.UpdatePullRequestJSONRequestBody{
 			Description: expected.Description,
 			Status:      expected.Status,
 			Title:       expected.Title,
@@ -6412,7 +6413,7 @@ func TestController_UpdatePullRequest(t *testing.T) {
 		require.Equal(t, http.StatusNoContent, updateResp.StatusCode(), string(updateResp.Body))
 
 		// Verify update
-		getResp, err = clt.GetPullRequestWithResponse(ctx, repo, resp.JSON201.Id)
+		getResp, err = clt.GetPullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id)
 		require.NoError(t, err)
 		require.NotNil(t, getResp.JSON200)
 		// Update closing time since we closed PR
@@ -6429,7 +6430,7 @@ func TestController_UpdatePullRequest(t *testing.T) {
 			SourceBranch:      "branch_c",
 			Title:             "My title",
 		}
-		branchResp, err := clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+		branchResp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 			Name:   body.SourceBranch,
 			Source: "main",
 		})
@@ -6437,22 +6438,22 @@ func TestController_UpdatePullRequest(t *testing.T) {
 		require.Equal(t, http.StatusCreated, branchResp.StatusCode())
 		for _, status := range []string{"closed", "merged"} {
 			t.Run(status, func(t *testing.T) {
-				resp, err := clt.CreatePullRequestWithResponse(ctx, repo, body)
+				resp, err := clt.CreatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), body)
 				require.NoError(t, err)
 				require.NotNil(t, resp.JSON201)
 
 				// Get pull request
-				getResp, err := clt.GetPullRequestWithResponse(ctx, repo, resp.JSON201.Id)
+				getResp, err := clt.GetPullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id)
 				require.NoError(t, err)
 				require.NotNil(t, getResp.JSON200)
-				updateResp, err := clt.UpdatePullRequestWithResponse(ctx, repo, resp.JSON201.Id, apigen.UpdatePullRequestJSONRequestBody{
+				updateResp, err := clt.UpdatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id, apigen.UpdatePullRequestJSONRequestBody{
 					Status: &status,
 				})
 				require.NoError(t, err)
 				require.Equal(t, http.StatusNoContent, updateResp.StatusCode())
 
 				// Verify update
-				getResp, err = clt.GetPullRequestWithResponse(ctx, repo, resp.JSON201.Id)
+				getResp, err = clt.GetPullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id)
 				require.NoError(t, err)
 				require.NotNil(t, getResp.JSON200)
 				require.NotNil(t, getResp.JSON200.ClosedDate)
@@ -6470,14 +6471,14 @@ func TestController_MergePullRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("invalid xid", func(t *testing.T) {
-		resp, err := clt.MergePullRequestWithResponse(ctx, repo, "invalid-request-id")
+		resp, err := clt.MergePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "invalid-request-id")
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON400)
 	})
 
 	t.Run("not found", func(t *testing.T) {
 		id := xid.New()
-		resp, err := clt.MergePullRequestWithResponse(ctx, repo, id.String())
+		resp, err := clt.MergePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), id.String())
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON404, resp.Status())
 	})
@@ -6489,7 +6490,7 @@ func TestController_MergePullRequest(t *testing.T) {
 			SourceBranch:      "branch_b",
 			Title:             "My title",
 		}
-		branchResp, err := clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+		branchResp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 			Name:   body.SourceBranch,
 			Source: "main",
 		})
@@ -6498,24 +6499,24 @@ func TestController_MergePullRequest(t *testing.T) {
 
 		for _, status := range []string{"closed", "merged"} {
 			t.Run(status, func(t *testing.T) {
-				resp, err := clt.CreatePullRequestWithResponse(ctx, repo, body)
+				resp, err := clt.CreatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), body)
 				require.NoError(t, err)
 				require.NotNil(t, resp.JSON201)
 
-				updateResp, err := clt.UpdatePullRequestWithResponse(ctx, repo, resp.JSON201.Id, apigen.UpdatePullRequestJSONRequestBody{
+				updateResp, err := clt.UpdatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id, apigen.UpdatePullRequestJSONRequestBody{
 					Status: &status,
 				})
 				require.NoError(t, err)
 				require.Equal(t, http.StatusNoContent, updateResp.StatusCode())
 
 				// Merge with wrong status
-				mergeResp, err := clt.MergePullRequestWithResponse(ctx, repo, resp.JSON201.Id)
+				mergeResp, err := clt.MergePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id)
 				require.NoError(t, err)
 				require.NotNil(t, mergeResp.JSON400, mergeResp.Status())
 				require.Contains(t, mergeResp.JSON400.Message, "bad pull request status")
 
 				// Verify status
-				getResp, err := clt.GetPullRequestWithResponse(ctx, repo, resp.JSON201.Id)
+				getResp, err := clt.GetPullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id)
 				require.NoError(t, err)
 				require.NotNil(t, getResp.JSON200)
 				require.Equal(t, status, *getResp.JSON200.Status)
@@ -6531,25 +6532,25 @@ func TestController_MergePullRequest(t *testing.T) {
 			SourceBranch:      "branch_c",
 			Title:             "My title",
 		}
-		branchResp, err := clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+		branchResp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 			Name:   body.SourceBranch,
 			Source: "main",
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, branchResp.StatusCode())
 
-		resp, err := clt.CreatePullRequestWithResponse(ctx, repo, body)
+		resp, err := clt.CreatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), body)
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON201)
 
 		// Update with wrong status
-		mergeResp, err := clt.MergePullRequestWithResponse(ctx, repo, resp.JSON201.Id)
+		mergeResp, err := clt.MergePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id)
 		require.NoError(t, err)
 		require.NotNil(t, mergeResp.JSON400, mergeResp.Status())
 		require.Contains(t, mergeResp.JSON400.Message, "no changes")
 
 		// Verify status
-		getResp, err := clt.GetPullRequestWithResponse(ctx, repo, resp.JSON201.Id)
+		getResp, err := clt.GetPullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id)
 		require.NoError(t, err)
 		require.NotNil(t, getResp.JSON200)
 		require.Equal(t, "open", *getResp.JSON200.Status)
@@ -6564,7 +6565,7 @@ func TestController_MergePullRequest(t *testing.T) {
 			SourceBranch:      "branch_d",
 			Title:             "My title",
 		}
-		branchResp, err := clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+		branchResp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 			Name:   body.SourceBranch,
 			Source: "main",
 		})
@@ -6576,12 +6577,12 @@ func TestController_MergePullRequest(t *testing.T) {
 		parentCommitLog, err := deps.catalog.Commit(ctx, repo, body.SourceBranch, "some message", DefaultUserID, nil, nil, nil, false)
 		require.NoError(t, err)
 
-		resp, err := clt.CreatePullRequestWithResponse(ctx, repo, body)
+		resp, err := clt.CreatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), body)
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON201)
 
 		// Update with wrong status
-		mergeResp, err := clt.MergePullRequestWithResponse(ctx, repo, resp.JSON201.Id)
+		mergeResp, err := clt.MergePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id)
 		require.NoError(t, err)
 		require.NotNil(t, mergeResp.JSON200, mergeResp.Status())
 
@@ -6591,7 +6592,7 @@ func TestController_MergePullRequest(t *testing.T) {
 		require.Equal(t, parentCommitLog.Reference, commitLog.Parents[1])
 
 		// Verify status
-		getResp, err := clt.GetPullRequestWithResponse(ctx, repo, resp.JSON201.Id)
+		getResp, err := clt.GetPullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id)
 		require.NoError(t, err)
 		require.NotNil(t, getResp.JSON200)
 		require.Equal(t, "merged", *getResp.JSON200.Status)
@@ -6608,7 +6609,7 @@ func TestController_MergePullRequest(t *testing.T) {
 			SourceBranch:      "branch_e",
 			Title:             "My title",
 		}
-		branchResp, err := clt.CreateBranchWithResponse(ctx, repo, apigen.CreateBranchJSONRequestBody{
+		branchResp, err := clt.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), apigen.CreateBranchJSONRequestBody{
 			Name:   body.SourceBranch,
 			Source: "main",
 		})
@@ -6625,12 +6626,12 @@ func TestController_MergePullRequest(t *testing.T) {
 		_, err = deps.catalog.Commit(ctx, repo, body.DestinationBranch, "some message", DefaultUserID, nil, nil, nil, false)
 		require.NoError(t, err)
 
-		resp, err := clt.CreatePullRequestWithResponse(ctx, repo, body)
+		resp, err := clt.CreatePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), body)
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON201, resp.Status())
 
 		// Update with wrong status
-		mergeResp, err := clt.MergePullRequestWithResponse(ctx, repo, resp.JSON201.Id)
+		mergeResp, err := clt.MergePullRequestWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), resp.JSON201.Id)
 		require.NoError(t, err)
 		require.NotNil(t, mergeResp.JSON409, mergeResp.Status())
 		require.NotNil(t, mergeResp.Body)
@@ -6647,7 +6648,7 @@ func pollRestoreStatus(t *testing.T, clt apigen.ClientWithResponsesInterface, re
 	defer ticker.Stop()
 	started := time.Now()
 	for range ticker.C {
-		statusResponse, err := clt.RestoreStatusWithResponse(context.Background(), repo, &apigen.RestoreStatusParams{TaskId: taskID})
+		statusResponse, err := clt.RestoreStatusWithResponse(context.Background(), apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.RestoreStatusParams{TaskId: taskID})
 		testutil.MustDo(t, "restore status", err)
 		if statusResponse.JSON200 == nil {
 			t.Fatalf("Expected 200 response, got: %s", statusResponse.Status())

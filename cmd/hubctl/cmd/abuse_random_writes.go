@@ -6,6 +6,7 @@ import (
 	"os"
 	"syscall"
 
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
 	"github.com/invergent-ai/surogate-hub/pkg/testutil/stress"
 	"github.com/spf13/cobra"
 )
@@ -33,7 +34,7 @@ var abuseRandomWritesCmd = &cobra.Command{
 		})
 
 		client := getClient()
-		resp, err := client.GetRepositoryWithResponse(cmd.Context(), u.Repository)
+		resp, err := client.GetRepositoryWithResponse(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository))
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)
 		if resp.JSON200 == nil {
 			Die("Bad response from server", 1)

@@ -63,7 +63,7 @@ var mergeCmd = &cobra.Command{
 			SquashMerge: &squash,
 		}
 
-		resp, err := client.MergeIntoBranchWithResponse(cmd.Context(), destinationRef.Repository, sourceRef.Ref, destinationRef.Ref, body)
+		resp, err := client.MergeIntoBranchWithResponse(cmd.Context(), apigen.RepositoryOwner(destinationRef.Repository), apigen.RepositoryName(destinationRef.Repository), sourceRef.Ref, destinationRef.Ref, body)
 		if resp != nil && resp.JSON409 != nil {
 			Die("Conflict found.", 1)
 		}

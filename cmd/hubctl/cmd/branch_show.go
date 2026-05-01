@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +18,7 @@ var branchShowCmd = &cobra.Command{
 		client := getClient()
 		u := MustParseBranchURI("branch URI", args[0])
 		fmt.Println("Branch:", u)
-		resp, err := client.GetBranchWithResponse(cmd.Context(), u.Repository, u.Ref)
+		resp, err := client.GetBranchWithResponse(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), u.Ref)
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)
 		if resp.JSON200 == nil {
 			Die("Bad response from server", 1)

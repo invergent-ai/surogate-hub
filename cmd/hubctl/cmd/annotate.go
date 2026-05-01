@@ -35,7 +35,7 @@ var annotateCmd = &cobra.Command{
 		client := getClient()
 		pfx := apigen.PaginationPrefix(*pathURI.Path)
 		context := cmd.Context()
-		resp, err := client.ListObjectsWithResponse(context, pathURI.Repository, pathURI.Ref, &apigen.ListObjectsParams{Prefix: &pfx})
+		resp, err := client.ListObjectsWithResponse(context, apigen.RepositoryOwner(pathURI.Repository), apigen.RepositoryName(pathURI.Repository), pathURI.Ref, &apigen.ListObjectsParams{Prefix: &pfx})
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)
 		if resp.JSON200 == nil {
 			Die("Bad response from server", 1)
@@ -52,7 +52,7 @@ var annotateCmd = &cobra.Command{
 				After:     apiutil.Ptr(apigen.PaginationAfter(from)),
 				Delimiter: &listObjectsDelimiter,
 			}
-			listObjectsResp, err := client.ListObjectsWithResponse(context, pathURI.Repository, pathURI.Ref, params)
+			listObjectsResp, err := client.ListObjectsWithResponse(context, apigen.RepositoryOwner(pathURI.Repository), apigen.RepositoryName(pathURI.Repository), pathURI.Ref, params)
 			DieOnErrorOrUnexpectedStatusCode(listObjectsResp, err, http.StatusOK)
 			if resp.JSON200 == nil {
 				Die("Bad response from server", 1)
@@ -68,7 +68,7 @@ var annotateCmd = &cobra.Command{
 				} else {
 					logCommitsParams.Prefixes = &[]string{obj.Path}
 				}
-				logCommitsResp, err := client.LogCommitsWithResponse(context, pathURI.Repository, pathURI.Ref, logCommitsParams)
+				logCommitsResp, err := client.LogCommitsWithResponse(context, apigen.RepositoryOwner(pathURI.Repository), apigen.RepositoryName(pathURI.Repository), pathURI.Ref, logCommitsParams)
 				DieOnErrorOrUnexpectedStatusCode(logCommitsResp, err, http.StatusOK)
 				if resp.JSON200 == nil {
 					Die("Bad response from server", 1)

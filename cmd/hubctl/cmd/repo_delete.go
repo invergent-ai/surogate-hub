@@ -9,7 +9,7 @@ import (
 )
 
 // repoDeleteCmd represents the delete repo command
-// hubctl delete sg://myrepo
+// hubctl delete sg://my-user/my-repo
 var repoDeleteCmd = &cobra.Command{
 	Use:               "delete <repository URI>",
 	Short:             "Delete existing repository",
@@ -24,7 +24,7 @@ var repoDeleteCmd = &cobra.Command{
 		if err != nil || !confirmation {
 			DieFmt("Delete Repository '%s' aborted\n", u.Repository)
 		}
-		resp, err := clt.DeleteRepositoryWithResponse(cmd.Context(), u.Repository, &apigen.DeleteRepositoryParams{})
+		resp, err := clt.DeleteRepositoryWithResponse(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), &apigen.DeleteRepositoryParams{})
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusNoContent)
 		fmt.Printf("Repository '%s' deleted\n", u.Repository)
 	},
