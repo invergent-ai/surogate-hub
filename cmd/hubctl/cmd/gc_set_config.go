@@ -57,7 +57,7 @@ Example configuration file:
 			DieErr(err)
 		}
 		client := getClient()
-		resp, err := client.SetGCRules(cmd.Context(), u.Repository, body)
+		resp, err := client.SetGCRules(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), body)
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusNoContent)
 	},
 }

@@ -2,6 +2,7 @@ package path
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -86,5 +87,83 @@ func TestResolvePath(t *testing.T) {
 				t.Errorf("ResolvePath() got = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestResolveAbsolutePath(t *testing.T) {
+	namespacedBucket := RepositoryIDToBucket("alice/model")
+	tests := []struct {
+		name        string
+		encodedPath string
+		want        ResolvedAbsolutePath
+		wantErr     bool
+	}{
+		{
+			name:        "namespaced repo branch and path",
+			encodedPath: "/alice/model/main/data/file.txt",
+			want: ResolvedAbsolutePath{
+				Repo:      "alice/model",
+				Reference: "main",
+				Path:      "data/file.txt",
+			},
+		},
+		{
+			name:        "namespaced repo branch and empty path",
+			encodedPath: "alice/model/main/",
+			want: ResolvedAbsolutePath{
+				Repo:      "alice/model",
+				Reference: "main",
+				Path:      "",
+			},
+		},
+		{
+			name:        "encoded bucket repo branch and path",
+			encodedPath: "/" + namespacedBucket + "/main/data/file.txt",
+			want: ResolvedAbsolutePath{
+				Repo:      "alice/model",
+				Reference: "main",
+				Path:      "data/file.txt",
+			},
+		},
+		{
+			name:        "single segment repo is malformed",
+			encodedPath: "repo/main/data",
+			wantErr:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ResolveAbsolutePath(tt.encodedPath)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ResolveAbsolutePath() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ResolveAbsolutePath() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRepositoryIDBucketRoundTrip(t *testing.T) {
+	repository := "test-user/tests3copyobjectmultipart"
+	bucket := RepositoryIDToBucket(repository)
+	if strings.Contains(bucket, "/") {
+		t.Fatalf("RepositoryIDToBucket(%q) = %q contains slash", repository, bucket)
+	}
+	got, ok := BucketToRepositoryID(bucket)
+	if !ok {
+		t.Fatalf("BucketToRepositoryID(%q) failed", bucket)
+	}
+	if got != repository {
+		t.Fatalf("BucketToRepositoryID(%q) = %q, want %q", bucket, got, repository)
+	}
+}
+
+func TestBucketToRepositoryIDIgnoresOrdinaryBucketNames(t *testing.T) {
+	for _, bucket := range []string{"s3", "staging-data", "sample-bucket"} {
+		if got, ok := BucketToRepositoryID(bucket); ok {
+			t.Fatalf("BucketToRepositoryID(%q) = %q, want no match", bucket, got)
+		}
 	}
 }

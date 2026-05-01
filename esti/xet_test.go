@@ -53,7 +53,7 @@ func TestXETLinkPhysicalAddress(t *testing.T) {
 	registerXETShard(t, fileHash, shard, nil, nil)
 
 	physicalAddress := "xet://" + fileHash
-	resp, err := client.LinkPhysicalAddressWithResponse(ctx, repo, mainBranch, &apigen.LinkPhysicalAddressParams{
+	resp, err := client.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.LinkPhysicalAddressParams{
 		Path: "models/checkpoint.bin",
 	}, apigen.LinkPhysicalAddressJSONRequestBody{
 		Checksum:  "checksum-a",
@@ -68,7 +68,7 @@ func TestXETLinkPhysicalAddress(t *testing.T) {
 	require.Equal(t, physicalAddress, resp.JSON200.PhysicalAddress)
 
 	missingAddress := "xet://missing-" + fileHash
-	missingResp, err := client.LinkPhysicalAddressWithResponse(ctx, repo, mainBranch, &apigen.LinkPhysicalAddressParams{
+	missingResp, err := client.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.LinkPhysicalAddressParams{
 		Path: "models/missing.bin",
 	}, apigen.LinkPhysicalAddressJSONRequestBody{
 		Checksum:  "checksum-a",
@@ -100,7 +100,7 @@ func TestXETSmartClientSmoke(t *testing.T) {
 
 	path := "models/smoke-checkpoint.bin"
 	physicalAddress := "xet://" + fileHash
-	linkResp, err := client.LinkPhysicalAddressWithResponse(ctx, repo, mainBranch, &apigen.LinkPhysicalAddressParams{
+	linkResp, err := client.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.LinkPhysicalAddressParams{
 		Path: path,
 	}, apigen.LinkPhysicalAddressJSONRequestBody{
 		Checksum:  fileHash,
@@ -112,7 +112,7 @@ func TestXETSmartClientSmoke(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, linkResp.StatusCode())
 
-	readResp, err := client.GetObjectWithResponse(ctx, repo, mainBranch, &apigen.GetObjectParams{Path: path})
+	readResp, err := client.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.GetObjectParams{Path: path})
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, readResp.StatusCode())
 	require.Equal(t, chunk, readResp.Body)

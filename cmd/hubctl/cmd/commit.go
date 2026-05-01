@@ -47,7 +47,7 @@ var commitCmd = &cobra.Command{
 			AdditionalProperties: kvPairs,
 		}
 		client := getClient()
-		resp, err := client.CommitWithResponse(cmd.Context(), branchURI.Repository, branchURI.Ref, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+		resp, err := client.CommitWithResponse(cmd.Context(), apigen.RepositoryOwner(branchURI.Repository), apigen.RepositoryName(branchURI.Repository), branchURI.Ref, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 			Message:    message,
 			Metadata:   &metadata,
 			Date:       datePtr,

@@ -187,7 +187,7 @@ func TestHubctlCommit(t *testing.T) {
 
 	// verify the latest commit using 'show commit'
 	ctx := context.Background()
-	getBranchResp, err := client.GetBranchWithResponse(ctx, repoName, mainBranch)
+	getBranchResp, err := client.GetBranchWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), mainBranch)
 	if err != nil {
 		t.Fatal("Failed to get branch information", err)
 	}

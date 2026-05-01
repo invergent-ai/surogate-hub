@@ -63,7 +63,7 @@ var fsRmCmd = &cobra.Command{
 				After:     apiutil.Ptr(apigen.PaginationAfter(from)),
 				Delimiter: &paramsDelimiter,
 			}
-			resp, err := client.ListObjectsWithResponse(cmd.Context(), pathURI.Repository, pathURI.Ref, params)
+			resp, err := client.ListObjectsWithResponse(cmd.Context(), apigen.RepositoryOwner(pathURI.Repository), apigen.RepositoryName(pathURI.Repository), pathURI.Ref, params)
 			DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)
 			if resp.JSON200 == nil {
 				Die("Bad response from server", 1)
@@ -96,7 +96,7 @@ func deleteObjectWorker(ctx context.Context, client apigen.ClientWithResponsesIn
 	for objPath := range paths {
 		objs = append(objs, objPath)
 		if len(objs) >= deleteChunkSize {
-			resp, err := client.DeleteObjectsWithResponse(ctx, repository, branch, &apigen.DeleteObjectsParams{}, apigen.DeleteObjectsJSONRequestBody{
+			resp, err := client.DeleteObjectsWithResponse(ctx, apigen.RepositoryOwner(repository), apigen.RepositoryName(repository), branch, &apigen.DeleteObjectsParams{}, apigen.DeleteObjectsJSONRequestBody{
 				Paths: objs,
 			})
 			err = RetrieveError(resp, err)
@@ -108,7 +108,7 @@ func deleteObjectWorker(ctx context.Context, client apigen.ClientWithResponsesIn
 		}
 	}
 	if len(objs) > 0 {
-		resp, err := client.DeleteObjectsWithResponse(ctx, repository, branch, &apigen.DeleteObjectsParams{}, apigen.DeleteObjectsJSONRequestBody{
+		resp, err := client.DeleteObjectsWithResponse(ctx, apigen.RepositoryOwner(repository), apigen.RepositoryName(repository), branch, &apigen.DeleteObjectsParams{}, apigen.DeleteObjectsJSONRequestBody{
 			Paths: objs,
 		})
 		err = RetrieveError(resp, err)
@@ -120,7 +120,7 @@ func deleteObjectWorker(ctx context.Context, client apigen.ClientWithResponsesIn
 }
 
 func deleteObject(ctx context.Context, client apigen.ClientWithResponsesInterface, pathURI *uri.URI) error {
-	resp, err := client.DeleteObjectWithResponse(ctx, pathURI.Repository, pathURI.Ref, &apigen.DeleteObjectParams{
+	resp, err := client.DeleteObjectWithResponse(ctx, apigen.RepositoryOwner(pathURI.Repository), apigen.RepositoryName(pathURI.Repository), pathURI.Ref, &apigen.DeleteObjectParams{
 		Path: *pathURI.Path,
 	})
 	return RetrieveError(resp, err)

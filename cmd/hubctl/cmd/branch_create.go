@@ -12,7 +12,7 @@ import (
 var branchCreateCmd = &cobra.Command{
 	Use:               "create <branch URI> -s <source ref URI>",
 	Short:             "Create a new branch in a repository",
-	Example:           "hubctl branch create sg://example-repo/new-branch -s sg://example-repo/main",
+	Example:           "hubctl branch create sg://my-user/example-repo/new-branch -s sg://my-user/example-repo/main",
 	Args:              cobra.ExactArgs(1),
 	ValidArgsFunction: ValidArgsRepository,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -28,7 +28,7 @@ var branchCreateCmd = &cobra.Command{
 			Die("source branch must be in the same repository", 1)
 		}
 
-		resp, err := client.CreateBranchWithResponse(cmd.Context(), u.Repository, apigen.CreateBranchJSONRequestBody{
+		resp, err := client.CreateBranchWithResponse(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), apigen.CreateBranchJSONRequestBody{
 			Name:   u.Ref,
 			Source: sourceURI.Ref,
 		})

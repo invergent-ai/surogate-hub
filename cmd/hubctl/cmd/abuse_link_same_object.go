@@ -49,7 +49,7 @@ func runLinkObject(cmd *cobra.Command, u *uri.URI, generator *stress.Generator) 
 		for work := range input {
 			start := time.Now()
 
-			getResponse, err := client.GetPhysicalAddressWithResponse(ctx, u.Repository, u.Ref, &apigen.GetPhysicalAddressParams{Path: work})
+			getResponse, err := client.GetPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), u.Ref, &apigen.GetPhysicalAddressParams{Path: work})
 			if err == nil && getResponse.JSON200 == nil {
 				err = helpers.ResponseAsError(getResponse)
 			}
@@ -65,7 +65,7 @@ func runLinkObject(cmd *cobra.Command, u *uri.URI, generator *stress.Generator) 
 			// This tests the operations done on the Surogate Hub server side without the overhead of uploading the
 			// object to the object store which should optimally be performed with Surogate Hub not in the data path (upload using pre-signed urls / set/link).
 			stagingLocation := getResponse.JSON200
-			linkResponse, err := client.LinkPhysicalAddressWithResponse(ctx, u.Repository, u.Ref,
+			linkResponse, err := client.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), u.Ref,
 				&apigen.LinkPhysicalAddressParams{
 					Path: work,
 				},

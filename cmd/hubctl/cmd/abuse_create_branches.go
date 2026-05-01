@@ -37,7 +37,7 @@ var abuseCreateBranchesCmd = &cobra.Command{
 			currentOffset := apigen.PaginationAfter(branchPrefix)
 			amount := apigen.PaginationAmount(paginationAmount)
 			for {
-				resp, err := client.ListBranchesWithResponse(cmd.Context(), u.Repository, &apigen.ListBranchesParams{
+				resp, err := client.ListBranchesWithResponse(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), &apigen.ListBranchesParams{
 					After:  &currentOffset,
 					Amount: &amount,
 				})
@@ -64,7 +64,7 @@ var abuseCreateBranchesCmd = &cobra.Command{
 		deleteGen.Run(func(input chan string, output chan stress.Result) {
 			for branch := range input {
 				start := time.Now()
-				_, err := client.DeleteBranchWithResponse(cmd.Context(), u.Repository, branch, &apigen.DeleteBranchParams{})
+				_, err := client.DeleteBranchWithResponse(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), branch, &apigen.DeleteBranchParams{})
 				output <- stress.Result{
 					Error: err,
 					Took:  time.Since(start),
@@ -91,7 +91,7 @@ var abuseCreateBranchesCmd = &cobra.Command{
 			for branch := range input {
 				start := time.Now()
 				resp, err := client.CreateBranchWithResponse(
-					ctx, u.Repository, apigen.CreateBranchJSONRequestBody{
+					ctx, apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), apigen.CreateBranchJSONRequestBody{
 						Name:   branch,
 						Source: u.Ref,
 					})

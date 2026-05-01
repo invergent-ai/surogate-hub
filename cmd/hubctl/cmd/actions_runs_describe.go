@@ -39,7 +39,7 @@ var actionsRunsDescribeCmd = &cobra.Command{
 		ctx := cmd.Context()
 
 		// run result information
-		runsRes, err := client.GetRunWithResponse(ctx, u.Repository, runID)
+		runsRes, err := client.GetRunWithResponse(ctx, apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), runID)
 		DieOnErrorOrUnexpectedStatusCode(runsRes, err, http.StatusOK)
 		if runsRes.JSON200 == nil {
 			Die("Bad response from server", 1)
@@ -53,7 +53,7 @@ var actionsRunsDescribeCmd = &cobra.Command{
 				amountForPagination = internalPageSize
 			}
 			// iterator over hooks - print information and output
-			runHooksRes, err := client.ListRunHooksWithResponse(ctx, u.Repository, runID, &apigen.ListRunHooksParams{
+			runHooksRes, err := client.ListRunHooksWithResponse(ctx, apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), runID, &apigen.ListRunHooksParams{
 				After:  apiutil.Ptr(apigen.PaginationAfter(after)),
 				Amount: apiutil.Ptr(apigen.PaginationAmount(amountForPagination)),
 			})
@@ -89,7 +89,7 @@ var actionsRunsDescribeCmd = &cobra.Command{
 
 func makeHookLog(ctx context.Context, client apigen.ClientWithResponsesInterface, repositoryID string, runID string) func(hookRunID string) (string, error) {
 	return func(hookRunID string) (string, error) {
-		resp, err := client.GetRunHookOutputWithResponse(ctx, repositoryID, runID, hookRunID)
+		resp, err := client.GetRunHookOutputWithResponse(ctx, apigen.RepositoryOwner(repositoryID), apigen.RepositoryName(repositoryID), runID, hookRunID)
 		if err != nil {
 			return "", err
 		}

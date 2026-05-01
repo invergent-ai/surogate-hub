@@ -39,7 +39,7 @@ func hasExternalChange(ctx context.Context, client *apigen.ClientWithResponses, 
 	}
 
 	// Get first uncommitted change. If there are no changes or it's outside the local prefix, we're done
-	dirtyResp, err := client.DiffBranchWithResponse(ctx, remote.Repository, remote.Ref, &apigen.DiffBranchParams{
+	dirtyResp, err := client.DiffBranchWithResponse(ctx, apigen.RepositoryOwner(remote.Repository), apigen.RepositoryName(remote.Repository), remote.Ref, &apigen.DiffBranchParams{
 		Amount: apiutil.Ptr(apigen.PaginationAmount(1)),
 	})
 	DieOnErrorOrUnexpectedStatusCode(dirtyResp, err, http.StatusOK)
@@ -57,14 +57,14 @@ func hasExternalChange(ctx context.Context, client *apigen.ClientWithResponses, 
 	// For example, if the prefix is "test-data/", the next item in lexicographic order will be "test-data0"
 	// because "/" is ordinal 47 and "0" is ordinal 48
 	nextPrefix := fmt.Sprintf("%s%s", filepath.Clean(*currentURI.Path), asciiCharAfterSlash)
-	dirtyResp, err = client.DiffBranchWithResponse(ctx, remote.Repository, remote.Ref, &apigen.DiffBranchParams{
+	dirtyResp, err = client.DiffBranchWithResponse(ctx, apigen.RepositoryOwner(remote.Repository), apigen.RepositoryName(remote.Repository), remote.Ref, &apigen.DiffBranchParams{
 		Amount: apiutil.Ptr(apigen.PaginationAmount(1)),
 		After:  apiutil.Ptr(apigen.PaginationAfter(nextPrefix)),
 	})
 	DieOnErrorOrUnexpectedStatusCode(dirtyResp, err, http.StatusOK)
 
 	// The above gives us SeekGT. Since we need SeekGE, we do another stat for exact match
-	statResp, err := client.StatObjectWithResponse(ctx, remote.Repository, remote.Ref, &apigen.StatObjectParams{
+	statResp, err := client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(remote.Repository), apigen.RepositoryName(remote.Repository), remote.Ref, &apigen.StatObjectParams{
 		Path: nextPrefix,
 	})
 	if err != nil {
@@ -108,7 +108,7 @@ var localCommitCmd = &cobra.Command{
 		}
 
 		fmt.Printf("\nGetting branch: %s\n", remote.Ref)
-		resp, err := client.GetBranchWithResponse(cmd.Context(), remote.Repository, remote.Ref)
+		resp, err := client.GetBranchWithResponse(cmd.Context(), apigen.RepositoryOwner(remote.Repository), apigen.RepositoryName(remote.Repository), remote.Ref)
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)
 
 		// Diff local with current head
@@ -205,7 +205,7 @@ var localCommitCmd = &cobra.Command{
 		}
 
 		// commit!
-		response, err := client.CommitWithResponse(cmd.Context(), remote.Repository, remote.Ref, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+		response, err := client.CommitWithResponse(cmd.Context(), apigen.RepositoryOwner(remote.Repository), apigen.RepositoryName(remote.Repository), remote.Ref, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 			Message: message,
 			Metadata: &apigen.CommitCreation_Metadata{
 				AdditionalProperties: kvPairs,

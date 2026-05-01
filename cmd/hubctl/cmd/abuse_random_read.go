@@ -51,7 +51,7 @@ var abuseRandomReadsCmd = &cobra.Command{
 			client := getClient()
 			for work := range input {
 				start := time.Now()
-				resp, err := client.StatObjectWithResponse(ctx, u.Repository, u.Ref, &apigen.StatObjectParams{
+				resp, err := client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), u.Ref, &apigen.StatObjectParams{
 					Path: work,
 				})
 				if err == nil && resp.StatusCode() != http.StatusOK {

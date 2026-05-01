@@ -170,6 +170,27 @@ func TestManager_GetRepository(t *testing.T) {
 	})
 }
 
+func TestManager_GetNamespacedRepositoriesWithSameName(t *testing.T) {
+	r, _ := testRefManager(t)
+	ctx := context.Background()
+	repoIDs := []graveler.RepositoryID{"alice/model", "bob/model"}
+
+	for _, repoID := range repoIDs {
+		_, err := r.CreateRepository(ctx, repoID, graveler.Repository{
+			StorageNamespace: graveler.StorageNamespace("s3://foo/" + repoID.String()),
+			CreationDate:     time.Now(),
+			DefaultBranchID:  "main",
+		})
+		testutil.Must(t, err)
+	}
+
+	for _, repoID := range repoIDs {
+		repo, err := r.GetRepository(ctx, repoID)
+		require.NoError(t, err)
+		require.Equal(t, repoID, repo.RepositoryID)
+	}
+}
+
 func TestManager_ListRepositories(t *testing.T) {
 	r, _ := testRefManager(t)
 	repoIDs := []graveler.RepositoryID{"a", "aa", "b", "c", "e", "d"}
@@ -224,6 +245,31 @@ func TestManager_ListRepositories(t *testing.T) {
 			t.Fatalf("got wrong list of repo IDs")
 		}
 	})
+}
+
+func TestManager_ListNamespacedRepositories(t *testing.T) {
+	r, _ := testRefManager(t)
+	ctx := context.Background()
+	repoIDs := []graveler.RepositoryID{"alice/model", "bob/model", "alice/dataset"}
+	for _, repoID := range repoIDs {
+		_, err := r.CreateRepository(ctx, repoID, graveler.Repository{
+			StorageNamespace: graveler.StorageNamespace("s3://foo/" + repoID.String()),
+			CreationDate:     time.Now(),
+			DefaultBranchID:  "main",
+		})
+		testutil.Must(t, err)
+	}
+
+	iter, err := r.ListRepositories(ctx)
+	require.NoError(t, err)
+	defer iter.Close()
+
+	var got []graveler.RepositoryID
+	for iter.Next() {
+		got = append(got, iter.Value().RepositoryID)
+	}
+	require.NoError(t, iter.Err())
+	require.Equal(t, []graveler.RepositoryID{"alice/dataset", "alice/model", "bob/model"}, got)
 }
 
 func TestManager_DeleteRepository(t *testing.T) {

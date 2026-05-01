@@ -3,6 +3,7 @@ package cmd
 import (
 	"net/http"
 
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +18,7 @@ var gcDeleteConfigCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		u := MustParseRepoURI("repository URI", args[0])
 		client := getClient()
-		resp, err := client.DeleteGCRulesWithResponse(cmd.Context(), u.Repository)
+		resp, err := client.DeleteGCRulesWithResponse(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository))
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusNoContent)
 	},
 }

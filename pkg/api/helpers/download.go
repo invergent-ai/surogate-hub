@@ -72,7 +72,7 @@ func (d *Downloader) Download(ctx context.Context, src uri.URI, dst string, trac
 
 func (d *Downloader) downloadPresignMultipart(ctx context.Context, src uri.URI, dst string, tracker *progress.Tracker) (err error) {
 	// get object metadata for size and physical address (presigned)
-	statResp, err := d.Client.StatObjectWithResponse(ctx, src.Repository, src.Ref, &apigen.StatObjectParams{
+	statResp, err := d.Client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(src.Repository), apigen.RepositoryName(src.Repository), src.Ref, &apigen.StatObjectParams{
 		Path:    *src.Path,
 		Presign: swag.Bool(true),
 	})
@@ -191,7 +191,7 @@ func (d *Downloader) downloadPresignedPart(ctx context.Context, physicalAddress 
 
 func (d *Downloader) downloadObject(ctx context.Context, src uri.URI, dst string, tracker *progress.Tracker) error {
 	// get object content
-	resp, err := d.Client.GetObject(ctx, src.Repository, src.Ref, &apigen.GetObjectParams{
+	resp, err := d.Client.GetObject(ctx, apigen.RepositoryOwner(src.Repository), apigen.RepositoryName(src.Repository), src.Ref, &apigen.GetObjectParams{
 		Path:    *src.Path,
 		Presign: swag.Bool(d.PreSign),
 	})

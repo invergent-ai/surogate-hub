@@ -54,7 +54,7 @@ var localCloneCmd = &cobra.Command{
 			remotePath := remote.GetPath()
 			var after string
 			for {
-				listResp, err := client.ListObjectsWithResponse(ctx, remote.Repository, stableRemote.Ref, &apigen.ListObjectsParams{
+				listResp, err := client.ListObjectsWithResponse(ctx, apigen.RepositoryOwner(remote.Repository), apigen.RepositoryName(remote.Repository), stableRemote.Ref, &apigen.ListObjectsParams{
 					After:        (*apigen.PaginationAfter)(swag.String(after)),
 					Prefix:       (*apigen.PaginationPrefix)(remote.Path),
 					UserMetadata: swag.Bool(true),

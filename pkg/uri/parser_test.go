@@ -19,70 +19,67 @@ func TestParse(t *testing.T) {
 		Expected *uri.URI
 	}{
 		{
-			Input: "sg://foo/bar/baz",
+			Input: "sg://alice/model/main/data",
 			Expected: &uri.URI{
-				Repository: "foo",
-				Ref:        "bar",
-				Path:       strp("baz"),
+				Repository: "alice/model",
+				Ref:        "main",
+				Path:       strp("data"),
 			},
 		},
 		{
-			Input: "sg://foo",
+			Input: "sg://alice/model",
 			Expected: &uri.URI{
-				Repository: "foo",
+				Repository: "alice/model",
 			},
 		},
 		{
-			Input: "sg://foo/bar/baz/path",
+			Input: "sg://alice/model/main/baz/path",
 			Expected: &uri.URI{
-				Repository: "foo",
-				Ref:        "bar",
+				Repository: "alice/model",
+				Ref:        "main",
 				Path:       strp("baz/path"),
 			},
 		},
 		{
-			Input: "sg://foo/bar/baz/path@withappendix.foo",
+			Input: "sg://alice/model/main/baz/path@withappendix.foo",
 			Expected: &uri.URI{
-				Repository: "foo",
-				Ref:        "bar",
+				Repository: "alice/model",
+				Ref:        "main",
 				Path:       strp("baz/path@withappendix.foo"),
 			},
 		},
 		{
-			Input: "sg://fo-o/bar/baz/path@withappendix.foo",
+			Input: "sg://alice-dev/fo-o/main/baz/path@withappendix.foo",
 			Expected: &uri.URI{
-				Repository: "fo-o",
-				Ref:        "bar",
+				Repository: "alice-dev/fo-o",
+				Ref:        "main",
 				Path:       strp("baz/path@withappendix.foo"),
 			},
 		},
 		{
 			Input: "sg://foo",
-			Expected: &uri.URI{
-				Repository: "foo",
-			},
+			Err:   uri.ErrMalformedURI,
 		},
 		{
-			Input: "sg://foo/bar/",
+			Input: "sg://alice/model/main/",
 			Expected: &uri.URI{
-				Repository: "foo",
-				Ref:        "bar",
+				Repository: "alice/model",
+				Ref:        "main",
 				Path:       strp(""),
 			},
 		},
 		{
-			Input: "sg://foo/bar//",
+			Input: "sg://alice/model/main//",
 			Expected: &uri.URI{
-				Repository: "foo",
-				Ref:        "bar",
+				Repository: "alice/model",
+				Ref:        "main",
 				Path:       strp("/"),
 			},
 		},
 		{
 			Input: "sg://foo/bar",
 			Expected: &uri.URI{
-				Repository: "foo",
-				Ref:        "bar",
+				Repository: "foo/bar",
 			},
 		},
 		{
@@ -130,22 +127,22 @@ func TestURI_String(t *testing.T) {
 		Expected string
 	}{
 		{&uri.URI{
-			Repository: "foo",
-			Ref:        "bar",
+			Repository: "alice/model",
+			Ref:        "main",
 			Path:       strp("baz/file.csv"),
-		}, "sg://foo/bar/baz/file.csv"},
+		}, "sg://alice/model/main/baz/file.csv"},
 		{&uri.URI{
-			Repository: "foo",
-			Ref:        "bar",
+			Repository: "alice/model",
+			Ref:        "main",
 			Path:       strp(""),
-		}, "sg://foo/bar/"},
+		}, "sg://alice/model/main/"},
 		{&uri.URI{
-			Repository: "foo",
-			Ref:        "bar",
-		}, "sg://foo/bar"},
+			Repository: "alice/model",
+			Ref:        "main",
+		}, "sg://alice/model/main"},
 		{&uri.URI{
-			Repository: "foo",
-		}, "sg://foo"},
+			Repository: "alice/model",
+		}, "sg://alice/model"},
 	}
 
 	for i, test := range cases {
@@ -160,7 +157,7 @@ func TestIsValid(t *testing.T) {
 		Input    string
 		Expected bool
 	}{
-		{"sg://foo/bar/baz", true},
+		{"sg://alice/model/main", true},
 	}
 
 	for i, test := range cases {
@@ -172,11 +169,10 @@ func TestIsValid(t *testing.T) {
 
 func TestMust(t *testing.T) {
 	// should not panic
-	u := uri.Must(uri.Parse("sg://foo/bar/baz"))
+	u := uri.Must(uri.Parse("sg://alice/model/main"))
 	if !uri.Equals(u, &uri.URI{
-		Repository: "foo",
-		Ref:        "bar",
-		Path:       strp("baz"),
+		Repository: "alice/model",
+		Ref:        "main",
 	}) {
 		t.Fatalf("expected a parsed URI according to input, instead got %s", u.String())
 	}

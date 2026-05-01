@@ -29,23 +29,23 @@ var diffCmd = &cobra.Command{
 	Use:   `diff <ref URI> [ref URI]`,
 	Short: "Show changes between two commits, or the currently uncommitted changes",
 	Example: fmt.Sprintf(`
-	hubctl diff sg://example-repo/example-branch
+	hubctl diff sg://my-user/example-repo/example-branch
 	Show uncommitted changes in example-branch.
 
-	hubctl diff sg://example-repo/main sg://example-repo/dev
+	hubctl diff sg://my-user/example-repo/main sg://my-user/example-repo/dev
 	This shows the differences between master and dev starting at the last common commit.
 	This is similar to the three-dot (...) syntax in git.
 	Uncommitted changes are not shown.
 
-	hubctl diff --%s sg://example-repo/main sg://example-repo/dev
+	hubctl diff --%s sg://my-user/example-repo/main sg://my-user/example-repo/dev
 	Show changes between the tips of the main and dev branches.
 	This is similar to the two-dot (..) syntax in git.
 	Uncommitted changes are not shown.
 
-	hubctl diff --%s sg://example-repo/main sg://example-repo/dev$
+	hubctl diff --%s sg://my-user/example-repo/main sg://my-user/example-repo/dev$
 	Show changes between the tip of the main and the dev branch, including uncommitted changes on dev.
 	
-	hubctl diff --%s some/path sg://example-repo/main sg://example-repo/dev
+	hubctl diff --%s some/path sg://my-user/example-repo/main sg://my-user/example-repo/dev
 	Show changes of objects prefixed with 'some/path' between the tips of the main and dev branches.`, twoWayFlagName, twoWayFlagName, prefixFlagName),
 
 	Args: cobra.RangeArgs(diffCmdMinArgs, diffCmdMaxArgs),
@@ -93,7 +93,7 @@ func printDiffBranch(ctx context.Context, client apigen.ClientWithResponsesInter
 	var after string
 	pageSize := pageSize(minDiffPageSize)
 	for {
-		resp, err := client.DiffBranchWithResponse(ctx, repository, branch, &apigen.DiffBranchParams{
+		resp, err := client.DiffBranchWithResponse(ctx, apigen.RepositoryOwner(repository), apigen.RepositoryName(repository), branch, &apigen.DiffBranchParams{
 			After:  apiutil.Ptr(apigen.PaginationAfter(after)),
 			Amount: apiutil.Ptr(apigen.PaginationAmount(pageSize)),
 		})

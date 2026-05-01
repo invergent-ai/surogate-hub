@@ -30,7 +30,7 @@ func localInit(ctx context.Context, dir string, remote *uri.URI, force, updateIg
 
 	remotePath := remote.GetPath()
 	if remotePath != "" && !strings.HasSuffix(remotePath, uri.PathSeparator) { // Verify path is not an existing object
-		stat, err := client.StatObjectWithResponse(ctx, remote.Repository, remote.Ref, &apigen.StatObjectParams{
+		stat, err := client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(remote.Repository), apigen.RepositoryName(remote.Repository), remote.Ref, &apigen.StatObjectParams{
 			Path: *remote.Path,
 		})
 		switch {

@@ -14,14 +14,14 @@ const (
 	ParentNumberFlagName = "parent-number"
 )
 
-// hubctl branch revert sg://myrepo/main commitId
+// hubctl branch revert sg://my-user/my-repo/main commitId
 var branchRevertCmd = &cobra.Command{
 	Use:   "revert <branch URI> <commit ref to revert> [<more commits>...]",
 	Short: "Given a commit, record a new commit to reverse the effect of this commit",
 	Long:  "The commits will be reverted in left-to-right order",
-	Example: `hubctl branch revert sg://example-repo/example-branch commitA
+	Example: `hubctl branch revert sg://my-user/example-repo/example-branch commitA
 	          Revert the changes done by commitA in example-branch
-		      branch revert sg://example-repo/example-branch HEAD~1 HEAD~2 HEAD~3
+		      branch revert sg://my-user/example-repo/example-branch HEAD~1 HEAD~2 HEAD~3
 		      Revert the changes done by the second last commit to the fourth last commit in example-branch`,
 	Args: cobra.MinimumNArgs(branchRevertCmdArgs),
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -44,7 +44,7 @@ var branchRevertCmd = &cobra.Command{
 		clt := getClient()
 		for i := 1; i < len(args); i++ {
 			commitRef := args[i]
-			resp, err := clt.RevertBranchWithResponse(cmd.Context(), u.Repository, u.Ref, apigen.RevertBranchJSONRequestBody{
+			resp, err := clt.RevertBranchWithResponse(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), u.Ref, apigen.RevertBranchJSONRequestBody{
 				ParentNumber: parentNumber,
 				Ref:          commitRef,
 				AllowEmpty:   &allowEmptyRevert,

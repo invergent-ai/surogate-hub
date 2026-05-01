@@ -3,6 +3,7 @@ package cmd
 import (
 	"net/http"
 
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +25,7 @@ var gcGetConfigCmd = &cobra.Command{
 		u := MustParseRepoURI("repository URI", args[0])
 		isJSON := Must(cmd.Flags().GetBool(jsonFlagName))
 		client := getClient()
-		resp, err := client.GetGCRulesWithResponse(cmd.Context(), u.Repository)
+		resp, err := client.GetGCRulesWithResponse(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository))
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)
 		if resp.JSON200 == nil {
 			Die("Bad response from server", 1)

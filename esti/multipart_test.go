@@ -36,10 +36,11 @@ func TestMultipartUpload(t *testing.T) {
 
 	ctx, logger, repo := setupTest(t)
 	defer tearDownTest(repo)
+	bucket := s3BucketName(repo)
 	file := "multipart_file"
 	path := mainBranch + "/" + file
 	input := &s3.CreateMultipartUploadInput{
-		Bucket: aws.String(repo),
+		Bucket: aws.String(bucket),
 		Key:    aws.String(path),
 	}
 
@@ -67,7 +68,7 @@ func TestMultipartUpload(t *testing.T) {
 
 	logger.WithField("key", aws.ToString(completeResponse.Key)).Info("Completed multipart request successfully")
 
-	getResp, err := client.GetObjectWithResponse(ctx, repo, mainBranch, &apigen.GetObjectParams{Path: file})
+	getResp, err := client.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.GetObjectParams{Path: file})
 	require.NoError(t, err, "failed to get object")
 	require.Equal(t, http.StatusOK, getResp.StatusCode())
 	if !bytes.Equal(partsConcat, getResp.Body) {
@@ -79,7 +80,7 @@ func TestMultipartUpload(t *testing.T) {
 	if !localBlockstore {
 		statParams.Presign = aws.Bool(true)
 	}
-	statResp, err := client.StatObjectWithResponse(ctx, repo, mainBranch, statParams)
+	statResp, err := client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, statParams)
 	require.NoError(t, err, "failed to get object")
 	require.Equal(t, http.StatusOK, statResp.StatusCode(), statResp.Status())
 	require.NotNil(t, statResp.JSON200, "successful response")
@@ -115,18 +116,19 @@ func TestMultipartUpload(t *testing.T) {
 func TestMultipartUploadAbort(t *testing.T) {
 	ctx, _, repo := setupTest(t)
 	defer tearDownTest(repo)
+	bucket := s3BucketName(repo)
 
 	t.Run("exists", func(t *testing.T) {
 		const objPath = mainBranch + "/multipart_file1"
 		createInput := &s3.CreateMultipartUploadInput{
-			Bucket: aws.String(repo),
+			Bucket: aws.String(bucket),
 			Key:    aws.String(objPath),
 		}
 		createResp, err := svc.CreateMultipartUpload(ctx, createInput)
 		require.NoError(t, err, "CreateMultipartUpload")
 
 		abortInput := &s3.AbortMultipartUploadInput{
-			Bucket:   aws.String(repo),
+			Bucket:   aws.String(bucket),
 			Key:      aws.String(objPath),
 			UploadId: createResp.UploadId,
 		}
@@ -137,7 +139,7 @@ func TestMultipartUploadAbort(t *testing.T) {
 	t.Run("unknown_upload_id", func(t *testing.T) {
 		const objPath = mainBranch + "/multipart_file2"
 		createInput := &s3.CreateMultipartUploadInput{
-			Bucket: aws.String(repo),
+			Bucket: aws.String(bucket),
 			Key:    aws.String(objPath),
 		}
 		createResp, err := svc.CreateMultipartUpload(ctx, createInput)
@@ -148,7 +150,7 @@ func TestMultipartUploadAbort(t *testing.T) {
 		unknownUploadID := reverse(uploadID)
 
 		abortInput := &s3.AbortMultipartUploadInput{
-			Bucket:   aws.String(repo),
+			Bucket:   aws.String(bucket),
 			Key:      aws.String(objPath),
 			UploadId: aws.String(unknownUploadID),
 		}
@@ -159,14 +161,14 @@ func TestMultipartUploadAbort(t *testing.T) {
 	t.Run("unknown_key", func(t *testing.T) {
 		const objPath = mainBranch + "/multipart_file3"
 		createInput := &s3.CreateMultipartUploadInput{
-			Bucket: aws.String(repo),
+			Bucket: aws.String(bucket),
 			Key:    aws.String(objPath),
 		}
 		createResp, err := svc.CreateMultipartUpload(ctx, createInput)
 		require.NoError(t, err, "CreateMultipartUpload")
 
 		abortInput := &s3.AbortMultipartUploadInput{
-			Bucket:   aws.String(repo),
+			Bucket:   aws.String(bucket),
 			Key:      aws.String(mainBranch + "/unknown_file"),
 			UploadId: createResp.UploadId,
 		}

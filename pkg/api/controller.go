@@ -81,6 +81,10 @@ const (
 	pullRequestOpen   = "OPEN"
 )
 
+func namespacedRepository(owner, repository string) string {
+	return owner + "/" + repository
+}
+
 type actionsHandler interface {
 	GetRunResult(ctx context.Context, repositoryID, runID string) (*actions.RunResult, error)
 	GetTaskResult(ctx context.Context, repositoryID, runID, hookRunID string) (*actions.TaskResult, error)
@@ -157,7 +161,8 @@ func (c *Controller) DeleteUser(w http.ResponseWriter, r *http.Request, userID s
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) CreatePresignMultipartUpload(w http.ResponseWriter, r *http.Request, repository string, branch string, params apigen.CreatePresignMultipartUploadParams) {
+func (c *Controller) CreatePresignMultipartUpload(w http.ResponseWriter, r *http.Request, owner string, repository string, branch string, params apigen.CreatePresignMultipartUploadParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.WriteObjectAction,
@@ -261,7 +266,8 @@ func (c *Controller) CreatePresignMultipartUpload(w http.ResponseWriter, r *http
 	writeResponse(w, r, http.StatusCreated, resp)
 }
 
-func (c *Controller) AbortPresignMultipartUpload(w http.ResponseWriter, r *http.Request, body apigen.AbortPresignMultipartUploadJSONRequestBody, repository string, branch string, uploadID string, params apigen.AbortPresignMultipartUploadParams) {
+func (c *Controller) AbortPresignMultipartUpload(w http.ResponseWriter, r *http.Request, body apigen.AbortPresignMultipartUploadJSONRequestBody, owner string, repository string, branch string, uploadID string, params apigen.AbortPresignMultipartUploadParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.WriteObjectAction,
@@ -325,7 +331,8 @@ func (c *Controller) AbortPresignMultipartUpload(w http.ResponseWriter, r *http.
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) CompletePresignMultipartUpload(w http.ResponseWriter, r *http.Request, body apigen.CompletePresignMultipartUploadJSONRequestBody, repository string, branch string, uploadID string, params apigen.CompletePresignMultipartUploadParams) {
+func (c *Controller) CompletePresignMultipartUpload(w http.ResponseWriter, r *http.Request, body apigen.CompletePresignMultipartUploadJSONRequestBody, owner string, repository string, branch string, uploadID string, params apigen.CompletePresignMultipartUploadParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.WriteObjectAction,
@@ -445,7 +452,8 @@ func (c *Controller) CompletePresignMultipartUpload(w http.ResponseWriter, r *ht
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) PrepareGarbageCollectionUncommitted(w http.ResponseWriter, r *http.Request, body apigen.PrepareGarbageCollectionUncommittedJSONRequestBody, repository string) {
+func (c *Controller) PrepareGarbageCollectionUncommitted(w http.ResponseWriter, r *http.Request, body apigen.PrepareGarbageCollectionUncommittedJSONRequestBody, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.PrepareGarbageCollectionUncommittedAction,
@@ -502,7 +510,8 @@ func (c *Controller) GetAuthCapabilities(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-func (c *Controller) DeleteObjects(w http.ResponseWriter, r *http.Request, body apigen.DeleteObjectsJSONRequestBody, repository, branch string, params apigen.DeleteObjectsParams) {
+func (c *Controller) DeleteObjects(w http.ResponseWriter, r *http.Request, body apigen.DeleteObjectsJSONRequestBody, owner, repository, branch string, params apigen.DeleteObjectsParams) {
+	repository = namespacedRepository(owner, repository)
 	ctx := r.Context()
 	c.LogAction(ctx, "delete_objects", r, repository, branch, "")
 
@@ -681,7 +690,8 @@ func (c *Controller) StsLogin(w http.ResponseWriter, r *http.Request, body apige
 	writeResponse(w, r, http.StatusOK, responseToken)
 }
 
-func (c *Controller) GetPhysicalAddress(w http.ResponseWriter, r *http.Request, repository, branch string, params apigen.GetPhysicalAddressParams) {
+func (c *Controller) GetPhysicalAddress(w http.ResponseWriter, r *http.Request, owner, repository, branch string, params apigen.GetPhysicalAddressParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.WriteObjectAction,
@@ -740,7 +750,8 @@ func (c *Controller) GetPhysicalAddress(w http.ResponseWriter, r *http.Request, 
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request, body apigen.LinkPhysicalAddressJSONRequestBody, repository, branch string, params apigen.LinkPhysicalAddressParams) {
+func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request, body apigen.LinkPhysicalAddressJSONRequestBody, owner, repository, branch string, params apigen.LinkPhysicalAddressParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.WriteObjectAction,
@@ -2219,7 +2230,8 @@ func (c *Controller) ensureStorageNamespace(ctx context.Context, storageID, stor
 	return nil
 }
 
-func (c *Controller) DeleteRepository(w http.ResponseWriter, r *http.Request, repository string, params apigen.DeleteRepositoryParams) {
+func (c *Controller) DeleteRepository(w http.ResponseWriter, r *http.Request, owner string, repository string, params apigen.DeleteRepositoryParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.DeleteRepositoryAction,
@@ -2254,7 +2266,8 @@ func (c *Controller) DeleteRepository(w http.ResponseWriter, r *http.Request, re
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) GetRepository(w http.ResponseWriter, r *http.Request, repository string) {
+func (c *Controller) GetRepository(w http.ResponseWriter, r *http.Request, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ReadRepositoryAction,
@@ -2297,7 +2310,8 @@ func (c *Controller) GetRepository(w http.ResponseWriter, r *http.Request, repos
 	}
 }
 
-func (c *Controller) GetRepositoryMetadata(w http.ResponseWriter, r *http.Request, repository string) {
+func (c *Controller) GetRepositoryMetadata(w http.ResponseWriter, r *http.Request, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ReadRepositoryAction,
@@ -2315,7 +2329,8 @@ func (c *Controller) GetRepositoryMetadata(w http.ResponseWriter, r *http.Reques
 	writeResponse(w, r, http.StatusOK, apigen.RepositoryMetadata{AdditionalProperties: metadata})
 }
 
-func (c *Controller) SetRepositoryMetadata(w http.ResponseWriter, r *http.Request, body apigen.SetRepositoryMetadataJSONRequestBody, repository string) {
+func (c *Controller) SetRepositoryMetadata(w http.ResponseWriter, r *http.Request, body apigen.SetRepositoryMetadataJSONRequestBody, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.UpdateRepositoryAction,
@@ -2333,7 +2348,8 @@ func (c *Controller) SetRepositoryMetadata(w http.ResponseWriter, r *http.Reques
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) DeleteRepositoryMetadata(w http.ResponseWriter, r *http.Request, body apigen.DeleteRepositoryMetadataJSONRequestBody, repository string) {
+func (c *Controller) DeleteRepositoryMetadata(w http.ResponseWriter, r *http.Request, body apigen.DeleteRepositoryMetadataJSONRequestBody, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.UpdateRepositoryAction,
@@ -2351,7 +2367,8 @@ func (c *Controller) DeleteRepositoryMetadata(w http.ResponseWriter, r *http.Req
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) GetBranchProtectionRules(w http.ResponseWriter, r *http.Request, repository string) {
+func (c *Controller) GetBranchProtectionRules(w http.ResponseWriter, r *http.Request, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.GetBranchProtectionRulesAction,
@@ -2375,7 +2392,8 @@ func (c *Controller) GetBranchProtectionRules(w http.ResponseWriter, r *http.Req
 	writeResponse(w, r, http.StatusOK, resp)
 }
 
-func (c *Controller) SetBranchProtectionRules(w http.ResponseWriter, r *http.Request, body apigen.SetBranchProtectionRulesJSONRequestBody, repository string, params apigen.SetBranchProtectionRulesParams) {
+func (c *Controller) SetBranchProtectionRules(w http.ResponseWriter, r *http.Request, body apigen.SetBranchProtectionRulesJSONRequestBody, owner string, repository string, params apigen.SetBranchProtectionRulesParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.SetBranchProtectionRulesAction,
@@ -2405,7 +2423,8 @@ func (c *Controller) SetBranchProtectionRules(w http.ResponseWriter, r *http.Req
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) DeleteGCRules(w http.ResponseWriter, r *http.Request, repository string) {
+func (c *Controller) DeleteGCRules(w http.ResponseWriter, r *http.Request, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.SetGarbageCollectionRulesAction,
@@ -2422,7 +2441,8 @@ func (c *Controller) DeleteGCRules(w http.ResponseWriter, r *http.Request, repos
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) GetGCRules(w http.ResponseWriter, r *http.Request, repository string) {
+func (c *Controller) GetGCRules(w http.ResponseWriter, r *http.Request, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.GetGarbageCollectionRulesAction,
@@ -2444,7 +2464,8 @@ func (c *Controller) GetGCRules(w http.ResponseWriter, r *http.Request, reposito
 	writeResponse(w, r, http.StatusOK, resp)
 }
 
-func (c *Controller) SetGCRules(w http.ResponseWriter, r *http.Request, body apigen.SetGCRulesJSONRequestBody, repository string) {
+func (c *Controller) SetGCRules(w http.ResponseWriter, r *http.Request, body apigen.SetGCRulesJSONRequestBody, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.SetGarbageCollectionRulesAction,
@@ -2468,7 +2489,8 @@ func (c *Controller) SetGCRules(w http.ResponseWriter, r *http.Request, body api
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) ListRepositoryRuns(w http.ResponseWriter, r *http.Request, repository string, params apigen.ListRepositoryRunsParams) {
+func (c *Controller) ListRepositoryRuns(w http.ResponseWriter, r *http.Request, owner string, repository string, params apigen.ListRepositoryRunsParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ReadActionsAction,
@@ -2536,7 +2558,8 @@ func runResultToActionRun(val *actions.RunResult) apigen.ActionRun {
 	return runResult
 }
 
-func (c *Controller) GetRun(w http.ResponseWriter, r *http.Request, repository, runID string) {
+func (c *Controller) GetRun(w http.ResponseWriter, r *http.Request, owner, repository, runID string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ReadActionsAction,
@@ -2575,7 +2598,8 @@ func (c *Controller) GetRun(w http.ResponseWriter, r *http.Request, repository, 
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) ListRunHooks(w http.ResponseWriter, r *http.Request, repository, runID string, params apigen.ListRunHooksParams) {
+func (c *Controller) ListRunHooks(w http.ResponseWriter, r *http.Request, owner, repository, runID string, params apigen.ListRunHooksParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ReadActionsAction,
@@ -2640,7 +2664,8 @@ func (c *Controller) ListRunHooks(w http.ResponseWriter, r *http.Request, reposi
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) GetRunHookOutput(w http.ResponseWriter, r *http.Request, repository, runID, hookRunID string) {
+func (c *Controller) GetRunHookOutput(w http.ResponseWriter, r *http.Request, owner, repository, runID, hookRunID string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ReadActionsAction,
@@ -2690,7 +2715,8 @@ func (c *Controller) GetRunHookOutput(w http.ResponseWriter, r *http.Request, re
 	}
 }
 
-func (c *Controller) ListBranches(w http.ResponseWriter, r *http.Request, repository string, params apigen.ListBranchesParams) {
+func (c *Controller) ListBranches(w http.ResponseWriter, r *http.Request, owner string, repository string, params apigen.ListBranchesParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ListBranchesAction,
@@ -2726,7 +2752,8 @@ func (c *Controller) ListBranches(w http.ResponseWriter, r *http.Request, reposi
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) CreateBranch(w http.ResponseWriter, r *http.Request, body apigen.CreateBranchJSONRequestBody, repository string) {
+func (c *Controller) CreateBranch(w http.ResponseWriter, r *http.Request, body apigen.CreateBranchJSONRequestBody, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.CreateBranchAction,
@@ -2753,7 +2780,8 @@ func (c *Controller) CreateBranch(w http.ResponseWriter, r *http.Request, body a
 	_, _ = io.WriteString(w, commitLog.Reference)
 }
 
-func (c *Controller) DeleteBranch(w http.ResponseWriter, r *http.Request, repository, branch string, body apigen.DeleteBranchParams) {
+func (c *Controller) DeleteBranch(w http.ResponseWriter, r *http.Request, owner, repository, branch string, body apigen.DeleteBranchParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.DeleteBranchAction,
@@ -2772,7 +2800,8 @@ func (c *Controller) DeleteBranch(w http.ResponseWriter, r *http.Request, reposi
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) GetBranch(w http.ResponseWriter, r *http.Request, repository, branch string) {
+func (c *Controller) GetBranch(w http.ResponseWriter, r *http.Request, owner, repository, branch string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ReadBranchAction,
@@ -2911,7 +2940,8 @@ func (c *Controller) handleAPIError(ctx context.Context, w http.ResponseWriter, 
 	return c.handleAPIErrorCallback(ctx, w, r, err, writeError)
 }
 
-func (c *Controller) ResetBranch(w http.ResponseWriter, r *http.Request, body apigen.ResetBranchJSONRequestBody, repository, branch string) {
+func (c *Controller) ResetBranch(w http.ResponseWriter, r *http.Request, body apigen.ResetBranchJSONRequestBody, owner, repository, branch string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.RevertBranchAction,
@@ -2944,7 +2974,8 @@ func (c *Controller) ResetBranch(w http.ResponseWriter, r *http.Request, body ap
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) HardResetBranch(w http.ResponseWriter, r *http.Request, repository, branch string, params apigen.HardResetBranchParams) {
+func (c *Controller) HardResetBranch(w http.ResponseWriter, r *http.Request, owner, repository, branch string, params apigen.HardResetBranchParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			// TODO(ozkatz): Can we have another action here?
@@ -2965,7 +2996,8 @@ func (c *Controller) HardResetBranch(w http.ResponseWriter, r *http.Request, rep
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) ImportStart(w http.ResponseWriter, r *http.Request, body apigen.ImportStartJSONRequestBody, repository, branch string) {
+func (c *Controller) ImportStart(w http.ResponseWriter, r *http.Request, body apigen.ImportStartJSONRequestBody, owner, repository, branch string) {
+	repository = namespacedRepository(owner, repository)
 	perm := permissions.Node{
 		Type: permissions.NodeTypeAnd,
 		Nodes: []permissions.Node{
@@ -3075,7 +3107,8 @@ func importStatusToResponse(status *graveler.ImportStatus) apigen.ImportStatus {
 	return resp
 }
 
-func (c *Controller) ImportStatus(w http.ResponseWriter, r *http.Request, repository, branch string, params apigen.ImportStatusParams) {
+func (c *Controller) ImportStatus(w http.ResponseWriter, r *http.Request, owner, repository, branch string, params apigen.ImportStatusParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ReadBranchAction,
@@ -3094,7 +3127,8 @@ func (c *Controller) ImportStatus(w http.ResponseWriter, r *http.Request, reposi
 	writeResponse(w, r, http.StatusOK, resp)
 }
 
-func (c *Controller) ImportCancel(w http.ResponseWriter, r *http.Request, repository, branch string, params apigen.ImportCancelParams) {
+func (c *Controller) ImportCancel(w http.ResponseWriter, r *http.Request, owner, repository, branch string, params apigen.ImportCancelParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ImportCancelAction,
@@ -3113,7 +3147,8 @@ func (c *Controller) ImportCancel(w http.ResponseWriter, r *http.Request, reposi
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) Commit(w http.ResponseWriter, r *http.Request, body apigen.CommitJSONRequestBody, repository, branch string, params apigen.CommitParams) {
+func (c *Controller) Commit(w http.ResponseWriter, r *http.Request, body apigen.CommitJSONRequestBody, owner, repository, branch string, params apigen.CommitParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.CreateCommitAction,
@@ -3141,7 +3176,8 @@ func (c *Controller) Commit(w http.ResponseWriter, r *http.Request, body apigen.
 	commitResponse(w, r, newCommit)
 }
 
-func (c *Controller) CreateCommitRecord(w http.ResponseWriter, r *http.Request, body apigen.CreateCommitRecordJSONRequestBody, repository string) {
+func (c *Controller) CreateCommitRecord(w http.ResponseWriter, r *http.Request, body apigen.CreateCommitRecordJSONRequestBody, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.CreateCommitAction,
@@ -3180,7 +3216,8 @@ func commitResponse(w http.ResponseWriter, r *http.Request, newCommit *catalog.C
 	writeResponse(w, r, http.StatusCreated, response)
 }
 
-func (c *Controller) DiffBranch(w http.ResponseWriter, r *http.Request, repository, branch string, params apigen.DiffBranchParams) {
+func (c *Controller) DiffBranch(w http.ResponseWriter, r *http.Request, owner, repository, branch string, params apigen.DiffBranchParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ListObjectsAction,
@@ -3228,7 +3265,8 @@ func (c *Controller) DiffBranch(w http.ResponseWriter, r *http.Request, reposito
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) DeleteObject(w http.ResponseWriter, r *http.Request, repository, branch string, params apigen.DeleteObjectParams) {
+func (c *Controller) DeleteObject(w http.ResponseWriter, r *http.Request, owner, repository, branch string, params apigen.DeleteObjectParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.DeleteObjectAction,
@@ -3246,7 +3284,8 @@ func (c *Controller) DeleteObject(w http.ResponseWriter, r *http.Request, reposi
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) UploadObjectPreflight(w http.ResponseWriter, r *http.Request, repository, branch string, params apigen.UploadObjectPreflightParams) {
+func (c *Controller) UploadObjectPreflight(w http.ResponseWriter, r *http.Request, owner, repository, branch string, params apigen.UploadObjectPreflightParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.WriteObjectAction,
@@ -3262,7 +3301,8 @@ func (c *Controller) UploadObjectPreflight(w http.ResponseWriter, r *http.Reques
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) UploadObject(w http.ResponseWriter, r *http.Request, repository, branch string, params apigen.UploadObjectParams) {
+func (c *Controller) UploadObject(w http.ResponseWriter, r *http.Request, owner, repository, branch string, params apigen.UploadObjectParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.WriteObjectAction,
@@ -3432,7 +3472,8 @@ func (c *Controller) UploadObject(w http.ResponseWriter, r *http.Request, reposi
 	writeResponse(w, r, http.StatusCreated, response)
 }
 
-func (c *Controller) StageObject(w http.ResponseWriter, r *http.Request, body apigen.StageObjectJSONRequestBody, repository, branch string, params apigen.StageObjectParams) {
+func (c *Controller) StageObject(w http.ResponseWriter, r *http.Request, body apigen.StageObjectJSONRequestBody, owner, repository, branch string, params apigen.StageObjectParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.WriteObjectAction,
@@ -3508,7 +3549,8 @@ func (c *Controller) StageObject(w http.ResponseWriter, r *http.Request, body ap
 	writeResponse(w, r, http.StatusCreated, response)
 }
 
-func (c *Controller) CopyObject(w http.ResponseWriter, r *http.Request, body apigen.CopyObjectJSONRequestBody, repository, branch string, params apigen.CopyObjectParams) {
+func (c *Controller) CopyObject(w http.ResponseWriter, r *http.Request, body apigen.CopyObjectJSONRequestBody, owner, repository, branch string, params apigen.CopyObjectParams) {
+	repository = namespacedRepository(owner, repository)
 	srcPath := body.SrcPath
 	destPath := params.DestPath
 	if !c.authorize(w, r, permissions.Node{
@@ -3587,7 +3629,8 @@ func (c *Controller) CopyObject(w http.ResponseWriter, r *http.Request, body api
 	writeResponse(w, r, http.StatusCreated, response)
 }
 
-func (c *Controller) RevertBranch(w http.ResponseWriter, r *http.Request, body apigen.RevertBranchJSONRequestBody, repository, branch string) {
+func (c *Controller) RevertBranch(w http.ResponseWriter, r *http.Request, body apigen.RevertBranchJSONRequestBody, owner, repository, branch string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.RevertBranchAction,
@@ -3618,7 +3661,8 @@ func (c *Controller) RevertBranch(w http.ResponseWriter, r *http.Request, body a
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) CherryPick(w http.ResponseWriter, r *http.Request, body apigen.CherryPickJSONRequestBody, repository string, branch string) {
+func (c *Controller) CherryPick(w http.ResponseWriter, r *http.Request, body apigen.CherryPickJSONRequestBody, owner string, repository string, branch string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Type: permissions.NodeTypeAnd,
 		Nodes: []permissions.Node{
@@ -3675,7 +3719,8 @@ func getCommitOverrides(commitOverrides *apigen.CommitOverrides) *graveler.Commi
 	}
 }
 
-func (c *Controller) GetCommit(w http.ResponseWriter, r *http.Request, repository, commitID string) {
+func (c *Controller) GetCommit(w http.ResponseWriter, r *http.Request, owner, repository, commitID string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ReadCommitAction,
@@ -3713,11 +3758,12 @@ func (c *Controller) GetCommit(w http.ResponseWriter, r *http.Request, repositor
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) InternalGetGarbageCollectionRules(w http.ResponseWriter, r *http.Request, repository string) {
-	c.GetGCRules(w, r, repository)
+func (c *Controller) InternalGetGarbageCollectionRules(w http.ResponseWriter, r *http.Request, owner string, repository string) {
+	c.GetGCRules(w, r, owner, repository)
 }
 
-func (c *Controller) SetGarbageCollectionRulesPreflight(w http.ResponseWriter, r *http.Request, repository string) {
+func (c *Controller) SetGarbageCollectionRulesPreflight(w http.ResponseWriter, r *http.Request, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.SetGarbageCollectionRulesAction,
@@ -3733,15 +3779,16 @@ func (c *Controller) SetGarbageCollectionRulesPreflight(w http.ResponseWriter, r
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) InternalSetGarbageCollectionRules(w http.ResponseWriter, r *http.Request, body apigen.InternalSetGarbageCollectionRulesJSONRequestBody, repository string) {
-	c.SetGCRules(w, r, apigen.SetGCRulesJSONRequestBody(body), repository)
+func (c *Controller) InternalSetGarbageCollectionRules(w http.ResponseWriter, r *http.Request, body apigen.InternalSetGarbageCollectionRulesJSONRequestBody, owner string, repository string) {
+	c.SetGCRules(w, r, apigen.SetGCRulesJSONRequestBody(body), owner, repository)
 }
 
-func (c *Controller) InternalDeleteGarbageCollectionRules(w http.ResponseWriter, r *http.Request, repository string) {
-	c.DeleteGCRules(w, r, repository)
+func (c *Controller) InternalDeleteGarbageCollectionRules(w http.ResponseWriter, r *http.Request, owner string, repository string) {
+	c.DeleteGCRules(w, r, owner, repository)
 }
 
-func (c *Controller) PrepareGarbageCollectionCommits(w http.ResponseWriter, r *http.Request, repository string) {
+func (c *Controller) PrepareGarbageCollectionCommits(w http.ResponseWriter, r *http.Request, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.PrepareGarbageCollectionCommitsAction,
@@ -3772,11 +3819,12 @@ func (c *Controller) PrepareGarbageCollectionCommits(w http.ResponseWriter, r *h
 	})
 }
 
-func (c *Controller) InternalGetBranchProtectionRules(w http.ResponseWriter, r *http.Request, repository string) {
-	c.GetBranchProtectionRules(w, r, repository)
+func (c *Controller) InternalGetBranchProtectionRules(w http.ResponseWriter, r *http.Request, owner string, repository string) {
+	c.GetBranchProtectionRules(w, r, owner, repository)
 }
 
-func (c *Controller) InternalDeleteBranchProtectionRule(w http.ResponseWriter, r *http.Request, body apigen.InternalDeleteBranchProtectionRuleJSONRequestBody, repository string) {
+func (c *Controller) InternalDeleteBranchProtectionRule(w http.ResponseWriter, r *http.Request, body apigen.InternalDeleteBranchProtectionRuleJSONRequestBody, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.SetBranchProtectionRulesAction,
@@ -3806,7 +3854,8 @@ func (c *Controller) InternalDeleteBranchProtectionRule(w http.ResponseWriter, r
 	writeResponse(w, r, http.StatusNotFound, nil)
 }
 
-func (c *Controller) CreateBranchProtectionRulePreflight(w http.ResponseWriter, r *http.Request, repository string) {
+func (c *Controller) CreateBranchProtectionRulePreflight(w http.ResponseWriter, r *http.Request, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.SetBranchProtectionRulesAction,
@@ -3822,7 +3871,8 @@ func (c *Controller) CreateBranchProtectionRulePreflight(w http.ResponseWriter, 
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) InternalCreateBranchProtectionRule(w http.ResponseWriter, r *http.Request, body apigen.InternalCreateBranchProtectionRuleJSONRequestBody, repository string) {
+func (c *Controller) InternalCreateBranchProtectionRule(w http.ResponseWriter, r *http.Request, body apigen.InternalCreateBranchProtectionRuleJSONRequestBody, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.SetBranchProtectionRulesAction,
@@ -3856,7 +3906,8 @@ func (c *Controller) InternalCreateBranchProtectionRule(w http.ResponseWriter, r
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) GetMetaRange(w http.ResponseWriter, r *http.Request, repository, metaRange string) {
+func (c *Controller) GetMetaRange(w http.ResponseWriter, r *http.Request, owner, repository, metaRange string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Type: permissions.NodeTypeAnd,
 		Nodes: []permissions.Node{
@@ -3891,7 +3942,8 @@ func (c *Controller) GetMetaRange(w http.ResponseWriter, r *http.Request, reposi
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) GetRange(w http.ResponseWriter, r *http.Request, repository, pRange string) {
+func (c *Controller) GetRange(w http.ResponseWriter, r *http.Request, owner, repository, pRange string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Type: permissions.NodeTypeAnd,
 		Nodes: []permissions.Node{
@@ -3925,7 +3977,8 @@ func (c *Controller) GetRange(w http.ResponseWriter, r *http.Request, repository
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) DumpRefs(w http.ResponseWriter, r *http.Request, repository string) {
+func (c *Controller) DumpRefs(w http.ResponseWriter, r *http.Request, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Type: permissions.NodeTypeAnd,
 		Nodes: []permissions.Node{
@@ -3999,7 +4052,8 @@ func (c *Controller) DumpRefs(w http.ResponseWriter, r *http.Request, repository
 	writeResponse(w, r, http.StatusCreated, response)
 }
 
-func (c *Controller) RestoreRefs(w http.ResponseWriter, r *http.Request, body apigen.RestoreRefsJSONRequestBody, repository string) {
+func (c *Controller) RestoreRefs(w http.ResponseWriter, r *http.Request, body apigen.RestoreRefsJSONRequestBody, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Type: permissions.NodeTypeAnd,
 		Nodes: []permissions.Node{
@@ -4061,7 +4115,8 @@ func (c *Controller) RestoreRefs(w http.ResponseWriter, r *http.Request, body ap
 	}
 }
 
-func (c *Controller) DumpSubmit(w http.ResponseWriter, r *http.Request, repository string) {
+func (c *Controller) DumpSubmit(w http.ResponseWriter, r *http.Request, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Type: permissions.NodeTypeAnd,
 		Nodes: []permissions.Node{
@@ -4100,7 +4155,8 @@ func (c *Controller) DumpSubmit(w http.ResponseWriter, r *http.Request, reposito
 	})
 }
 
-func (c *Controller) DumpStatus(w http.ResponseWriter, r *http.Request, repository string, params apigen.DumpStatusParams) {
+func (c *Controller) DumpStatus(w http.ResponseWriter, r *http.Request, owner string, repository string, params apigen.DumpStatusParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Type: permissions.NodeTypeAnd,
 		Nodes: []permissions.Node{
@@ -4153,7 +4209,8 @@ func (c *Controller) DumpStatus(w http.ResponseWriter, r *http.Request, reposito
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) RestoreSubmit(w http.ResponseWriter, r *http.Request, body apigen.RestoreSubmitJSONRequestBody, repository string) {
+func (c *Controller) RestoreSubmit(w http.ResponseWriter, r *http.Request, body apigen.RestoreSubmitJSONRequestBody, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Type: permissions.NodeTypeAnd,
 		Nodes: []permissions.Node{
@@ -4201,7 +4258,8 @@ func (c *Controller) RestoreSubmit(w http.ResponseWriter, r *http.Request, body 
 	})
 }
 
-func (c *Controller) RestoreStatus(w http.ResponseWriter, r *http.Request, repository string, params apigen.RestoreStatusParams) {
+func (c *Controller) RestoreStatus(w http.ResponseWriter, r *http.Request, owner string, repository string, params apigen.RestoreStatusParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Type: permissions.NodeTypeAnd,
 		Nodes: []permissions.Node{
@@ -4247,7 +4305,8 @@ func (c *Controller) RestoreStatus(w http.ResponseWriter, r *http.Request, repos
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) CreateSymlinkFile(w http.ResponseWriter, r *http.Request, repository, branch string, params apigen.CreateSymlinkFileParams) {
+func (c *Controller) CreateSymlinkFile(w http.ResponseWriter, r *http.Request, owner, repository, branch string, params apigen.CreateSymlinkFileParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.WriteObjectAction,
@@ -4336,7 +4395,8 @@ func writeSymlink(ctx context.Context, repo *catalog.Repository, branch, path st
 	return err
 }
 
-func (c *Controller) DiffRefs(w http.ResponseWriter, r *http.Request, repository, leftRef, rightRef string, params apigen.DiffRefsParams) {
+func (c *Controller) DiffRefs(w http.ResponseWriter, r *http.Request, owner, repository, leftRef, rightRef string, params apigen.DiffRefsParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ListObjectsAction,
@@ -4385,7 +4445,8 @@ func (c *Controller) DiffRefs(w http.ResponseWriter, r *http.Request, repository
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) LogCommits(w http.ResponseWriter, r *http.Request, repository, ref string, params apigen.LogCommitsParams) {
+func (c *Controller) LogCommits(w http.ResponseWriter, r *http.Request, owner, repository, ref string, params apigen.LogCommitsParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ReadBranchAction,
@@ -4436,7 +4497,8 @@ func (c *Controller) LogCommits(w http.ResponseWriter, r *http.Request, reposito
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) HeadObject(w http.ResponseWriter, r *http.Request, repository, ref string, params apigen.HeadObjectParams) {
+func (c *Controller) HeadObject(w http.ResponseWriter, r *http.Request, owner, repository, ref string, params apigen.HeadObjectParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorizeCallback(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ReadObjectAction,
@@ -4488,7 +4550,8 @@ func (c *Controller) HeadObject(w http.ResponseWriter, r *http.Request, reposito
 	}
 }
 
-func (c *Controller) GetMetadataObject(w http.ResponseWriter, r *http.Request, repository string, objectType string, objectID string, params apigen.GetMetadataObjectParams) {
+func (c *Controller) GetMetadataObject(w http.ResponseWriter, r *http.Request, owner string, repository string, objectType string, objectID string, params apigen.GetMetadataObjectParams) {
+	repository = namespacedRepository(owner, repository)
 	const getTypeMetaRange = "meta_range"
 	const getTypeRange = "range"
 
@@ -4577,7 +4640,8 @@ func (c *Controller) GetMetadataObject(w http.ResponseWriter, r *http.Request, r
 	}
 }
 
-func (c *Controller) GetObject(w http.ResponseWriter, r *http.Request, repository, ref string, params apigen.GetObjectParams) {
+func (c *Controller) GetObject(w http.ResponseWriter, r *http.Request, owner, repository, ref string, params apigen.GetObjectParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ReadObjectAction,
@@ -4757,7 +4821,8 @@ func (c *Controller) getXETObject(w http.ResponseWriter, r *http.Request, entry 
 	}
 }
 
-func (c *Controller) ListObjects(w http.ResponseWriter, r *http.Request, repository, ref string, params apigen.ListObjectsParams) {
+func (c *Controller) ListObjects(w http.ResponseWriter, r *http.Request, owner, repository, ref string, params apigen.ListObjectsParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ListObjectsAction,
@@ -4866,7 +4931,8 @@ func (c *Controller) ListObjects(w http.ResponseWriter, r *http.Request, reposit
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) StatObject(w http.ResponseWriter, r *http.Request, repository, ref string, params apigen.StatObjectParams) {
+func (c *Controller) StatObject(w http.ResponseWriter, r *http.Request, owner, repository, ref string, params apigen.StatObjectParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ReadObjectAction,
@@ -4943,7 +5009,8 @@ func (c *Controller) StatObject(w http.ResponseWriter, r *http.Request, reposito
 	writeResponse(w, r, code, objStat)
 }
 
-func (c *Controller) UpdateObjectUserMetadata(w http.ResponseWriter, r *http.Request, body apigen.UpdateObjectUserMetadataJSONRequestBody, repository, branch string, params apigen.UpdateObjectUserMetadataParams) {
+func (c *Controller) UpdateObjectUserMetadata(w http.ResponseWriter, r *http.Request, body apigen.UpdateObjectUserMetadataJSONRequestBody, owner, repository, branch string, params apigen.UpdateObjectUserMetadataParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.WriteObjectAction,
@@ -4964,7 +5031,8 @@ func (c *Controller) UpdateObjectUserMetadata(w http.ResponseWriter, r *http.Req
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) GetUnderlyingProperties(w http.ResponseWriter, r *http.Request, repository, ref string, params apigen.GetUnderlyingPropertiesParams) {
+func (c *Controller) GetUnderlyingProperties(w http.ResponseWriter, r *http.Request, owner, repository, ref string, params apigen.GetUnderlyingPropertiesParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ReadObjectAction,
@@ -5005,7 +5073,8 @@ func (c *Controller) GetUnderlyingProperties(w http.ResponseWriter, r *http.Requ
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) MergeIntoBranch(w http.ResponseWriter, r *http.Request, body apigen.MergeIntoBranchJSONRequestBody, repository, sourceRef, destinationBranch string) {
+func (c *Controller) MergeIntoBranch(w http.ResponseWriter, r *http.Request, body apigen.MergeIntoBranchJSONRequestBody, owner, repository, sourceRef, destinationBranch string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.CreateCommitAction,
@@ -5051,7 +5120,8 @@ func (c *Controller) MergeIntoBranch(w http.ResponseWriter, r *http.Request, bod
 	})
 }
 
-func (c *Controller) FindMergeBase(w http.ResponseWriter, r *http.Request, repository string, sourceRef string, destinationRef string) {
+func (c *Controller) FindMergeBase(w http.ResponseWriter, r *http.Request, owner string, repository string, sourceRef string, destinationRef string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ListCommitsAction,
@@ -5074,7 +5144,8 @@ func (c *Controller) FindMergeBase(w http.ResponseWriter, r *http.Request, repos
 	})
 }
 
-func (c *Controller) ListTags(w http.ResponseWriter, r *http.Request, repository string, params apigen.ListTagsParams) {
+func (c *Controller) ListTags(w http.ResponseWriter, r *http.Request, owner string, repository string, params apigen.ListTagsParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ListTagsAction,
@@ -5105,7 +5176,8 @@ func (c *Controller) ListTags(w http.ResponseWriter, r *http.Request, repository
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) CreateTag(w http.ResponseWriter, r *http.Request, body apigen.CreateTagJSONRequestBody, repository string) {
+func (c *Controller) CreateTag(w http.ResponseWriter, r *http.Request, body apigen.CreateTagJSONRequestBody, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.CreateTagAction,
@@ -5128,7 +5200,8 @@ func (c *Controller) CreateTag(w http.ResponseWriter, r *http.Request, body apig
 	writeResponse(w, r, http.StatusCreated, response)
 }
 
-func (c *Controller) DeleteTag(w http.ResponseWriter, r *http.Request, repository, tag string, params apigen.DeleteTagParams) {
+func (c *Controller) DeleteTag(w http.ResponseWriter, r *http.Request, owner, repository, tag string, params apigen.DeleteTagParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.DeleteTagAction,
@@ -5146,7 +5219,8 @@ func (c *Controller) DeleteTag(w http.ResponseWriter, r *http.Request, repositor
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) GetTag(w http.ResponseWriter, r *http.Request, repository, tag string) {
+func (c *Controller) GetTag(w http.ResponseWriter, r *http.Request, owner, repository, tag string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ReadTagAction,
@@ -5442,7 +5516,8 @@ func (c *Controller) PostStatsEvents(w http.ResponseWriter, r *http.Request, bod
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) ListPullRequests(w http.ResponseWriter, r *http.Request, repository string, params apigen.ListPullRequestsParams) {
+func (c *Controller) ListPullRequests(w http.ResponseWriter, r *http.Request, owner string, repository string, params apigen.ListPullRequestsParams) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ListPullRequestsAction,
@@ -5484,7 +5559,8 @@ func (c *Controller) ListPullRequests(w http.ResponseWriter, r *http.Request, re
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) CreatePullRequest(w http.ResponseWriter, r *http.Request, body apigen.CreatePullRequestJSONRequestBody, repository string) {
+func (c *Controller) CreatePullRequest(w http.ResponseWriter, r *http.Request, body apigen.CreatePullRequestJSONRequestBody, owner string, repository string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.WritePullReqeustAction,
@@ -5521,7 +5597,8 @@ func (c *Controller) CreatePullRequest(w http.ResponseWriter, r *http.Request, b
 	writeResponse(w, r, http.StatusCreated, response)
 }
 
-func (c *Controller) GetPullRequest(w http.ResponseWriter, r *http.Request, repository string, pullRequestID string) {
+func (c *Controller) GetPullRequest(w http.ResponseWriter, r *http.Request, owner string, repository string, pullRequestID string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.ReadPullReqeustAction,
@@ -5553,7 +5630,8 @@ func (c *Controller) GetPullRequest(w http.ResponseWriter, r *http.Request, repo
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-func (c *Controller) UpdatePullRequest(w http.ResponseWriter, r *http.Request, body apigen.UpdatePullRequestJSONRequestBody, repository string, pullRequestID string) {
+func (c *Controller) UpdatePullRequest(w http.ResponseWriter, r *http.Request, body apigen.UpdatePullRequestJSONRequestBody, owner string, repository string, pullRequestID string) {
+	repository = namespacedRepository(owner, repository)
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.WritePullReqeustAction,
@@ -5576,7 +5654,8 @@ func (c *Controller) UpdatePullRequest(w http.ResponseWriter, r *http.Request, b
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-func (c *Controller) MergePullRequest(w http.ResponseWriter, r *http.Request, repository string, pullRequestID string) {
+func (c *Controller) MergePullRequest(w http.ResponseWriter, r *http.Request, owner string, repository string, pullRequestID string) {
+	repository = namespacedRepository(owner, repository)
 	ctx := r.Context()
 	pr, err := c.Catalog.GetPullRequest(ctx, repository, pullRequestID)
 	if c.handleAPIError(ctx, w, r, err) {

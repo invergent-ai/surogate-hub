@@ -29,7 +29,7 @@ var branchProtectListCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		client := getClient()
 		u := MustParseRepoURI("repository URI", args[0])
-		resp, err := client.GetBranchProtectionRulesWithResponse(cmd.Context(), u.Repository)
+		resp, err := client.GetBranchProtectionRulesWithResponse(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository))
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)
 		if resp.JSON200 == nil {
 			Die("Bad response from server", 1)
@@ -55,7 +55,7 @@ var branchProtectAddCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		client := getClient()
 		u := MustParseRepoURI("repository URI", args[0])
-		resp, err := client.GetBranchProtectionRulesWithResponse(cmd.Context(), u.Repository)
+		resp, err := client.GetBranchProtectionRulesWithResponse(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository))
 
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)
 		rules := *resp.JSON200
@@ -67,7 +67,7 @@ var branchProtectAddCmd = &cobra.Command{
 		if etag != nil && *etag != "" {
 			params.IfMatch = etag
 		}
-		setResp, err := client.SetBranchProtectionRulesWithResponse(cmd.Context(), u.Repository, params, rules)
+		setResp, err := client.SetBranchProtectionRulesWithResponse(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), params, rules)
 		DieOnErrorOrUnexpectedStatusCode(setResp, err, http.StatusNoContent)
 	},
 }
@@ -82,7 +82,7 @@ var branchProtectDeleteCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		client := getClient()
 		u := MustParseRepoURI("repository URI", args[0])
-		resp, err := client.GetBranchProtectionRulesWithResponse(cmd.Context(), u.Repository)
+		resp, err := client.GetBranchProtectionRulesWithResponse(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository))
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)
 		found := false
 		rules := slices.DeleteFunc(*resp.JSON200, func(rule apigen.BranchProtectionRule) bool {
@@ -95,7 +95,7 @@ var branchProtectDeleteCmd = &cobra.Command{
 		if !found {
 			Die("Branch protection rule not found", 1)
 		}
-		setResp, err := client.SetBranchProtectionRulesWithResponse(cmd.Context(), u.Repository, &apigen.SetBranchProtectionRulesParams{
+		setResp, err := client.SetBranchProtectionRulesWithResponse(cmd.Context(), apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), &apigen.SetBranchProtectionRulesParams{
 			IfMatch: swag.String(resp.HTTPResponse.Header.Get("ETag")),
 		}, rules)
 		DieOnErrorOrUnexpectedStatusCode(setResp, err, http.StatusNoContent)

@@ -50,7 +50,7 @@ var abuseRandomDeletesCmd = &cobra.Command{
 			client := getClient()
 			for work := range input {
 				start := time.Now()
-				resp, err := client.DeleteObject(ctx, u.Repository, u.Ref, &apigen.DeleteObjectParams{
+				resp, err := client.DeleteObject(ctx, apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), u.Ref, &apigen.DeleteObjectParams{
 					Path: work,
 				})
 				if err == nil && resp.StatusCode != http.StatusOK {

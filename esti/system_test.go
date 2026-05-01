@@ -34,6 +34,8 @@ const minHTTPErrorStatusCode = 400
 const (
 	ViperStorageNamespaceKey = "storage_namespace"
 	ViperBlockstoreType      = "blockstore_type"
+
+	testRepositoryOwner = "test-user"
 )
 
 var errNotVerified = errors.New("Surogate Hub failed")
@@ -66,10 +68,26 @@ func verifyResponse(resp *http.Response, body []byte) error {
 	return nil
 }
 
-// makeRepositoryName changes name to make it an acceptable repository name by replacing all
-// non-alphanumeric characters with a `-`.
+// makeRepositoryName changes name to make it an acceptable namespaced repository
+// name by replacing invalid segment characters with a `-`.
 func makeRepositoryName(name string) string {
-	return nonAlphanumericSequence.ReplaceAllString(name, "-")
+	parts := strings.Split(name, "/")
+	if len(parts) == 2 {
+		return sanitizeRepositorySegment(parts[0]) + "/" + sanitizeRepositorySegment(parts[1])
+	}
+	return testRepositoryOwner + "/" + sanitizeRepositorySegment(name)
+}
+
+func sanitizeRepositorySegment(segment string) string {
+	segment = strings.Trim(nonAlphanumericSequence.ReplaceAllString(segment, "-"), "-")
+	if len(segment) < 3 {
+		segment += strings.Repeat("x", 3-len(segment))
+	}
+	if len(segment) > 63 {
+		segment = segment[:63]
+		segment = strings.TrimRight(segment, "-.")
+	}
+	return segment
 }
 
 func setupTest(t testing.TB) (context.Context, logging.Logger, string) {
@@ -111,7 +129,7 @@ func createRepositoryUnique(ctx context.Context, t testing.TB) string {
 }
 
 func generateUniqueRepositoryName() string {
-	return "repo-" + xid.New().String()
+	return testRepositoryOwner + "/repo-" + xid.New().String()
 }
 
 func generateUniqueStorageNamespace(repoName string) string {
@@ -142,7 +160,7 @@ func createRepository(ctx context.Context, t testing.TB, name string, repoStorag
 func deleteRepositoryIfAskedTo(ctx context.Context, repositoryName string) {
 	deleteRepositories := viper.GetBool("delete_repositories")
 	if deleteRepositories {
-		resp, err := client.DeleteRepositoryWithResponse(ctx, repositoryName, &apigen.DeleteRepositoryParams{Force: swag.Bool(true)})
+		resp, err := client.DeleteRepositoryWithResponse(ctx, apigen.RepositoryOwner(repositoryName), apigen.RepositoryName(repositoryName), &apigen.DeleteRepositoryParams{Force: swag.Bool(true)})
 		if err != nil {
 			logger.WithError(err).WithField("repo", repositoryName).Error("Request to delete repository failed")
 		} else if resp.StatusCode() != http.StatusNoContent {
@@ -201,7 +219,7 @@ func uploadFileAndReport(ctx context.Context, repo, branch, objPath, objContent 
 // It requires credentials both to Surogate Hub and to underlying storage, but considerably reduces the load on the Surogate Hub
 // server.
 func uploadContentDirect(ctx context.Context, client apigen.ClientWithResponsesInterface, repoID, branchID, objPath string, metadata map[string]string, contentType string, contents io.ReadSeeker) (*apigen.ObjectStats, error) {
-	resp, err := client.GetPhysicalAddressWithResponse(ctx, repoID, branchID, &apigen.GetPhysicalAddressParams{
+	resp, err := client.GetPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repoID), apigen.RepositoryName(repoID), branchID, &apigen.GetPhysicalAddressParams{
 		Path: objPath,
 	})
 	if err != nil {
@@ -229,7 +247,7 @@ func uploadContentDirect(ctx context.Context, client apigen.ClientWithResponsesI
 			return nil, fmt.Errorf("upload to backing store: %w", err)
 		}
 
-		resp, err := client.LinkPhysicalAddressWithResponse(ctx, repoID, branchID, &apigen.LinkPhysicalAddressParams{
+		resp, err := client.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repoID), apigen.RepositoryName(repoID), branchID, &apigen.LinkPhysicalAddressParams{
 			Path: objPath,
 		}, apigen.LinkPhysicalAddressJSONRequestBody{
 			Checksum:  stats.ETag,
@@ -271,7 +289,7 @@ func uploadContent(ctx context.Context, repo string, branch string, objPath stri
 	if err != nil {
 		return nil, fmt.Errorf("close form file: %w", err)
 	}
-	return client.UploadObjectWithBodyWithResponse(ctx, repo, branch, &apigen.UploadObjectParams{
+	return client.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.UploadObjectParams{
 		Path: objPath,
 	}, w.FormDataContentType(), &b)
 }
@@ -288,7 +306,7 @@ func listRepositoryObjects(ctx context.Context, t *testing.T, repository string,
 	var entries []apigen.ObjectStats
 	var after string
 	for {
-		resp, err := client.ListObjectsWithResponse(ctx, repository, ref, &apigen.ListObjectsParams{
+		resp, err := client.ListObjectsWithResponse(ctx, apigen.RepositoryOwner(repository), apigen.RepositoryName(repository), ref, &apigen.ListObjectsParams{
 			After:  apiutil.Ptr(apigen.PaginationAfter(after)),
 			Amount: apiutil.Ptr(apigen.PaginationAmount(amount)),
 		})

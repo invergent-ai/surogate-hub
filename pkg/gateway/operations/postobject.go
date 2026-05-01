@@ -80,7 +80,7 @@ func (controller *PostObject) HandleCreateMultipartUpload(w http.ResponseWriter,
 	}
 	o.SetHeaders(w, resp.ServerSideHeader)
 	o.EncodeResponse(w, req, &serde.InitiateMultipartUploadResult{
-		Bucket:   o.Repository.Name,
+		Bucket:   path.RepositoryIDToBucket(o.Repository.Name),
 		Key:      path.WithRef(o.Path, o.Reference),
 		UploadID: resp.UploadID,
 	}, http.StatusOK)
@@ -171,12 +171,12 @@ func (controller *PostObject) HandleCompleteMultipartUpload(w http.ResponseWrite
 	if o.MatchedHost {
 		location = fmt.Sprintf("%s://%s/%s/%s", scheme, req.Host, o.Reference, o.Path)
 	} else {
-		location = fmt.Sprintf("%s://%s/%s/%s/%s", scheme, req.Host, o.Repository.Name, o.Reference, o.Path)
+		location = fmt.Sprintf("%s://%s/%s/%s/%s", scheme, req.Host, path.RepositoryIDToBucket(o.Repository.Name), o.Reference, o.Path)
 	}
 	o.SetHeaders(w, resp.ServerSideHeader)
 	o.EncodeResponse(w, req, &serde.CompleteMultipartUploadResult{
 		Location: location,
-		Bucket:   o.Repository.Name,
+		Bucket:   path.RepositoryIDToBucket(o.Repository.Name),
 		Key:      path.WithRef(o.Path, o.Reference),
 		ETag:     httputil.ETag(resp.ETag),
 	}, http.StatusOK)

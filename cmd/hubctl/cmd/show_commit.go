@@ -19,7 +19,7 @@ var showCommitCmd = &cobra.Command{
 
 		ctx := cmd.Context()
 		client := getClient()
-		resp, err := client.GetCommitWithResponse(ctx, commitURI.Repository, commitURI.Ref)
+		resp, err := client.GetCommitWithResponse(ctx, apigen.RepositoryOwner(commitURI.Repository), apigen.RepositoryName(commitURI.Repository), commitURI.Ref)
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)
 		if resp.JSON200 == nil {
 			Die("Bad response from server", 1)

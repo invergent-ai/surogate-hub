@@ -107,7 +107,7 @@ func verifyImportObjects(t testing.TB, ctx context.Context, repoName, prefix, im
 	for _, k := range importFilesToCheck {
 		// try to read some values from that ingested branch
 		objPath := prefix + k
-		objResp, err := client.GetObjectWithResponse(ctx, repoName, importBranch, &apigen.GetObjectParams{
+		objResp, err := client.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), importBranch, &apigen.GetObjectParams{
 			Path: objPath,
 		})
 		require.NoError(t, err, "get object failed: %s", objPath)
@@ -120,7 +120,7 @@ func verifyImportObjects(t testing.TB, ctx context.Context, repoName, prefix, im
 	after := apigen.PaginationAfter("")
 	count := 0
 	for hasMore {
-		listResp, err := client.ListObjectsWithResponse(ctx, repoName, importBranch, &apigen.ListObjectsParams{After: &after})
+		listResp, err := client.ListObjectsWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), importBranch, &apigen.ListObjectsParams{After: &after})
 		require.NoError(t, err, "list objects failed")
 		require.NotNil(t, listResp.JSON200)
 
@@ -154,13 +154,13 @@ func TestImport(t *testing.T) {
 		verifyImportObjects(t, ctx, repoName, importTargetPrefix, branch, importFilesToCheck, expectedContentLength)
 
 		// Verify we cannot cancel a completed import
-		cancelResp, err := client.ImportCancelWithResponse(ctx, repoName, branch, &apigen.ImportCancelParams{
+		cancelResp, err := client.ImportCancelWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), branch, &apigen.ImportCancelParams{
 			Id: importID,
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusConflict, cancelResp.StatusCode())
 
-		statusResp, err := client.ImportStatusWithResponse(ctx, repoName, branch, &apigen.ImportStatusParams{
+		statusResp, err := client.ImportStatusWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), branch, &apigen.ImportStatusParams{
 			Id: importID,
 		})
 		require.NoError(t, err)
@@ -168,7 +168,7 @@ func TestImport(t *testing.T) {
 		require.Nil(t, statusResp.JSON200.Error)
 
 		// Check import metadata was created on repository
-		metadataResp, err := client.GetRepositoryMetadataWithResponse(ctx, repoName)
+		metadataResp, err := client.GetRepositoryMetadataWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName))
 		require.NoError(t, err)
 		require.NotNil(t, metadataResp.JSON200)
 
@@ -248,7 +248,7 @@ func TestImport(t *testing.T) {
 }
 
 func testImportNew(t testing.TB, ctx context.Context, repoName, importBranch string, paths []apigen.ImportLocation, metadata map[string]string, force bool) string {
-	createResp, err := client.CreateBranchWithResponse(ctx, repoName, apigen.CreateBranchJSONRequestBody{
+	createResp, err := client.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.CreateBranchJSONRequestBody{
 		Name:   importBranch,
 		Source: "main",
 		Force:  swag.Bool(force),
@@ -267,7 +267,7 @@ func testImportNew(t testing.TB, ctx context.Context, repoName, importBranch str
 		body.Commit.Metadata = &apigen.CommitCreation_Metadata{AdditionalProperties: metadata}
 	}
 
-	importResp, err := client.ImportStartWithResponse(ctx, repoName, importBranch, body)
+	importResp, err := client.ImportStartWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), importBranch, body)
 	require.NoError(t, err, "failed to start import", importBranch)
 	require.NotNil(t, importResp.JSON202, "failed to start import", importResp.Status())
 	require.NotNil(t, importResp.JSON202.Id, "missing import ID")
@@ -281,7 +281,7 @@ func testImportNew(t testing.TB, ctx context.Context, repoName, importBranch str
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
-		statusResp, err = client.ImportStatusWithResponse(ctx, repoName, importBranch, &apigen.ImportStatusParams{
+		statusResp, err = client.ImportStatusWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), importBranch, &apigen.ImportStatusParams{
 			Id: importID,
 		})
 		require.NoError(t, err, "failed to get import status", importID)
@@ -304,14 +304,14 @@ func TestImportCancel(t *testing.T) {
 	ctx, _, repoName := setupTest(t)
 	defer tearDownTest(repoName)
 	branch := fmt.Sprintf("%s-%s", importBranchBase, "canceled")
-	createResp, err := client.CreateBranchWithResponse(ctx, repoName, apigen.CreateBranchJSONRequestBody{
+	createResp, err := client.CreateBranchWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), apigen.CreateBranchJSONRequestBody{
 		Name:   branch,
 		Source: "main",
 	})
 	require.NoError(t, err, "failed to create branch", branch)
 	require.Equal(t, http.StatusCreated, createResp.StatusCode(), "failed to create branch", branch)
 
-	importResp, err := client.ImportStartWithResponse(ctx, repoName, branch, apigen.ImportStartJSONRequestBody{
+	importResp, err := client.ImportStartWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), branch, apigen.ImportStartJSONRequestBody{
 		Commit: apigen.CommitCreation{
 			Message:  "created by import",
 			Metadata: &apigen.CommitCreation_Metadata{AdditionalProperties: map[string]string{"created_by": "import"}},
@@ -327,7 +327,7 @@ func TestImportCancel(t *testing.T) {
 
 	// Wait 1 second and cancel request
 	time.Sleep(1 * time.Second)
-	cancelResp, err := client.ImportCancelWithResponse(ctx, repoName, branch, &apigen.ImportCancelParams{
+	cancelResp, err := client.ImportCancelWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), branch, &apigen.ImportCancelParams{
 		Id: importResp.JSON202.Id,
 	})
 	require.NoError(t, err)
@@ -337,7 +337,7 @@ func TestImportCancel(t *testing.T) {
 	var updateTime time.Time
 	timer := time.NewTimer(0)
 	for range timer.C {
-		statusResp, err := client.ImportStatusWithResponse(ctx, repoName, branch, &apigen.ImportStatusParams{
+		statusResp, err := client.ImportStatusWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), branch, &apigen.ImportStatusParams{
 			Id: importResp.JSON202.Id,
 		})
 		require.NoError(t, err)

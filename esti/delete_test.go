@@ -19,7 +19,7 @@ import (
 )
 
 func objectFound(ctx context.Context, repo, ref, path string) (bool, error) {
-	res, err := client.GetObjectWithResponse(ctx, repo, ref, &apigen.GetObjectParams{Path: path})
+	res, err := client.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), ref, &apigen.GetObjectParams{Path: path})
 	if err == nil && res.HTTPResponse.StatusCode == http.StatusOK {
 		return true, nil
 	}
@@ -41,7 +41,7 @@ func TestDeleteStaging(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, f, "uploaded object found")
 
-	resp, err := client.DeleteObjectWithResponse(ctx, repo, mainBranch, &apigen.DeleteObjectParams{Path: objPath})
+	resp, err := client.DeleteObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.DeleteObjectParams{Path: objPath})
 	require.NoError(t, err, "failed to delete object")
 	require.Equal(t, http.StatusNoContent, resp.StatusCode())
 
@@ -61,11 +61,11 @@ func TestDeleteCommitted(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, f, "uploaded object found")
 
-	commitResp, err := client.CommitWithResponse(ctx, repo, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{Message: "singleCommit"})
+	commitResp, err := client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{Message: "singleCommit"})
 	require.NoError(t, err, "commit changes")
 	require.Equal(t, http.StatusCreated, commitResp.StatusCode())
 
-	getResp, err := client.DeleteObjectWithResponse(ctx, repo, mainBranch, &apigen.DeleteObjectParams{Path: objPath})
+	getResp, err := client.DeleteObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.DeleteObjectParams{Path: objPath})
 	require.NoError(t, err, "failed to delete object")
 	require.Equal(t, http.StatusNoContent, getResp.StatusCode())
 
@@ -100,7 +100,7 @@ func TestDeleteObjectsReadOnlyRepository(t *testing.T) {
 	require.NoError(t, err, "failed to upload file", repoName, mainBranch, objPath)
 	err = w.Close()
 	require.NoError(t, err, "failed to upload file", repoName, mainBranch, objPath)
-	uploadResp, err := client.UploadObjectWithBodyWithResponse(ctx, repoName, mainBranch, &apigen.UploadObjectParams{
+	uploadResp, err := client.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), mainBranch, &apigen.UploadObjectParams{
 		Path:  objPath,
 		Force: swag.Bool(true),
 	}, w.FormDataContentType(), &b)
@@ -108,13 +108,13 @@ func TestDeleteObjectsReadOnlyRepository(t *testing.T) {
 	err = verifyResponse(uploadResp.HTTPResponse, uploadResp.Body)
 	require.NoError(t, err, "failed to upload file", repoName, mainBranch, objPath)
 
-	deleteResp, err := client.DeleteObjectWithResponse(ctx, repoName, mainBranch, &apigen.DeleteObjectParams{Path: objPath})
+	deleteResp, err := client.DeleteObjectWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), mainBranch, &apigen.DeleteObjectParams{Path: objPath})
 	require.NoError(t, err, "failed to delete object")
 	if deleteResp.JSON403 == nil {
 		t.Fatalf("expected 403 forbidden error for trying to delete an object from a read-only repository, got %d instead", deleteResp.StatusCode())
 	}
 
-	deleteResp, err = client.DeleteObjectWithResponse(ctx, repoName, mainBranch, &apigen.DeleteObjectParams{Path: objPath, Force: swag.Bool(true)})
+	deleteResp, err = client.DeleteObjectWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), mainBranch, &apigen.DeleteObjectParams{Path: objPath, Force: swag.Bool(true)})
 	require.NoError(t, err, "failed to delete object")
 	require.Equal(t, http.StatusNoContent, deleteResp.StatusCode())
 
@@ -134,17 +134,17 @@ func TestCommitDeleteCommitted(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, f, "uploaded object found")
 
-	commitResp, err := client.CommitWithResponse(ctx, repo, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err := client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "singleCommit",
 	})
 	require.NoError(t, err, "commit new file")
 	require.Equal(t, http.StatusCreated, commitResp.StatusCode())
 
-	deleteResp, err := client.DeleteObjectWithResponse(ctx, repo, mainBranch, &apigen.DeleteObjectParams{Path: objPath})
+	deleteResp, err := client.DeleteObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.DeleteObjectParams{Path: objPath})
 	require.NoError(t, err, "failed to delete object")
 	require.Equal(t, http.StatusNoContent, deleteResp.StatusCode())
 
-	commitResp, err = client.CommitWithResponse(ctx, repo, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err = client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "deleteCommit",
 	})
 	require.NoError(t, err, "commit delete file")

@@ -35,10 +35,10 @@ func TestGetObjectXETPhysicalAddressRange(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = c.Close() })
 
-	repo := "repo-a"
+	repo := "test-user/repo-a"
 	const branch = "main"
 	const path = "models/checkpoint.bin"
-	_, err = c.CreateRepository(ctx, repo, "", "mem://repo-a", branch, false)
+	_, err = c.CreateRepository(ctx, repo, "", "mem://test-user/repo-a", branch, false)
 	require.NoError(t, err)
 	chunk := []byte("hello world!")
 	xorbHash, xorbBytes := testGatewaySerializedXorb(t, chunk)

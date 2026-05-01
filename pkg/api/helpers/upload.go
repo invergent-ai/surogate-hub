@@ -76,7 +76,7 @@ func ClientUpload(ctx context.Context, client apigen.ClientWithResponsesInterfac
 		}
 	}()
 
-	resp, err := client.UploadObjectWithBodyWithResponse(ctx, repoID, branchID, &apigen.UploadObjectParams{
+	resp, err := client.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner(repoID), apigen.RepositoryName(repoID), branchID, &apigen.UploadObjectParams{
 		Path: objPath,
 	}, mpContentType, pr, func(ctx context.Context, req *http.Request) error {
 		var metaKey string
@@ -218,7 +218,7 @@ func (u *presignUpload) uploadMultipart(ctx context.Context) (*apigen.ObjectStat
 }
 
 func (u *presignUpload) completeMultipart(ctx context.Context, mpu *apigen.PresignMultipartUpload, uploadParts []apigen.UploadPart) (*apigen.ObjectStats, error) {
-	resp, err := u.uploader.Client.CompletePresignMultipartUploadWithResponse(ctx, u.repoID, u.branchID, mpu.UploadId,
+	resp, err := u.uploader.Client.CompletePresignMultipartUploadWithResponse(ctx, apigen.RepositoryOwner(u.repoID), apigen.RepositoryName(u.repoID), u.branchID, mpu.UploadId,
 		&apigen.CompletePresignMultipartUploadParams{
 			Path: u.objectPath,
 		},
@@ -244,7 +244,7 @@ func (u *presignUpload) completeMultipart(ctx context.Context, mpu *apigen.Presi
 }
 
 func (u *presignUpload) abortMultipart(ctx context.Context, mpu *apigen.PresignMultipartUpload) error {
-	resp, err := u.uploader.Client.AbortPresignMultipartUploadWithResponse(ctx, u.repoID, u.branchID, mpu.UploadId,
+	resp, err := u.uploader.Client.AbortPresignMultipartUploadWithResponse(ctx, apigen.RepositoryOwner(u.repoID), apigen.RepositoryName(u.repoID), u.branchID, mpu.UploadId,
 		&apigen.AbortPresignMultipartUploadParams{
 			Path: u.objectPath,
 		},
@@ -275,7 +275,7 @@ func (u *presignUpload) initMultipart(ctx context.Context) (*apigen.PresignMulti
 	}
 
 	// create presign multipart upload
-	resp, err := u.uploader.Client.CreatePresignMultipartUploadWithResponse(ctx, u.repoID, u.branchID, &apigen.CreatePresignMultipartUploadParams{
+	resp, err := u.uploader.Client.CreatePresignMultipartUploadWithResponse(ctx, apigen.RepositoryOwner(u.repoID), apigen.RepositoryName(u.repoID), u.branchID, &apigen.CreatePresignMultipartUploadParams{
 		Path:  u.objectPath,
 		Parts: swag.Int(u.numParts),
 	})
@@ -375,7 +375,7 @@ func (u *presignUpload) uploadObject(ctx context.Context) (*apigen.ObjectStats, 
 		},
 		ContentType: apiutil.Ptr(u.contentType),
 	}
-	linkResp, err := u.uploader.Client.LinkPhysicalAddressWithResponse(ctx, u.repoID, u.branchID,
+	linkResp, err := u.uploader.Client.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(u.repoID), apigen.RepositoryName(u.repoID), u.branchID,
 		&apigen.LinkPhysicalAddressParams{
 			Path: u.objectPath,
 		}, linkReqBody)
@@ -441,7 +441,7 @@ func extractEtagFromResponseHeader(h http.Header) string {
 }
 
 func getPhysicalAddress(ctx context.Context, client apigen.ClientWithResponsesInterface, repoID string, branchID string, params *apigen.GetPhysicalAddressParams) (*apigen.StagingLocation, error) {
-	resp, err := client.GetPhysicalAddressWithResponse(ctx, repoID, branchID, params)
+	resp, err := client.GetPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repoID), apigen.RepositoryName(repoID), branchID, params)
 	if err != nil {
 		return nil, fmt.Errorf("get physical address to upload object: %w", err)
 	}

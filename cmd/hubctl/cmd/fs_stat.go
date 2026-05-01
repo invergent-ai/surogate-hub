@@ -18,7 +18,7 @@ var fsStatCmd = &cobra.Command{
 		client := getClient()
 		preSignMode := getPresignMode(cmd, client)
 
-		resp, err := client.StatObjectWithResponse(cmd.Context(), pathURI.Repository, pathURI.Ref, &apigen.StatObjectParams{
+		resp, err := client.StatObjectWithResponse(cmd.Context(), apigen.RepositoryOwner(pathURI.Repository), apigen.RepositoryName(pathURI.Repository), pathURI.Ref, &apigen.StatObjectParams{
 			Path:         *pathURI.Path,
 			Presign:      swag.Bool(preSignMode.Enabled),
 			UserMetadata: swag.Bool(true),

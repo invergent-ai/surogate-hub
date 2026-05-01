@@ -115,8 +115,8 @@ var (
 	// override by flag 'base-url'. The baseURI is used as a prefix when we parse the hub address (repo, ref or path).
 	// The prefix is used only when the address we parse is not a full address (starts with 'sg://' scheme).
 	// Examples:
-	//   `--base-uri sg:// repo1` will resolve to repository `sg://repo1`
-	//   `--base-uri sg://repo1 /main/file.md` will resolve to path `sg://repo1/main/file.md`
+	//   `--base-uri sg:// my-user/my-repo` will resolve to repository `sg://my-user/my-repo`
+	//   `--base-uri sg://my-user/my-repo /main/file.md` will resolve to path `sg://my-user/my-repo/main/file.md`
 	baseURI string
 
 	// logLevel logging level (default is off)
@@ -145,7 +145,7 @@ const (
 	defaultSyncPresign = true
 	defaultNoProgress  = false
 
-	myRepoExample   = "sg://my-repo"
+	myRepoExample   = "sg://my-user/my-repo"
 	myBucketExample = "s3://my-bucket"
 	myBranchExample = "my-branch"
 	myRunIDExample  = "20230719152411arS0z6I"

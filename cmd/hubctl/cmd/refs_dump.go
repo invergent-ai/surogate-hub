@@ -33,7 +33,7 @@ var refsDumpCmd = &cobra.Command{
 
 		// request refs dump
 		ctx := cmd.Context()
-		resp, err := client.DumpSubmitWithResponse(ctx, repoURI.Repository)
+		resp, err := client.DumpSubmitWithResponse(ctx, apigen.RepositoryOwner(repoURI.Repository), apigen.RepositoryName(repoURI.Repository))
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusAccepted)
 		if resp.JSON202 == nil {
 			Die("Bad response from server", 1)
@@ -47,7 +47,7 @@ var refsDumpCmd = &cobra.Command{
 			logging.FromContext(ctx).
 				WithFields(logging.Fields{"task_id": taskID}).Debug("Checking status of refs dump")
 
-			resp, err := client.DumpStatusWithResponse(ctx, repoURI.Repository, &apigen.DumpStatusParams{
+			resp, err := client.DumpStatusWithResponse(ctx, apigen.RepositoryOwner(repoURI.Repository), apigen.RepositoryName(repoURI.Repository), &apigen.DumpStatusParams{
 				TaskId: taskID,
 			})
 			DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)

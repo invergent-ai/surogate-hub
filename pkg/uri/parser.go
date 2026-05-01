@@ -29,7 +29,7 @@ type URI struct {
 	// Ref represents the reference in the repository (commit, tag, branch, etc.)
 	Ref string
 	// Path is a path to an object (or prefix of such) in Surogate Hub. It *could* be null since there's a difference between
-	// 	an empty path ("sg://repo/branch/", and no path at all e.g. "sg://repo/branch").
+	// 	an empty path ("sg://user/repo/branch/", and no path at all e.g. "sg://user/repo/branch").
 	// 	Since path is the only URI part that is allowed to be empty, it is represented as a pointer.
 	Path *string
 }
@@ -169,24 +169,28 @@ func Parse(s string) (*URI, error) {
 	if err != nil || u.Scheme != SgHubSchema || u.User != nil {
 		return nil, ErrMalformedURI
 	}
-	repository := u.Hostname()
-	if len(repository) == 0 {
+	owner := u.Hostname()
+	if len(owner) == 0 {
 		return nil, ErrMalformedURI
 	}
+	if len(u.Path) == 0 || !strings.HasPrefix(u.Path, PathSeparator) {
+		return nil, ErrMalformedURI
+	}
+
+	const repoRefPathParts = 3
+	levels := strings.SplitN(u.Path[1:], PathSeparator, repoRefPathParts)
+	if len(levels) == 0 || len(levels[0]) == 0 {
+		return nil, ErrMalformedURI
+	}
+
+	repository := owner + PathSeparator + levels[0]
 	var ref string
 	var path *string
-	if len(u.Path) > 0 {
-		if !strings.HasPrefix(u.Path, PathSeparator) {
-			return nil, ErrMalformedURI
-		}
-		const refAndPathParts = 2
-		levels := strings.SplitN(u.Path[1:], PathSeparator, refAndPathParts)
-		if len(levels) == refAndPathParts {
-			ref = levels[0]
-			path = &levels[1]
-		} else if len(levels) == 1 {
-			ref = levels[0]
-		}
+	if len(levels) >= 2 {
+		ref = levels[1]
+	}
+	if len(levels) == repoRefPathParts {
+		path = &levels[2]
 	}
 	return &URI{
 		Repository: repository,

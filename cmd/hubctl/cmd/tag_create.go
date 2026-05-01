@@ -13,7 +13,7 @@ const tagCreateRequiredArgs = 2
 var tagCreateCmd = &cobra.Command{
 	Use:     "create <tag URI> <commit URI>",
 	Short:   "Create a new tag in a repository",
-	Example: "hubctl tag create sg://example-repo/example-tag sg://example-repo/2397cc9a9d04c20a4e5739b42c1dd3d8ba655c0b3a3b974850895a13d8bf9917",
+	Example: "hubctl tag create sg://my-user/example-repo/example-tag sg://my-user/example-repo/2397cc9a9d04c20a4e5739b42c1dd3d8ba655c0b3a3b974850895a13d8bf9917",
 	Args:    cobra.ExactArgs(tagCreateRequiredArgs),
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) >= tagCreateRequiredArgs {
@@ -35,19 +35,19 @@ var tagCreateCmd = &cobra.Command{
 
 		if force {
 			// checking the validity of the commitRef before deleting the old one
-			res, err := client.GetCommitWithResponse(ctx, tagURI.Repository, commitURI.Ref)
+			res, err := client.GetCommitWithResponse(ctx, apigen.RepositoryOwner(tagURI.Repository), apigen.RepositoryName(tagURI.Repository), commitURI.Ref)
 			DieOnErrorOrUnexpectedStatusCode(res, err, http.StatusOK)
 			if res.JSON200 == nil {
 				Die("Bad response from server", 1)
 			}
 
-			resp, err := client.DeleteTagWithResponse(ctx, tagURI.Repository, tagURI.Ref, &apigen.DeleteTagParams{})
+			resp, err := client.DeleteTagWithResponse(ctx, apigen.RepositoryOwner(tagURI.Repository), apigen.RepositoryName(tagURI.Repository), tagURI.Ref, &apigen.DeleteTagParams{})
 			if err != nil && (resp == nil || resp.JSON404 == nil) {
 				DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusNoContent)
 			}
 		}
 
-		resp, err := client.CreateTagWithResponse(ctx, tagURI.Repository, apigen.CreateTagJSONRequestBody{
+		resp, err := client.CreateTagWithResponse(ctx, apigen.RepositoryOwner(tagURI.Repository), apigen.RepositoryName(tagURI.Repository), apigen.CreateTagJSONRequestBody{
 			Id:  tagURI.Ref,
 			Ref: commitURI.Ref,
 		})

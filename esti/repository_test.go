@@ -30,7 +30,7 @@ func TestRepositoryBasicOps(t *testing.T) {
 
 	// delete repositories
 	for _, repo := range repos {
-		resp, err := client.DeleteRepositoryWithResponse(ctx, repo, &apigen.DeleteRepositoryParams{})
+		resp, err := client.DeleteRepositoryWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), &apigen.DeleteRepositoryParams{})
 		require.NoErrorf(t, err, "failed to delete repository %s, storage %s", repo)
 		require.Equal(t, http.StatusNoContent, resp.StatusCode())
 	}
@@ -55,9 +55,9 @@ func TestRepositoryCreateSampleRepo(t *testing.T) {
 	require.NoErrorf(t, err, "failed to create repository '%s', storage '%s'", name, storageNamespace)
 	require.NoErrorf(t, verifyResponse(resp.HTTPResponse, resp.Body),
 		"create repository '%s', storage '%s'", name, storageNamespace)
-	_, err = client.GetRepositoryWithResponse(ctx, name)
+	_, err = client.GetRepositoryWithResponse(ctx, apigen.RepositoryOwner(name), apigen.RepositoryName(name))
 	require.NoErrorf(t, err, "failed to get repository '%s'", name)
-	listResp, err := client.ListObjectsWithResponse(ctx, name, mainBranch, &apigen.ListObjectsParams{})
+	listResp, err := client.ListObjectsWithResponse(ctx, apigen.RepositoryOwner(name), apigen.RepositoryName(name), mainBranch, &apigen.ListObjectsParams{})
 	require.NoErrorf(t, err, "failed to list objects in repository '%s'", name)
 	require.NotEmptyf(t, listResp.JSON200.Results, "repository '%s' has no objects in main branch", name)
 }

@@ -5,10 +5,12 @@ import (
 	"testing"
 
 	"github.com/invergent-ai/surogate-hub/pkg/gateway"
+	gatewaypath "github.com/invergent-ai/surogate-hub/pkg/gateway/path"
 )
 
 func TestParseRequestParts(t *testing.T) {
 	bareDomains := []string{"sghub.example.com"}
+	encodedBucket := gatewaypath.RepositoryIDToBucket("alice/model")
 	cases := []struct {
 		Name           string
 		URLPath        string
@@ -40,10 +42,10 @@ func TestParseRequestParts(t *testing.T) {
 		},
 		{
 			Name:    "repo_only_path_style",
-			URLPath: "/foo",
+			URLPath: "/alice/model",
 			Host:    "sghub.dev",
 			ExpectedResult: gateway.RequestParts{
-				Repository:  "foo",
+				Repository:  "alice/model",
 				Ref:         "",
 				Path:        "",
 				MatchedHost: false,
@@ -51,10 +53,10 @@ func TestParseRequestParts(t *testing.T) {
 		},
 		{
 			Name:    "repo_only_path_style_1",
-			URLPath: "/foo/",
+			URLPath: "/alice/model/",
 			Host:    "sghub.dev",
 			ExpectedResult: gateway.RequestParts{
-				Repository:  "foo",
+				Repository:  "alice/model",
 				Ref:         "",
 				Path:        "",
 				MatchedHost: false,
@@ -62,10 +64,10 @@ func TestParseRequestParts(t *testing.T) {
 		},
 		{
 			Name:    "repo_only_path_style_2",
-			URLPath: "foo/",
+			URLPath: "alice/model/",
 			Host:    "sghub.dev",
 			ExpectedResult: gateway.RequestParts{
-				Repository:  "foo",
+				Repository:  "alice/model",
 				Ref:         "",
 				Path:        "",
 				MatchedHost: false,
@@ -161,46 +163,68 @@ func TestParseRequestParts(t *testing.T) {
 		},
 		{
 			Name:    "repo_branch_path_path_style",
-			URLPath: "foo/bar/a/b/c",
+			URLPath: "alice/model/main/a/b/c",
 			Host:    "sghub.dev",
 			ExpectedResult: gateway.RequestParts{
-				Repository:  "foo",
-				Ref:         "bar",
+				Repository:  "alice/model",
+				Ref:         "main",
 				Path:        "a/b/c",
 				MatchedHost: false,
 			},
 		},
 		{
 			Name:    "repo_branch_path_path_style_1",
-			URLPath: "/foo/bar/a/b/c",
+			URLPath: "/alice/model/main/a/b/c",
 			Host:    "sghub.dev",
 			ExpectedResult: gateway.RequestParts{
-				Repository:  "foo",
-				Ref:         "bar",
+				Repository:  "alice/model",
+				Ref:         "main",
 				Path:        "a/b/c",
 				MatchedHost: false,
 			},
 		},
 		{
 			Name:    "repo_branch_path_path_style_2",
-			URLPath: "foo/bar/a/b/c/",
+			URLPath: "alice/model/main/a/b/c/",
 			Host:    "sghub.dev",
 			ExpectedResult: gateway.RequestParts{
-				Repository:  "foo",
-				Ref:         "bar",
+				Repository:  "alice/model",
+				Ref:         "main",
 				Path:        "a/b/c/",
 				MatchedHost: false,
 			},
 		},
 		{
 			Name:    "repo_branch_path_path_style_3",
-			URLPath: "/foo/bar/a/b/c/",
+			URLPath: "/alice/model/main/a/b/c/",
 			Host:    "sghub.dev",
 			ExpectedResult: gateway.RequestParts{
-				Repository:  "foo",
-				Ref:         "bar",
+				Repository:  "alice/model",
+				Ref:         "main",
 				Path:        "a/b/c/",
 				MatchedHost: false,
+			},
+		},
+		{
+			Name:    "encoded_bucket_path_style",
+			URLPath: "/" + encodedBucket + "/main/a/b/c",
+			Host:    "sghub.dev",
+			ExpectedResult: gateway.RequestParts{
+				Repository:  "alice/model",
+				Ref:         "main",
+				Path:        "a/b/c",
+				MatchedHost: false,
+			},
+		},
+		{
+			Name:    "encoded_bucket_virtual_style",
+			URLPath: "/main/a/b/c",
+			Host:    encodedBucket + ".sghub.example.com",
+			ExpectedResult: gateway.RequestParts{
+				Repository:  "alice/model",
+				Ref:         "main",
+				Path:        "a/b/c",
+				MatchedHost: true,
 			},
 		},
 		{

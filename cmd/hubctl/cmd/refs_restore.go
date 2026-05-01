@@ -25,7 +25,7 @@ var refsRestoreCmd = &cobra.Command{
 
 This command is expected to run on a bare repository (i.e. one created with 'hubctl repo create-bare').
 Since a bare repo is expected, in case of transient failure, delete the repository and recreate it as bare and retry.`,
-	Example: "aws s3 cp s3://bucket/_hub/refs_manifest.json - | hubctl refs-restore sg://my-bare-repository --manifest -",
+	Example: "aws s3 cp s3://bucket/_hub/refs_manifest.json - | hubctl refs-restore sg://my-user/my-bare-repository --manifest -",
 	Hidden:  true,
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -56,7 +56,7 @@ Since a bare repo is expected, in case of transient failure, delete the reposito
 		// execute the restore operation
 		client := getClient()
 		ctx := cmd.Context()
-		resp, err := client.RestoreSubmitWithResponse(ctx, repoURI.Repository, apigen.RestoreSubmitJSONRequestBody(manifest))
+		resp, err := client.RestoreSubmitWithResponse(ctx, apigen.RepositoryOwner(repoURI.Repository), apigen.RepositoryName(repoURI.Repository), apigen.RestoreSubmitJSONRequestBody(manifest))
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusAccepted)
 		if resp.JSON202 == nil {
 			Die("Bad response from server", 1)
@@ -72,7 +72,7 @@ Since a bare repo is expected, in case of transient failure, delete the reposito
 				WithFields(logging.Fields{"task_id": taskID}).
 				Debug("Checking status of refs restore")
 
-			resp, err := client.RestoreStatusWithResponse(ctx, repoURI.Repository, &apigen.RestoreStatusParams{
+			resp, err := client.RestoreStatusWithResponse(ctx, apigen.RepositoryOwner(repoURI.Repository), apigen.RepositoryName(repoURI.Repository), &apigen.RestoreStatusParams{
 				TaskId: taskID,
 			})
 			DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)

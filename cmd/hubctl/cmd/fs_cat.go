@@ -23,7 +23,7 @@ var fsCatCmd = &cobra.Command{
 		var err error
 		var body io.ReadCloser
 		var resp *http.Response
-		resp, err = client.GetObject(cmd.Context(), pathURI.Repository, pathURI.Ref, &apigen.GetObjectParams{
+		resp, err = client.GetObject(cmd.Context(), apigen.RepositoryOwner(pathURI.Repository), apigen.RepositoryName(pathURI.Repository), pathURI.Ref, &apigen.GetObjectParams{
 			Path:    *pathURI.Path,
 			Presign: swag.Bool(preSignMode.Enabled),
 		})

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +24,7 @@ var catHookOutputCmd = &cobra.Command{
 		hookRunID := args[2]
 		client := getClient()
 		ctx := cmd.Context()
-		resp, err := client.GetRunHookOutputWithResponse(ctx, u.Repository, runID, hookRunID)
+		resp, err := client.GetRunHookOutputWithResponse(ctx, apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), runID, hookRunID)
 		DieOnErrorOrUnexpectedStatusCode(resp, err, http.StatusOK)
 		fmt.Println(string(resp.Body))
 	},

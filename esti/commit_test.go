@@ -24,14 +24,14 @@ func TestCommitSingle(t *testing.T) {
 
 	const objPath = "1.txt"
 	_, objContent := uploadFileRandomData(ctx, t, repo, mainBranch, objPath)
-	commitResp, err := client.CommitWithResponse(ctx, repo, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err := client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "singleCommit",
 	})
 	require.NoError(t, err, "failed to commit changes")
 	require.NoErrorf(t, verifyResponse(commitResp.HTTPResponse, commitResp.Body),
 		"failed to commit changes repo %s branch %s", repo, mainBranch)
 
-	getObjResp, err := client.GetObjectWithResponse(ctx, repo, mainBranch, &apigen.GetObjectParams{Path: objPath})
+	getObjResp, err := client.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.GetObjectParams{Path: objPath})
 	require.NoError(t, err, "failed to get object")
 	require.NoErrorf(t, verifyResponse(getObjResp.HTTPResponse, getObjResp.Body),
 		"failed to get object repo %s branch %s path %s", repo, mainBranch, objPath)
@@ -94,7 +94,7 @@ func TestCommitInMixedOrder(t *testing.T) {
 		t.FailNow()
 	}
 
-	commitResp, err := client.CommitWithResponse(ctx, repo, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err := client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "mixedOrderCommit1",
 	})
 	require.NoError(t, err, "failed to commit changes")
@@ -123,7 +123,7 @@ func TestCommitInMixedOrder(t *testing.T) {
 		t.FailNow()
 	}
 
-	commitResp, err = client.CommitWithResponse(ctx, repo, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err = client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "mixedOrderCommit2",
 	})
 	require.NoError(t, err, "failed to commit second set of changes")
@@ -139,7 +139,7 @@ func TestCommitWithTombstone(t *testing.T) {
 	origObjPathHigh := "objc.txt"
 	uploadFileRandomData(ctx, t, repo, mainBranch, origObjPathLow)
 	uploadFileRandomData(ctx, t, repo, mainBranch, origObjPathHigh)
-	commitResp, err := client.CommitWithResponse(ctx, repo, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err := client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "First commit",
 	})
 	require.NoError(t, err, "failed to commit changes")
@@ -152,11 +152,11 @@ func TestCommitWithTombstone(t *testing.T) {
 	uploadFileRandomData(ctx, t, repo, mainBranch, newObjPath)
 
 	// Turning tombstoneObjPath to tombstone
-	resp, err := client.DeleteObjectWithResponse(ctx, repo, mainBranch, &apigen.DeleteObjectParams{Path: tombstoneObjPath})
+	resp, err := client.DeleteObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.DeleteObjectParams{Path: tombstoneObjPath})
 	require.NoError(t, err, "failed to delete object")
 	require.Equal(t, http.StatusNoContent, resp.StatusCode())
 
-	commitResp, err = client.CommitWithResponse(ctx, repo, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err = client.CommitWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "Commit with tombstone",
 	})
 	require.NoError(t, err, "failed to commit changes")
@@ -180,7 +180,7 @@ func TestCommitReadOnlyRepo(t *testing.T) {
 		"create repository '%s', storage '%s'", name, storageNamespace)
 	defer tearDownTest(repoName)
 
-	commitResp, _ := client.CommitWithResponse(ctx, repoName, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, _ := client.CommitWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "singleCommit",
 	})
 	if commitResp.StatusCode() != http.StatusForbidden {
@@ -197,7 +197,7 @@ func TestCommitReadOnlyRepo(t *testing.T) {
 	require.NoError(t, err, "failed to upload file", repoName, mainBranch, objPath)
 	err = w.Close()
 	require.NoError(t, err, "failed to upload file", repoName, mainBranch, objPath)
-	uploadResp, err := client.UploadObjectWithBodyWithResponse(ctx, repoName, mainBranch, &apigen.UploadObjectParams{
+	uploadResp, err := client.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), mainBranch, &apigen.UploadObjectParams{
 		Path:  objPath,
 		Force: swag.Bool(true),
 	}, w.FormDataContentType(), &b)
@@ -205,7 +205,7 @@ func TestCommitReadOnlyRepo(t *testing.T) {
 	err = verifyResponse(uploadResp.HTTPResponse, uploadResp.Body)
 	require.NoError(t, err, "failed to upload file", repoName, mainBranch, objPath)
 
-	commitResp, err = client.CommitWithResponse(ctx, repoName, mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
+	commitResp, err = client.CommitWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), mainBranch, &apigen.CommitParams{}, apigen.CommitJSONRequestBody{
 		Message: "singleCommit",
 		Force:   swag.Bool(true),
 	})
@@ -213,7 +213,7 @@ func TestCommitReadOnlyRepo(t *testing.T) {
 	require.NoErrorf(t, verifyResponse(commitResp.HTTPResponse, commitResp.Body),
 		"failed to commit changes repo %s branch %s", repoName, mainBranch)
 
-	getObjResp, err := client.GetObjectWithResponse(ctx, repoName, mainBranch, &apigen.GetObjectParams{Path: objPath})
+	getObjResp, err := client.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repoName), apigen.RepositoryName(repoName), mainBranch, &apigen.GetObjectParams{Path: objPath})
 	require.NoError(t, err, "failed to get object")
 	require.NoErrorf(t, verifyResponse(getObjResp.HTTPResponse, getObjResp.Body),
 		"failed to get object repo %s branch %s path %s", repoName, mainBranch, objPath)

@@ -295,7 +295,7 @@ func TestCatalog_BranchExists(t *testing.T) {
 			}
 			// test method
 			ctx := context.Background()
-			exists, err := c.BranchExists(ctx, "repo", tt.Branch)
+			exists, err := c.BranchExists(ctx, "test-user/repo", tt.Branch)
 			if err != nil {
 				t.Fatal("BranchExists failed:", err)
 			}
@@ -412,7 +412,7 @@ func TestCatalog_ListBranches(t *testing.T) {
 			}
 			// test method
 			ctx := context.Background()
-			got, hasMore, err := c.ListBranches(ctx, "repo", tt.args.prefix, tt.args.limit, tt.args.after)
+			got, hasMore, err := c.ListBranches(ctx, "test-user/repo", tt.args.prefix, tt.args.limit, tt.args.after)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("ListBranches() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -509,7 +509,7 @@ func TestCatalog_ListTags(t *testing.T) {
 				Store: gravelerMock,
 			}
 			ctx := context.Background()
-			got, hasMore, err := c.ListTags(ctx, "repo", "", tt.args.limit, tt.args.after)
+			got, hasMore, err := c.ListTags(ctx, "test-user/repo", "", tt.args.limit, tt.args.after)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("ListTags() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -630,7 +630,7 @@ func TestCatalog_ListEntries(t *testing.T) {
 			}
 			// test method
 			ctx := context.Background()
-			got, hasMore, err := c.ListEntries(ctx, "repo", "ref", tt.args.prefix, tt.args.after, tt.args.delimiter, tt.args.limit)
+			got, hasMore, err := c.ListEntries(ctx, "test-user/repo", "ref", tt.args.prefix, tt.args.after, tt.args.delimiter, tt.args.limit)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("ListEntries() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -683,7 +683,7 @@ func TestCatalog_PrepareGCUncommitted(t *testing.T) {
 	for _, tt := range tests {
 		for _, compactBranch := range []bool{false, true} {
 			t.Run(tt.name, func(t *testing.T) {
-				const repositoryID = "repo1"
+				const repositoryID = "test-user/repo1"
 				g, expectedRecords := createPrepareUncommittedTestScenario(t, repositoryID, tt.numBranch, tt.numRecords, tt.expectedCalls, compactBranch)
 				blockAdapter := testutil.NewBlockAdapterByType(t, block.BlockstoreTypeMem)
 				c := &catalog.Catalog{

@@ -41,7 +41,7 @@ var abuseListCmd = &cobra.Command{
 			client := getClient()
 			for range input {
 				start := time.Now()
-				resp, err := client.ListObjectsWithResponse(ctx, u.Repository, u.Ref, &apigen.ListObjectsParams{
+				resp, err := client.ListObjectsWithResponse(ctx, apigen.RepositoryOwner(u.Repository), apigen.RepositoryName(u.Repository), u.Ref, &apigen.ListObjectsParams{
 					Prefix: &listPrefix,
 				})
 				if err == nil && resp.StatusCode() != http.StatusOK {

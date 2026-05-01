@@ -170,7 +170,7 @@ func EnrichWithRepositoryOrFallback(c *catalog.Catalog, authService auth.Gateway
 			return
 		}
 		repo, err := c.GetRepository(ctx, repoID)
-		if errors.Is(err, graveler.ErrNotFound) {
+		if isRepositoryMissingError(err) {
 			authResp, authErr := authService.Authorize(ctx, &auth.AuthorizationRequest{
 				Username: username,
 				RequiredPermissions: permissions.Node{
@@ -203,6 +203,10 @@ func EnrichWithRepositoryOrFallback(c *catalog.Catalog, authService auth.Gateway
 		req = req.WithContext(context.WithValue(ctx, ContextKeyRepository, repo))
 		next.ServeHTTP(w, req)
 	})
+}
+
+func isRepositoryMissingError(err error) bool {
+	return errors.Is(err, graveler.ErrNotFound) || errors.Is(err, graveler.ErrInvalidRepositoryID)
 }
 
 func OperationLookupHandler(next http.Handler) http.Handler {
@@ -258,12 +262,8 @@ func ParseRequestParts(host string, urlPath string, bareDomains []string) Reques
 	// 2. if suffixes, virtual host
 	// 3. none of the above, path based
 	if memberFold(httputil.HostOnly(host), ourHosts) {
-		// path style: extract repo from first part
-		p = strings.SplitN(urlPath, path.Separator, 3) //nolint: mnd
-		parts.Repository = p[0]
-		if len(p) >= 1 {
-			p = p[1:]
-		}
+		// path style: extract namespaced repo from the first two parts
+		parts.Repository, p = splitNamespacedPath(urlPath)
 		parts.MatchedHost = true
 	} else {
 		// virtual host style: extract repo from subdomain
@@ -271,6 +271,9 @@ func ParseRequestParts(host string, urlPath string, bareDomains []string) Reques
 		for _, ourHost := range ourHosts {
 			if strings.HasSuffix(host, ourHost) {
 				parts.Repository = strings.TrimSuffix(host, "."+ourHost)
+				if repository, ok := path.BucketToRepositoryID(parts.Repository); ok {
+					parts.Repository = repository
+				}
 				parts.MatchedHost = true
 				break
 			}
@@ -282,11 +285,7 @@ func ParseRequestParts(host string, urlPath string, bareDomains []string) Reques
 
 	if !parts.MatchedHost {
 		// assume path-based for domains we don't explicitly know
-		p = strings.SplitN(urlPath, path.Separator, 3) //nolint: mnd
-		parts.Repository = p[0]
-		if len(p) >= 1 {
-			p = p[1:]
-		}
+		parts.Repository, p = splitNamespacedPath(urlPath)
 	}
 
 	// extract ref and path from remaining parts
@@ -297,6 +296,32 @@ func ParseRequestParts(host string, urlPath string, bareDomains []string) Reques
 		parts.Path = p[1]
 	}
 	return parts
+}
+
+func splitNamespacedPath(urlPath string) (string, []string) {
+	if urlPath == "" {
+		return "", nil
+	}
+	const (
+		encodedBucketPathParts = 3
+		namespacedPathParts    = 4
+	)
+	encodedBucketParts := strings.SplitN(urlPath, path.Separator, encodedBucketPathParts)
+	if repository, ok := path.BucketToRepositoryID(encodedBucketParts[0]); ok {
+		if len(encodedBucketParts) == 1 {
+			return repository, nil
+		}
+		return repository, encodedBucketParts[1:]
+	}
+	p := strings.SplitN(urlPath, path.Separator, namespacedPathParts)
+	if len(p) < 2 {
+		return p[0], nil
+	}
+	repository := p[0] + path.Separator + p[1]
+	if len(p) == 2 {
+		return repository, nil
+	}
+	return repository, p[2:]
 }
 
 func rootBasedOperationID(method string) operations.OperationID {

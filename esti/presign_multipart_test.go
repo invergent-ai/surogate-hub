@@ -45,7 +45,7 @@ func TestCreatePresignMultipartUpload(t *testing.T) {
 			if objName != "" {
 				objName = "presign_multipart_upload/" + objName
 			}
-			resp, err := client.CreatePresignMultipartUploadWithResponse(ctx, tt.repo, tt.branch, &apigen.CreatePresignMultipartUploadParams{
+			resp, err := client.CreatePresignMultipartUploadWithResponse(ctx, apigen.RepositoryOwner(tt.repo), apigen.RepositoryName(tt.repo), tt.branch, &apigen.CreatePresignMultipartUploadParams{
 				Path:  objName,
 				Parts: tt.parts,
 			})
@@ -96,7 +96,7 @@ func TestAbortPresignMultipartUpload(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := client.AbortPresignMultipartUploadWithResponse(ctx, tt.repo, tt.branch, tt.uploadID, &apigen.AbortPresignMultipartUploadParams{
+			resp, err := client.AbortPresignMultipartUploadWithResponse(ctx, apigen.RepositoryOwner(tt.repo), apigen.RepositoryName(tt.repo), tt.branch, tt.uploadID, &apigen.AbortPresignMultipartUploadParams{
 				Path: tt.objName,
 			}, apigen.AbortPresignMultipartUploadJSONRequestBody{
 				PhysicalAddress: tt.physicalAddress,
@@ -108,14 +108,14 @@ func TestAbortPresignMultipartUpload(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
 		const objPath = "presign_multipart_upload/abort"
-		respCreate, err := client.CreatePresignMultipartUploadWithResponse(ctx, repo, mainBranch, &apigen.CreatePresignMultipartUploadParams{
+		respCreate, err := client.CreatePresignMultipartUploadWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.CreatePresignMultipartUploadParams{
 			Path:  objPath,
 			Parts: swag.Int(2),
 		})
 		require.NoError(t, err)
 		require.NotNil(t, respCreate.JSON201)
 
-		resp, err := client.AbortPresignMultipartUploadWithResponse(ctx, repo, mainBranch, respCreate.JSON201.UploadId, &apigen.AbortPresignMultipartUploadParams{
+		resp, err := client.AbortPresignMultipartUploadWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, respCreate.JSON201.UploadId, &apigen.AbortPresignMultipartUploadParams{
 			Path: objPath,
 		}, apigen.AbortPresignMultipartUploadJSONRequestBody{
 			PhysicalAddress: respCreate.JSON201.PhysicalAddress,
@@ -161,7 +161,7 @@ func TestCompletePresignMultipartUpload(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := client.CompletePresignMultipartUploadWithResponse(ctx, tt.repo, tt.branch, tt.uploadID, &apigen.CompletePresignMultipartUploadParams{
+			resp, err := client.CompletePresignMultipartUploadWithResponse(ctx, apigen.RepositoryOwner(tt.repo), apigen.RepositoryName(tt.repo), tt.branch, tt.uploadID, &apigen.CompletePresignMultipartUploadParams{
 				Path: tt.objName,
 			}, apigen.CompletePresignMultipartUploadJSONRequestBody{
 				PhysicalAddress: tt.physicalAddress,
@@ -181,7 +181,7 @@ func TestCompletePresignMultipartUpload(t *testing.T) {
 			objPath       = "presign_multipart_upload/complete"
 			numberOfParts = 2
 		)
-		respCreate, err := client.CreatePresignMultipartUploadWithResponse(ctx, repo, mainBranch, &apigen.CreatePresignMultipartUploadParams{
+		respCreate, err := client.CreatePresignMultipartUploadWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.CreatePresignMultipartUploadParams{
 			Path:  objPath,
 			Parts: swag.Int(numberOfParts),
 		})
@@ -228,7 +228,7 @@ func TestCompletePresignMultipartUpload(t *testing.T) {
 		}
 
 		// complete multipart upload
-		resp, err := client.CompletePresignMultipartUploadWithResponse(ctx, repo, mainBranch, respCreate.JSON201.UploadId, &apigen.CompletePresignMultipartUploadParams{
+		resp, err := client.CompletePresignMultipartUploadWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, respCreate.JSON201.UploadId, &apigen.CompletePresignMultipartUploadParams{
 			Path: objPath,
 		}, apigen.CompletePresignMultipartUploadJSONRequestBody{
 			ContentType:     swag.String("application/octet-stream"),
@@ -242,7 +242,7 @@ func TestCompletePresignMultipartUpload(t *testing.T) {
 		require.Equalf(t, http.StatusOK, resp.StatusCode(), "CompletePresignMultipartUpload status code mismatch: %s - %s", resp.Status(), resp.Body)
 
 		// verify entry is found
-		statResp, err := client.StatObjectWithResponse(ctx, repo, mainBranch, &apigen.StatObjectParams{
+		statResp, err := client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.StatObjectParams{
 			Path: objPath,
 		})
 		require.NoError(t, err)

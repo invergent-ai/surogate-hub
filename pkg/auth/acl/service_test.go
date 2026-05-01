@@ -590,21 +590,21 @@ func TestACL(t *testing.T) {
 			ACL:  model.ACL{},
 			PermissionFrom: PermissionFrom{
 				authacl.ReadPermission: []permissions.Permission{
-					{Action: permissions.ReadObjectAction, Resource: permissions.ObjectArn("foo", "some/path")},
-					{Action: permissions.ListObjectsAction, Resource: permissions.ObjectArn("foo", "some/path")},
+					{Action: permissions.ReadObjectAction, Resource: permissions.ObjectArn("alice/model", "some/path")},
+					{Action: permissions.ListObjectsAction, Resource: permissions.ObjectArn("alice/model", "some/path")},
 					{Action: permissions.ListObjectsAction, Resource: permissions.ObjectArn("quux", "")},
 					{Action: permissions.CreateCredentialsAction, Resource: permissions.UserArn("${user}")},
 				},
 				authacl.WritePermission: []permissions.Permission{
-					{Action: permissions.WriteObjectAction, Resource: permissions.ObjectArn("foo", "some/path")},
-					{Action: permissions.DeleteObjectAction, Resource: permissions.ObjectArn("foo", "some/path")},
-					{Action: permissions.CreateBranchAction, Resource: permissions.BranchArn("foo", "twig")},
-					{Action: permissions.CreateCommitAction, Resource: permissions.BranchArn("foo", "twig")},
+					{Action: permissions.WriteObjectAction, Resource: permissions.ObjectArn("alice/model", "some/path")},
+					{Action: permissions.DeleteObjectAction, Resource: permissions.ObjectArn("alice/model", "some/path")},
+					{Action: permissions.CreateBranchAction, Resource: permissions.BranchArn("alice/model", "twig")},
+					{Action: permissions.CreateCommitAction, Resource: permissions.BranchArn("alice/model", "twig")},
 				},
 				authacl.SuperPermission: []permissions.Permission{
 					{Action: permissions.AttachStorageNamespaceAction, Resource: permissions.StorageNamespace("storage://bucket/path")},
 					{Action: permissions.ImportFromStorageAction, Resource: permissions.StorageNamespace("storage://bucket/path")},
-					{Action: permissions.ImportCancelAction, Resource: permissions.BranchArn("foo", "twig")},
+					{Action: permissions.ImportCancelAction, Resource: permissions.BranchArn("alice/model", "twig")},
 				},
 				authacl.AdminPermission: []permissions.Permission{
 					{Action: permissions.CreateUserAction, Resource: permissions.UserArn("you")},

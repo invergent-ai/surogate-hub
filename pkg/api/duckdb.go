@@ -15,7 +15,7 @@ import (
 	"github.com/invergent-ai/surogate-hub/pkg/uri"
 )
 
-var hubRegex = regexp.MustCompile(`'sg://([^/]+)/([^/]+)(/(.*))?'`)
+var hubRegex = regexp.MustCompile(`'sg://[^']+'`)
 
 func transformSqlQuery(query string, ctx context.Context, c *Controller, w http.ResponseWriter, r *http.Request) (string, error) {
 	hubUri := hubRegex.FindString(query)

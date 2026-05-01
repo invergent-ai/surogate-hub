@@ -165,7 +165,7 @@ func (s *SyncManager) downloadFile(ctx context.Context, remote *uri.URI, path, d
 			}
 			body = resp.Body
 		} else {
-			resp, err := s.client.GetObject(ctx, remote.Repository, remote.Ref, &apigen.GetObjectParams{
+			resp, err := s.client.GetObject(ctx, apigen.RepositoryOwner(remote.Repository), apigen.RepositoryName(remote.Repository), remote.Ref, &apigen.GetObjectParams{
 				Path: filepath.ToSlash(filepath.Join(remote.GetPath(), path)),
 			})
 			if err != nil {
@@ -217,7 +217,7 @@ func (s *SyncManager) download(ctx context.Context, rootPath string, remote *uri
 		return err
 	}
 
-	statResp, err := s.client.StatObjectWithResponse(ctx, remote.Repository, remote.Ref, &apigen.StatObjectParams{
+	statResp, err := s.client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(remote.Repository), apigen.RepositoryName(remote.Repository), remote.Ref, &apigen.StatObjectParams{
 		Path:         remotePath,
 		Presign:      swag.Bool(s.cfg.SyncFlags.Presign),
 		UserMetadata: swag.Bool(true),
@@ -381,7 +381,7 @@ func (s *SyncManager) deleteRemote(ctx context.Context, remote *uri.URI, change 
 	if strings.HasSuffix(change.Path, uri.PathSeparator) { // handle directory marker
 		dest += uri.PathSeparator
 	}
-	resp, err := s.client.DeleteObjectWithResponse(ctx, remote.Repository, remote.Ref, &apigen.DeleteObjectParams{
+	resp, err := s.client.DeleteObjectWithResponse(ctx, apigen.RepositoryOwner(remote.Repository), apigen.RepositoryName(remote.Repository), remote.Ref, &apigen.DeleteObjectParams{
 		Path: dest,
 	})
 	if err != nil {

@@ -204,7 +204,7 @@ func handleListParts(w http.ResponseWriter, req *http.Request, o *PathOperation)
 	maxPartsStr := query.Get(QueryParamMaxParts)
 	partNumberMarker := query.Get(QueryParamPartNumberMarker)
 	resp := &serde.ListPartsOutput{
-		Bucket: o.Repository.Name,
+		Bucket: path.RepositoryIDToBucket(o.Repository.Name),
 		Key:    path.WithRef(o.Path, o.Reference),
 	}
 	opts := block.ListPartsOpts{}

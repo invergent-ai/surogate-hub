@@ -473,7 +473,7 @@ func handleListMultipartUploads(w http.ResponseWriter, req *http.Request, o *Rep
 		})
 	}
 	resp := &serde.ListMultipartUploadsOutput{
-		Bucket:             o.Repository.Name,
+		Bucket:             path.RepositoryIDToBucket(o.Repository.Name),
 		Uploads:            uploads,
 		NextKeyMarker:      aws.StringValue(mpuResp.NextKeyMarker),
 		NextUploadIDMarker: aws.StringValue(mpuResp.NextUploadIDMarker),

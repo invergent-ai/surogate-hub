@@ -25,6 +25,7 @@ import (
 	"github.com/invergent-ai/surogate-hub/pkg/api/apiutil"
 	"github.com/invergent-ai/surogate-hub/pkg/block"
 	gtwerrors "github.com/invergent-ai/surogate-hub/pkg/gateway/errors"
+	gatewaypath "github.com/invergent-ai/surogate-hub/pkg/gateway/path"
 	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -60,18 +61,23 @@ func newMinioClient(t *testing.T, getCredentials GetCredentials) *minio.Client {
 	return client
 }
 
+func s3BucketName(repo string) string {
+	return gatewaypath.RepositoryIDToBucket(repo)
+}
+
 func TestS3UploadToReadOnlyRepoError(t *testing.T) {
 	ctx, _, repo := setupTest(t)
 	defer tearDownTest(repo)
 
 	readOnlyRepo := createReadOnlyRepositoryByName(ctx, t, "tests3uploadobjectdestreadonly")
 	defer deleteRepositoryIfAskedTo(ctx, readOnlyRepo)
+	readOnlyBucket := s3BucketName(readOnlyRepo)
 
 	minioClient := newMinioClient(t, credentials.NewStaticV4)
 	const tenMibi = 10 * 1024 * 1024
 	reader := NewZeroReader(tenMibi)
 
-	_, err := minioClient.PutObject(ctx, readOnlyRepo, gatewayTestPrefix+"/test", reader, tenMibi, minio.PutObjectOptions{
+	_, err := minioClient.PutObject(ctx, readOnlyBucket, gatewayTestPrefix+"/test", reader, tenMibi, minio.PutObjectOptions{
 		// this prevents minio from reading the entire file before sending the request
 		SendContentMd5: false,
 	})
@@ -91,25 +97,26 @@ func TestS3DeleteFromReadOnlyRepoError(t *testing.T) {
 
 	readOnlyRepo := createReadOnlyRepositoryByName(ctx, t, "tests3deleteobjectdestreadonly")
 	defer deleteRepositoryIfAskedTo(ctx, readOnlyRepo)
+	readOnlyBucket := s3BucketName(readOnlyRepo)
 
 	minioClient := newMinioClient(t, credentials.NewStaticV4)
 	content := "some random data"
 	contentReader := strings.NewReader(content)
 
 	path := gatewayTestPrefix + "test"
-	_, uploadErr := client.UploadObjectWithBodyWithResponse(ctx, readOnlyRepo, mainBranch, &apigen.UploadObjectParams{
+	_, uploadErr := client.UploadObjectWithBodyWithResponse(ctx, apigen.RepositoryOwner(readOnlyRepo), apigen.RepositoryName(readOnlyRepo), mainBranch, &apigen.UploadObjectParams{
 		Path:  path,
 		Force: swag.Bool(true),
 	}, "application/octet-stream", contentReader)
 	require.Nil(t, uploadErr)
 
 	t.Run("existing object", func(t *testing.T) {
-		err := minioClient.RemoveObject(ctx, readOnlyRepo, path, minio.RemoveObjectOptions{})
+		err := minioClient.RemoveObject(ctx, readOnlyBucket, path, minio.RemoveObjectOptions{})
 		require.NotNil(t, err)
 		require.Contains(t, err.Error(), "read-only")
 	})
 	t.Run("non existing object", func(t *testing.T) {
-		err := minioClient.RemoveObject(ctx, readOnlyRepo, path+"not-existing", minio.RemoveObjectOptions{})
+		err := minioClient.RemoveObject(ctx, readOnlyBucket, path+"not-existing", minio.RemoveObjectOptions{})
 		require.NotNil(t, err)
 		require.Contains(t, err.Error(), "read-only")
 	})
@@ -120,6 +127,7 @@ func TestS3UploadAndDownload(t *testing.T) {
 
 	ctx, _, repo := setupTest(t)
 	defer tearDownTest(repo)
+	bucket := s3BucketName(repo)
 
 	sigs := []struct {
 		Name           string
@@ -149,13 +157,13 @@ func TestS3UploadAndDownload(t *testing.T) {
 				go func() {
 					defer wg.Done()
 					for o := range objects {
-						_, err := client.PutObject(ctx, repo, o.Path, strings.NewReader(o.Content), int64(len(o.Content)), minio.PutObjectOptions{})
+						_, err := client.PutObject(ctx, bucket, o.Path, strings.NewReader(o.Content), int64(len(o.Content)), minio.PutObjectOptions{})
 						if err != nil {
 							t.Errorf("minio.Client.PutObject(%s): %s", o.Path, err)
 							continue
 						}
 
-						download, err := client.GetObject(ctx, repo, o.Path, minio.GetObjectOptions{})
+						download, err := client.GetObject(ctx, bucket, o.Path, minio.GetObjectOptions{})
 						if err != nil {
 							t.Errorf("minio.Client.GetObject(%s): %s", o.Path, err)
 							continue
@@ -190,6 +198,7 @@ func TestS3UploadAndDownload(t *testing.T) {
 func TestMultipartUploadIfNoneMatch(t *testing.T) {
 	ctx, log, repo := setupTest(t)
 	defer tearDownTest(repo)
+	bucket := s3BucketName(repo)
 	s3Endpoint := viper.GetString("s3_endpoint")
 	s3Client := createS3Client(s3Endpoint, t)
 	testCases := []struct {
@@ -218,7 +227,7 @@ func TestMultipartUploadIfNoneMatch(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.Name, func(t *testing.T) {
 			input := &s3.CreateMultipartUploadInput{
-				Bucket: aws.String(repo),
+				Bucket: aws.String(bucket),
 				Key:    aws.String(tt.Path),
 			}
 
@@ -252,6 +261,7 @@ func TestMultipartUploadIfNoneMatch(t *testing.T) {
 func TestS3IfNoneMatch(t *testing.T) {
 	ctx, _, repo := setupTest(t)
 	defer tearDownTest(repo)
+	bucket := s3BucketName(repo)
 
 	s3Endpoint := viper.GetString("s3_endpoint")
 	s3Client := createS3Client(s3Endpoint, t)
@@ -287,7 +297,7 @@ func TestS3IfNoneMatch(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.Name, func(t *testing.T) {
 			input := &s3.PutObjectInput{
-				Bucket: aws.String(repo),
+				Bucket: aws.String(bucket),
 				Key:    aws.String(tt.Path),
 			}
 			_, err := s3Client.PutObject(ctx, input, s3.WithAPIOptions(setIfNonMatchHeader(tt.IfNoneMatch)))
@@ -322,6 +332,7 @@ func TestListMultipartUploads(t *testing.T) {
 	}
 	ctx, logger, repo := setupTest(t)
 	defer tearDownTest(repo)
+	bucket := s3BucketName(repo)
 	s3Endpoint := viper.GetString("s3_endpoint")
 	s3Client := createS3Client(s3Endpoint, t)
 	multipartNumberOfParts := 3
@@ -335,11 +346,11 @@ func TestListMultipartUploads(t *testing.T) {
 	key2 := keysPrefix + obj2
 
 	input1 := &s3.CreateMultipartUploadInput{
-		Bucket: aws.String(repo),
+		Bucket: aws.String(bucket),
 		Key:    aws.String(key1),
 	}
 	input2 := &s3.CreateMultipartUploadInput{
-		Bucket: aws.String(repo),
+		Bucket: aws.String(bucket),
 		Key:    aws.String(key2),
 	}
 	// create first mpu
@@ -409,9 +420,10 @@ func TestListMultipartUploadsUnsupported(t *testing.T) {
 	}
 	ctx, _, repo := setupTest(t)
 	defer tearDownTest(repo)
+	bucket := s3BucketName(repo)
 	s3Endpoint := viper.GetString("s3_endpoint")
 	s3Client := createS3Client(s3Endpoint, t)
-	Bucket := aws.String(repo)
+	Bucket := aws.String(bucket)
 
 	delimiter := aws.String("/")
 	prefix := aws.String("prefix")
@@ -467,17 +479,18 @@ func TestS3ReadObject(t *testing.T) {
 
 	ctx, _, repo := setupTest(t)
 	defer tearDownTest(repo)
+	bucket := s3BucketName(repo)
 
 	// Upload an object
 	minioClient := newMinioClient(t, credentials.NewStaticV2)
 
-	_, err := minioClient.PutObject(ctx, repo, goodPath, strings.NewReader(contents), int64(len(contents)), minio.PutObjectOptions{})
+	_, err := minioClient.PutObject(ctx, bucket, goodPath, strings.NewReader(contents), int64(len(contents)), minio.PutObjectOptions{})
 	if err != nil {
 		t.Errorf("PutObject(%s, %s): %s", repo, goodPath, err)
 	}
 
 	t.Run("get_exists", func(t *testing.T) {
-		res, err := minioClient.GetObject(ctx, repo, goodPath, minio.GetObjectOptions{})
+		res, err := minioClient.GetObject(ctx, bucket, goodPath, minio.GetObjectOptions{})
 		if err != nil {
 			t.Errorf("GetObject(%s, %s): %s", repo, goodPath, err)
 		}
@@ -499,7 +512,7 @@ func TestS3ReadObject(t *testing.T) {
 	t.Run("get_exists_presigned", func(t *testing.T) {
 		// using presigned URL, so we can check the headers
 		// We expect the Content-Length header to be set
-		preSignedURL, err := minioClient.Presign(ctx, http.MethodGet, repo, goodPath, time.Second*60, url.Values{})
+		preSignedURL, err := minioClient.Presign(ctx, http.MethodGet, bucket, goodPath, time.Second*60, url.Values{})
 		if err != nil {
 			t.Fatalf("minioClientPresign(%s, %s): %s", repo, goodPath, err)
 		}
@@ -531,11 +544,11 @@ func TestS3ReadObject(t *testing.T) {
 			objPath   = "no-physical-object"
 			objS3Path = "main/" + objPath
 		)
-		_, err = minioClient.PutObject(ctx, repo, objS3Path, strings.NewReader(""), int64(0), minio.PutObjectOptions{})
+		_, err = minioClient.PutObject(ctx, bucket, objS3Path, strings.NewReader(""), int64(0), minio.PutObjectOptions{})
 		if err != nil {
 			t.Errorf("PutObject(%s, %s): %s", repo, objS3Path, err)
 		}
-		statResp, err := client.StatObjectWithResponse(ctx, repo, "main", &apigen.StatObjectParams{
+		statResp, err := client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.StatObjectParams{
 			Path:    objPath,
 			Presign: apiutil.Ptr(false),
 		})
@@ -572,7 +585,7 @@ func TestS3ReadObject(t *testing.T) {
 
 		// try to read the object - should fail
 		const s3ObjPath = "main/" + objPath
-		res, err := minioClient.GetObject(ctx, repo, s3ObjPath, minio.GetObjectOptions{})
+		res, err := minioClient.GetObject(ctx, bucket, s3ObjPath, minio.GetObjectOptions{})
 		if err != nil {
 			t.Fatalf("GetObject(%s, %s): %s", repo, s3ObjPath, err)
 		}
@@ -589,7 +602,7 @@ func TestS3ReadObject(t *testing.T) {
 	})
 
 	t.Run("get_not_exists", func(t *testing.T) {
-		res, err := minioClient.GetObject(ctx, repo, badPath, minio.GetObjectOptions{})
+		res, err := minioClient.GetObject(ctx, bucket, badPath, minio.GetObjectOptions{})
 		if err != nil {
 			t.Errorf("GetObject(%s, %s): %s", repo, badPath, err)
 		}
@@ -606,7 +619,7 @@ func TestS3ReadObject(t *testing.T) {
 	})
 
 	t.Run("head_exists", func(t *testing.T) {
-		info, err := minioClient.StatObject(ctx, repo, goodPath, minio.StatObjectOptions{})
+		info, err := minioClient.StatObject(ctx, bucket, goodPath, minio.StatObjectOptions{})
 		if err != nil {
 			t.Errorf("StatObject(%s, %s): %s", repo, goodPath, err)
 		}
@@ -614,7 +627,7 @@ func TestS3ReadObject(t *testing.T) {
 	})
 
 	t.Run("head_not_exists", func(t *testing.T) {
-		info, err := minioClient.StatObject(ctx, repo, badPath, minio.StatObjectOptions{})
+		info, err := minioClient.StatObject(ctx, bucket, badPath, minio.StatObjectOptions{})
 		if err == nil {
 			t.Errorf("StatObject(%s, %s): expected an error but got %+v", repo, badPath, info)
 		}
@@ -630,29 +643,30 @@ func TestS3ReadObject(t *testing.T) {
 func TestS3HeadBucket(t *testing.T) {
 	ctx, _, repo := setupTest(t)
 	defer tearDownTest(repo)
+	bucket := s3BucketName(repo)
 
-	badRepo := repo + "-nonexistent"
+	badBucket := bucket + "-nonexistent"
 
 	// Upload an object
 	client := newMinioClient(t, credentials.NewStaticV2)
 
 	t.Run("existing", func(t *testing.T) {
-		ok, err := client.BucketExists(ctx, repo)
+		ok, err := client.BucketExists(ctx, bucket)
 		if err != nil {
-			t.Errorf("BucketExists(%s) failed: %s", repo, err)
+			t.Errorf("BucketExists(%s) failed: %s", bucket, err)
 		}
 		if !ok {
-			t.Errorf("Got that good bucket %s does not exist", repo)
+			t.Errorf("Got that good bucket %s does not exist", bucket)
 		}
 	})
 
 	t.Run("not existing", func(t *testing.T) {
-		ok, err := client.BucketExists(ctx, badRepo)
+		ok, err := client.BucketExists(ctx, badBucket)
 		if err != nil {
-			t.Errorf("BucketExists(%s) failed: %s", badRepo, err)
+			t.Errorf("BucketExists(%s) failed: %s", badBucket, err)
 		}
 		if ok {
-			t.Errorf("Got that bad bucket %s exists", badRepo)
+			t.Errorf("Got that bad bucket %s exists", badBucket)
 		}
 	})
 }
@@ -662,12 +676,13 @@ func TestS3HeadBucket(t *testing.T) {
 // testPrefix.
 func getOrCreatePathToLargeObject(t *testing.T, ctx context.Context, s3HubClient *minio.Client, repo, branch string) (string, int64) {
 	t.Helper()
+	bucket := s3BucketName(repo)
 
 	path := "source-file"
 	s3Path := fmt.Sprintf("%s/source-file", branch)
 
 	if physicalAddress := viper.GetString("large_object_path"); physicalAddress != "" {
-		res, err := client.LinkPhysicalAddressWithResponse(ctx, repo, branch, &apigen.LinkPhysicalAddressParams{Path: path}, apigen.LinkPhysicalAddressJSONRequestBody{
+		res, err := client.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.LinkPhysicalAddressParams{Path: path}, apigen.LinkPhysicalAddressJSONRequestBody{
 			Checksum: "dont-care",
 			// TODO(ariels): Check actual length of object!
 			SizeBytes: largeDataContentLength,
@@ -685,7 +700,7 @@ func getOrCreatePathToLargeObject(t *testing.T, ctx context.Context, s3HubClient
 	objContent := testutil.NewRandomReader(r, largeDataContentLength)
 
 	// upload data
-	_, err := s3HubClient.PutObject(ctx, repo, s3Path, objContent, largeDataContentLength,
+	_, err := s3HubClient.PutObject(ctx, bucket, s3Path, objContent, largeDataContentLength,
 		minio.PutObjectOptions{})
 	require.NoError(t, err)
 	return s3Path, largeDataContentLength
@@ -698,7 +713,9 @@ func TestS3CopyObjectMultipart(t *testing.T) {
 	// additional repository for copy between repos
 	const destRepoName = "tests3copyobjectmultipartdest"
 	destRepo := createRepositoryByName(ctx, t, destRepoName)
-	defer deleteRepositoryIfAskedTo(ctx, destRepoName)
+	defer deleteRepositoryIfAskedTo(ctx, destRepo)
+	bucket := s3BucketName(repo)
+	destBucket := s3BucketName(destRepo)
 
 	s3HubClient := newMinioClient(t, credentials.NewStaticV4)
 
@@ -706,19 +723,19 @@ func TestS3CopyObjectMultipart(t *testing.T) {
 	destPath := gatewayTestPrefix + "dest-file"
 
 	dest := minio.CopyDestOptions{
-		Bucket: destRepo,
+		Bucket: destBucket,
 		Object: destPath,
 	}
 
 	srcs := []minio.CopySrcOptions{
 		{
-			Bucket:     repo,
+			Bucket:     bucket,
 			Object:     srcPath,
 			MatchRange: true,
 			Start:      0,
 			End:        minDataContentLengthForMultipart - 1,
 		}, {
-			Bucket:     repo,
+			Bucket:     bucket,
 			Object:     srcPath,
 			MatchRange: true,
 			Start:      minDataContentLengthForMultipart,
@@ -738,7 +755,7 @@ func TestS3CopyObjectMultipart(t *testing.T) {
 	// Comparing 2 readers is too much work.  Instead just hash them.
 	// This will fail for malicious bad S3 gateways, but otherwise is
 	// fine.
-	uploadedReader, err := s3HubClient.GetObject(ctx, repo, srcPath, minio.GetObjectOptions{})
+	uploadedReader, err := s3HubClient.GetObject(ctx, bucket, srcPath, minio.GetObjectOptions{})
 	if err != nil {
 		t.Fatalf("Get uploaded object: %s", err)
 	}
@@ -751,7 +768,7 @@ func TestS3CopyObjectMultipart(t *testing.T) {
 		t.Fatal("Impossibly bad luck: uploaded data with CRC64 == 0!")
 	}
 
-	copiedReader, err := s3HubClient.GetObject(ctx, repo, srcPath, minio.GetObjectOptions{})
+	copiedReader, err := s3HubClient.GetObject(ctx, bucket, srcPath, minio.GetObjectOptions{})
 	if err != nil {
 		t.Fatalf("Get copied object: %s", err)
 	}
@@ -773,7 +790,9 @@ func TestS3CopyObject(t *testing.T) {
 	// additional repository for copy between repos
 	const destRepoName = "tests3copyobjectdest"
 	destRepo := createRepositoryByName(ctx, t, destRepoName)
-	defer deleteRepositoryIfAskedTo(ctx, destRepoName)
+	defer deleteRepositoryIfAskedTo(ctx, destRepo)
+	bucket := s3BucketName(repo)
+	destBucket := s3BucketName(destRepo)
 
 	// content
 	r := rand.New(rand.NewSource(17))
@@ -784,7 +803,7 @@ func TestS3CopyObject(t *testing.T) {
 
 	// upload data
 	s3HubClient := newMinioClient(t, credentials.NewStaticV2)
-	_, err := s3HubClient.PutObject(ctx, repo, srcPath, strings.NewReader(objContent), int64(len(objContent)),
+	_, err := s3HubClient.PutObject(ctx, bucket, srcPath, strings.NewReader(objContent), int64(len(objContent)),
 		minio.PutObjectOptions{
 			UserMetadata: userMetadata,
 		})
@@ -792,20 +811,18 @@ func TestS3CopyObject(t *testing.T) {
 
 	t.Run("same_branch", func(t *testing.T) {
 		// copy the object to the same repository
-		_, err = s3HubClient.CopyObject(ctx,
-			minio.CopyDestOptions{
-				Bucket: repo,
-				Object: destPath,
-			},
-			minio.CopySrcOptions{
-				Bucket: repo,
-				Object: srcPath,
-			})
+		_, err = s3HubClient.CopyObject(ctx, minio.CopyDestOptions{
+			Bucket: bucket,
+			Object: destPath,
+		}, minio.CopySrcOptions{
+			Bucket: bucket,
+			Object: srcPath,
+		})
 		if err != nil {
 			t.Fatalf("minio.Client.CopyObject from(%s) to(%s): %s", srcPath, destPath, err)
 		}
 
-		download, err := s3HubClient.GetObject(ctx, repo, destPath, minio.GetObjectOptions{})
+		download, err := s3HubClient.GetObject(ctx, bucket, destPath, minio.GetObjectOptions{})
 		if err != nil {
 			t.Fatalf("minio.Client.GetObject(%s): %s", destPath, err)
 		}
@@ -819,11 +836,11 @@ func TestS3CopyObject(t *testing.T) {
 		}
 		require.Equal(t, objContent, content.String())
 
-		resp, err := client.StatObjectWithResponse(ctx, repo, mainBranch, &apigen.StatObjectParams{Path: "data/source-file"})
+		resp, err := client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.StatObjectParams{Path: "data/source-file"})
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON200)
 
-		resp, err = client.StatObjectWithResponse(ctx, repo, mainBranch, &apigen.StatObjectParams{Path: "data/dest-file"})
+		resp, err = client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.StatObjectParams{Path: "data/dest-file"})
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON200)
 
@@ -838,22 +855,20 @@ func TestS3CopyObject(t *testing.T) {
 		// copy the object to different repository. should create another version of the file
 		userMetadataReplace := map[string]string{"X-Amz-Meta-Key1": "value1Replace", "X-Amz-Meta-Key2": "value2Replace"}
 
-		_, err := s3HubClient.CopyObject(ctx,
-			minio.CopyDestOptions{
-				Bucket:          destRepo,
-				Object:          destPath,
-				UserMetadata:    userMetadataReplace,
-				ReplaceMetadata: true,
-			},
-			minio.CopySrcOptions{
-				Bucket: repo,
-				Object: srcPath,
-			})
+		_, err := s3HubClient.CopyObject(ctx, minio.CopyDestOptions{
+			Bucket:          destBucket,
+			Object:          destPath,
+			UserMetadata:    userMetadataReplace,
+			ReplaceMetadata: true,
+		}, minio.CopySrcOptions{
+			Bucket: bucket,
+			Object: srcPath,
+		})
 		if err != nil {
 			t.Fatalf("minio.Client.CopyObjectFrom(%s)To(%s): %s", srcPath, destPath, err)
 		}
 
-		download, err := s3HubClient.GetObject(ctx, destRepo, destPath, minio.GetObjectOptions{})
+		download, err := s3HubClient.GetObject(ctx, destBucket, destPath, minio.GetObjectOptions{})
 		if err != nil {
 			t.Fatalf("minio.Client.GetObject(%s): %s", destPath, err)
 		}
@@ -865,12 +880,12 @@ func TestS3CopyObject(t *testing.T) {
 		// compere files content
 		require.Equal(t, contents.String(), objContent)
 
-		resp, err := client.StatObjectWithResponse(ctx, repo, mainBranch, &apigen.StatObjectParams{Path: "data/source-file"})
+		resp, err := client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.StatObjectParams{Path: "data/source-file"})
 		require.NoError(t, err)
 		require.NotNil(t, resp.JSON200)
 		sourceObjectStats := resp.JSON200
 
-		resp, err = client.StatObjectWithResponse(ctx, destRepo, mainBranch, &apigen.StatObjectParams{Path: "data/dest-file"})
+		resp, err = client.StatObjectWithResponse(ctx, apigen.RepositoryOwner(destRepo), apigen.RepositoryName(destRepo), mainBranch, &apigen.StatObjectParams{Path: "data/dest-file"})
 		if err != nil {
 			t.Fatalf("client.StatObject(%s): %s", destPath, err)
 		}
@@ -887,6 +902,7 @@ func TestS3CopyObject(t *testing.T) {
 func TestS3PutObjectTagging(t *testing.T) {
 	ctx, _, repo := setupTest(t)
 	defer tearDownTest(repo)
+	bucket := s3BucketName(repo)
 
 	srcPath := gatewayTestPrefix + "source-file"
 	s3HubClient := newMinioClient(t, credentials.NewStaticV2)
@@ -894,7 +910,7 @@ func TestS3PutObjectTagging(t *testing.T) {
 	tag, err := tags.NewTags(map[string]string{"tag1": "value1"}, true)
 	require.NoError(t, err)
 
-	err = s3HubClient.PutObjectTagging(ctx, repo, srcPath, tag, minio.PutObjectTaggingOptions{})
+	err = s3HubClient.PutObjectTagging(ctx, bucket, srcPath, tag, minio.PutObjectTaggingOptions{})
 	require.Error(t, err)
 
 	errResponse := minio.ToErrorResponse(err)
@@ -905,9 +921,11 @@ func TestS3PutObjectTagging(t *testing.T) {
 func TestS3CopyObjectErrors(t *testing.T) {
 	ctx, _, repo := setupTest(t)
 	defer tearDownTest(repo)
+	bucket := s3BucketName(repo)
 
 	readOnlyRepo := createReadOnlyRepositoryByName(ctx, t, "tests3copyobjectdestreadonly")
 	defer deleteRepositoryIfAskedTo(ctx, readOnlyRepo)
+	readOnlyBucket := s3BucketName(readOnlyRepo)
 
 	requireBlockstoreType(t, block.BlockstoreTypeS3)
 	destPath := gatewayTestPrefix + "dest-file"
@@ -917,27 +935,25 @@ func TestS3CopyObjectErrors(t *testing.T) {
 
 	t.Run("malformed dest", func(t *testing.T) {
 		// copy the object to a non-existent repo - tests internal Surogate Hub error
-		_, err := s3HubClient.CopyObject(ctx,
-			minio.CopyDestOptions{
-				Bucket: "wrong-repo",
-				Object: destPath,
-			},
-			minio.CopySrcOptions{
-				Bucket: repo,
-				Object: "main/data/not-found",
-			})
+		_, err := s3HubClient.CopyObject(ctx, minio.CopyDestOptions{
+			Bucket: "wrong-repo",
+			Object: destPath,
+		}, minio.CopySrcOptions{
+			Bucket: bucket,
+			Object: "main/data/not-found",
+		})
 		require.NotNil(t, err)
 		require.Contains(t, err.Error(), "The specified bucket does not exist")
 	})
 
 	t.Run("source not found", func(t *testing.T) {
 		// Create object in Surogate Hub with wrong physical address
-		getResp, err := client.GetPhysicalAddressWithResponse(ctx, repo, mainBranch, &apigen.GetPhysicalAddressParams{
+		getResp, err := client.GetPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.GetPhysicalAddressParams{
 			Path: "data/not-found",
 		})
 		require.NoError(t, err)
 		require.NotNil(t, getResp.JSON200)
-		linkResp, err := client.LinkPhysicalAddressWithResponse(ctx, repo, mainBranch, &apigen.LinkPhysicalAddressParams{
+		linkResp, err := client.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.LinkPhysicalAddressParams{
 			Path: "data/not-found",
 		}, apigen.LinkPhysicalAddressJSONRequestBody{
 			Checksum:  "12345",
@@ -950,29 +966,25 @@ func TestS3CopyObjectErrors(t *testing.T) {
 		require.NotNil(t, linkResp.JSON200)
 
 		// copy the object to the same repository
-		_, err = s3HubClient.CopyObject(ctx,
-			minio.CopyDestOptions{
-				Bucket: repo,
-				Object: destPath,
-			},
-			minio.CopySrcOptions{
-				Bucket: repo,
-				Object: "main/data/not-found",
-			})
+		_, err = s3HubClient.CopyObject(ctx, minio.CopyDestOptions{
+			Bucket: bucket,
+			Object: destPath,
+		}, minio.CopySrcOptions{
+			Bucket: bucket,
+			Object: "main/data/not-found",
+		})
 		require.NotNil(t, err)
 		require.Contains(t, err.Error(), "NoSuchKey")
 	})
 
 	t.Run("readonly repo from non-existing source", func(t *testing.T) {
-		_, err := s3HubClient.CopyObject(ctx,
-			minio.CopyDestOptions{
-				Bucket: readOnlyRepo,
-				Object: destPath,
-			},
-			minio.CopySrcOptions{
-				Bucket: repo,
-				Object: "not-a-branch/data/not-found",
-			})
+		_, err := s3HubClient.CopyObject(ctx, minio.CopyDestOptions{
+			Bucket: readOnlyBucket,
+			Object: destPath,
+		}, minio.CopySrcOptions{
+			Bucket: bucket,
+			Object: "not-a-branch/data/not-found",
+		})
 		require.NotNil(t, err)
 		require.Contains(t, err.Error(), "read-only")
 	})
@@ -987,11 +999,12 @@ func TestS3ReadObjectRedirect(t *testing.T) {
 
 	ctx, _, repo := setupTest(t)
 	defer tearDownTest(repo)
+	bucket := s3BucketName(repo)
 
 	// Upload an object
 	minioClient := newMinioClient(t, credentials.NewStaticV4)
 
-	_, err := minioClient.PutObject(ctx, repo, goodPath, strings.NewReader(contents), int64(len(contents)), minio.PutObjectOptions{})
+	_, err := minioClient.PutObject(ctx, bucket, goodPath, strings.NewReader(contents), int64(len(contents)), minio.PutObjectOptions{})
 	if err != nil {
 		t.Errorf("PutObject(%s, %s): %s", repo, goodPath, err)
 	}
@@ -999,7 +1012,7 @@ func TestS3ReadObjectRedirect(t *testing.T) {
 	t.Run("get_exists", func(t *testing.T) {
 		opts := minio.GetObjectOptions{}
 		opts.Set("User-Agent", "client with s3RedirectionSupport set")
-		res, err := minioClient.GetObject(ctx, repo, goodPath, opts)
+		res, err := minioClient.GetObject(ctx, bucket, goodPath, opts)
 		require.NoError(t, err)
 
 		// Verify we got redirect
