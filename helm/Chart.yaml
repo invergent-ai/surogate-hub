@@ -11,3 +11,15 @@ sources:
 maintainers:
   - name: invergent
     email: maintainers@invergent.ai
+
+annotations:
+  artifacthub.io/category: storage
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/links: |
+    - name: source
+      url: https://github.com/invergent-ai/surogate-hub
+    - name: support
+      url: https://github.com/invergent-ai/surogate-hub/issues
+  artifacthub.io/images: |
+    - name: surogate-hub
+      image: ghcr.io/invergent-ai/surogate-hub:latest

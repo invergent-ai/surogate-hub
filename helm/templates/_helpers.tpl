@@ -64,43 +64,18 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
-Define which repository to use according to the following:
-1. Explicitly defined
-2. Otherwise if enterprise is enabled - take enterprise image
-3. Otherwise use OSS image
+Image repository.
 */}}
 {{- define "shub.repository" -}}
-{{- if not .Values.image.repository }}
-{{- if (.Values.enterprise).enabled }}
-{{- default "treeverse/shub-enterprise" .Values.image.repository }}
-{{- else }}
-{{- default "treeverse/shub" .Values.image.repository }}
-{{- end }}
-{{- else }}
-{{- default .Values.image.repository }}
-{{- end }}
+{{- default "ghcr.io/invergent-ai/surogate-hub" .Values.image.repository }}
 {{- end }}
 
 {{/*
-Select the image tag. An explicit .Values.image.tag wins (back-compat override).
-Otherwise pick community or enterprise tag based on the enterprise flag so each
-variant can release on its own cadence.
+Image tag.
 */}}
 {{- define "shub.tag" -}}
-{{- if .Values.image.tag }}
-{{- .Values.image.tag }}
-{{- else if (.Values.enterprise).enabled }}
-{{- required "image.enterprise.tag is required when enterprise.enabled is true" (((.Values.image).enterprise).tag) }}
-{{- else }}
-{{- required "image.community.tag is required" (((.Values.image).community).tag) }}
+{{- default "latest" .Values.image.tag }}
 {{- end }}
-{{- end }}
-
-{{- define "shub.checkDeprecated" -}}
-{{- if .Values.fluffy -}}
-{{- fail "Fluffy configuration detected. Please migrate to shub Enterprise auth configuration and use treeverse/shub-enterprise docker image. See migration guide: https://docs.shub.io/latest/enterprise/upgrade/#kubernetes-migrating-with-helm-from-fluffy-to-new-shub-enterprise." -}}
-{{- end -}}
-{{- end -}}
 
 {{/*
 Replication resource full name
@@ -160,6 +135,36 @@ app.kubernetes.io/name: {{ include "shub.name" . }}-audit-maintain
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/component: audit-maintain
 app: {{ include "shub.name" . }}-audit-maintain
+{{- end }}
+
+{{/*
+Stats-worker resource full name
+*/}}
+{{- define "shub.statsWorker.fullname" -}}
+{{- printf "%s-stats-worker" (include "shub.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Stats-worker selector labels
+*/}}
+{{- define "shub.statsWorker.selectorLabels" -}}
+app: {{ include "shub.name" . }}-stats-worker
+app.kubernetes.io/name: {{ include "shub.name" . }}-stats-worker
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: stats-worker
+{{- end }}
+
+{{/*
+Stats-worker common labels
+*/}}
+{{- define "shub.statsWorker.labels" -}}
+helm.sh/chart: {{ include "shub.chart" . }}
+{{ include "shub.statsWorker.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/part-of: {{ include "shub.name" . }}
 {{- end }}
 
 {{- define "shub.dockerConfigJson" }}

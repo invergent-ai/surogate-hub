@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "shub.statsWorker.fullname" . }}
+  labels:
+    {{- include "shub.statsWorker.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.statsWorker.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "shub.statsWorker.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.statsWorker.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "shub.statsWorker.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if (.Values.image.privateRegistry).enabled }}
+      imagePullSecrets:
+       {{- if (.Values.image.privateRegistry).secretToken }}
+        - name: "docker-registry"
+       {{- else }}
+        - name: {{ .Values.image.privateRegistry.secretName }}
+       {{- end }}
+      {{- end }}
+      serviceAccountName: {{ include "shub.serviceAccountName" . }}
+      containers:
+        - name: stats-worker
+          image: "{{ include "shub.repository" . }}:{{ include "shub.tag" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/app/stats-worker"]
+          env:
+            - name: SHUB_URL
+              value: "http://{{ include "shub.fullname" . }}:{{ .Values.service.port }}/api/v1"
+            - name: SHUB_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "shub.fullname" . }}-creds
+                  key: access-key
+            - name: SHUB_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "shub.fullname" . }}-creds
+                  key: secret-key
+            - name: WORKER_PORT
+              value: {{ .Values.statsWorker.workerPort | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.statsWorker.workerPort }}
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.statsWorker.resources | nindent 12 }}
+      {{- with .Values.statsWorker.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.statsWorker.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.statsWorker.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "shub.statsWorker.fullname" . }}
+  labels:
+    {{- include "shub.statsWorker.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "shub.statsWorker.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.statsWorker.workerPort }}
+      targetPort: http
+      protocol: TCP

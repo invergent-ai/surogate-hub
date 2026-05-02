@@ -196,9 +196,57 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  publish-helm-chart:
+    name: Package & push Helm chart (OCI)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.2
+
+      - name: Lint chart
+        run: helm lint helm
+
+      - name: Package chart
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p dist-chart
+          helm package helm \
+            --version "${VERSION}" \
+            --app-version "${VERSION}" \
+            --destination dist-chart
+
+      - name: Log in to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io \
+            --username "${{ github.actor }}" \
+            --password-stdin
+
+      - name: Push chart to GHCR
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          helm push "dist-chart/surogate-hub-${VERSION}.tgz" oci://ghcr.io/invergent-ai/charts
+
+      - name: Upload chart artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-chart
+          path: dist-chart/*.tgz
+          if-no-files-found: error
+
   release:
     name: Create GitHub Release
-    needs: [build-binaries, build-python-client, build-java-client, build-docker]
+    needs: [build-binaries, build-python-client, build-java-client, build-docker, publish-helm-chart]
     runs-on: ubuntu-latest
     steps:
       - name: Download binaries artifact
@@ -218,6 +266,12 @@ jobs:
         with:
           name: java-client
           path: artifacts/java-client
+
+      - name: Download Helm chart artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: helm-chart
+          path: artifacts/helm-chart
 
       - name: Flatten assets
         run: |

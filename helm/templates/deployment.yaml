@@ -1,4 +1,3 @@
-{{- include "shub.checkDeprecated" . -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -99,19 +98,6 @@ spec:
           {{- else }}
             - name: {{ .Chart.Name }}-local-data
               mountPath: "/shub/data"
-          {{- end }}
-          {{- if (((.Values.enterprise).auth).saml).enabled }}
-            - name: secret-volume-license-token
-              readOnly: true
-              mountPath: /etc/saml_certs/
-          {{- end }}
-          {{- if (.Values.enterprise).enabled }}
-          {{- if or (and .Values.secrets .Values.secrets.licenseContents) (and .Values.existingSecret .Values.secretKeys.licenseContentsKey) }}
-            - name: secret-volume-license-token
-              mountPath: /etc/shub/license.tkn
-              subPath: "license.tkn"
-              readOnly: true
-          {{- end }}
           {{- end }}
           {{- include "shub.env" . | nindent 10 }}
         {{- include "shub.s3proxyContainer" . | nindent 8}}

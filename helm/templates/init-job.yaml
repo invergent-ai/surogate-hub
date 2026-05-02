@@ -1,0 +1,100 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "shub.fullname" . }}-init
+  labels:
+    {{- include "shub.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      {{- with .Values.jobPodAnnotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "shub.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      {{- if (.Values.image.privateRegistry).enabled }}
+      imagePullSecrets:
+       {{- if (.Values.image.privateRegistry).secretToken }}
+        - name: "docker-registry"
+       {{- else }}
+        - name: {{ .Values.image.privateRegistry.secretName }}
+       {{- end }}
+      {{- end }}
+      serviceAccountName: {{ include "shub.serviceAccountName" . }}
+      containers:
+        - name: init
+          image: "{{ include "shub.repository" . }}:{{ include "shub.tag" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.shubConfig }}
+          args:
+            - "setup"
+            - "--config"
+            - "/etc/shub/config.yaml"
+            - "--user-name"
+            - {{ .Values.init.userName | quote }}
+            - "--access-key-id"
+            - "$(SGHUB_ACCESS_KEY_ID)"
+            - "--secret-access-key"
+            - "$(SGHUB_SECRET_ACCESS_KEY)"
+          {{- else }}
+          args:
+            - "setup"
+            - "--user-name"
+            - {{ .Values.init.userName | quote }}
+            - "--access-key-id"
+            - "$(SGHUB_ACCESS_KEY_ID)"
+            - "--secret-access-key"
+            - "$(SGHUB_SECRET_ACCESS_KEY)"
+          {{- end }}
+          env:
+            - name: SGHUB_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "shub.fullname" . }}-creds
+                  key: access-key
+            - name: SGHUB_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "shub.fullname" . }}-creds
+                  key: secret-key
+            {{- include "shub.envList" . | nindent 12 }}
+          {{- if .Values.extraEnvVarsSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.extraEnvVarsSecret }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.init.resources | nindent 12 }}
+          volumeMounts:
+          {{- if .Values.extraVolumeMounts }}
+            {{ toYaml .Values.extraVolumeMounts | nindent 12 }}
+          {{- end }}
+          {{- if .Values.shubConfig }}
+            - name: config-volume
+              mountPath: /etc/shub/config.yaml
+              subPath: "config.yaml"
+              readOnly: true
+          {{- end }}
+      volumes:
+        {{- include "shub.volumes" . | nindent 8 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
