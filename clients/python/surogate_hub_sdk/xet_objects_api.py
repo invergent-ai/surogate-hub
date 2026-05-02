@@ -6,6 +6,7 @@ import urllib.parse
 import urllib.request
 from typing import Any, Dict, Optional, Tuple
 
+from surogate_hub_sdk.api.internal_api import InternalApi
 from surogate_hub_sdk.api.objects_api import ObjectsApi
 from surogate_hub_sdk.api.staging_api import StagingApi
 from surogate_hub_sdk.models.staging_location import StagingLocation
@@ -26,6 +27,7 @@ class XetObjectsApi(ObjectsApi):
         request_headers: Optional[Dict[str, str]] = None,
     ) -> None:
         super().__init__(api_client)
+        self._internal_api = InternalApi(self.api_client)
         self._staging_api = StagingApi(self.api_client)
         self.configuration = self.api_client.configuration
         self.xet_endpoint = (xet_endpoint or self._derive_xet_endpoint(self.configuration.host)).rstrip("/")
@@ -68,6 +70,31 @@ class XetObjectsApi(ObjectsApi):
 
         local_path, cleanup_path = xet_content
         try:
+            upload_mode = self._server_upload_mode(
+                repository,
+                branch,
+                path,
+                self._content_size(content, local_path),
+                _request_timeout=_request_timeout,
+                _headers=_headers,
+                _host_index=_host_index,
+            )
+            if upload_mode != "xet":
+                return super().upload_object(
+                    repository,
+                    branch,
+                    path,
+                    if_none_match=if_none_match,
+                    storage_class=storage_class,
+                    force=force,
+                    content=content,
+                    _request_timeout=_request_timeout,
+                    _request_auth=_request_auth,
+                    _content_type=_content_type,
+                    _headers=_headers,
+                    _host_index=_host_index,
+                )
+
             hf_xet = self._hf_xet()
             upload_info = hf_xet.upload_files(
                 [local_path],
@@ -188,6 +215,42 @@ class XetObjectsApi(ObjectsApi):
         if isinstance(content, tuple) and len(content) == 2 and isinstance(content[1], (bytes, bytearray)):
             return self._spool_bytes(bytes(content[1]))
         return None
+
+    @staticmethod
+    def _content_size(content, local_path: Optional[str]):
+        if content is None:
+            return None
+        if local_path is not None:
+            try:
+                return os.path.getsize(local_path)
+            except OSError:
+                return None
+        if isinstance(content, (bytes, bytearray)):
+            return len(content)
+        if isinstance(content, tuple) and len(content) == 2 and isinstance(content[1], (bytes, bytearray)):
+            return len(content[1])
+        return None
+
+    def _server_upload_mode(
+        self,
+        repository,
+        branch,
+        path,
+        size_bytes,
+        _request_timeout=None,
+        _headers=None,
+        _host_index=0,
+    ) -> str:
+        upload_mode = self._internal_api.upload_object_preflight(
+            repository,
+            branch,
+            path,
+            size_bytes=size_bytes,
+            _request_timeout=_request_timeout,
+            _headers=_headers,
+            _host_index=_host_index,
+        )
+        return getattr(upload_mode, "upload_mode", "regular")
 
     @staticmethod
     def _spool_bytes(data: bytes):
