@@ -415,6 +415,19 @@ components:
           type: boolean
           default: false
 
+    ObjectUploadMode:
+      type: object
+      required:
+        - upload_mode
+      properties:
+        upload_mode:
+          type: string
+          enum: [regular, xet]
+          description: |
+            Server-selected upload mode for a regular object upload.
+            "regular" means the client should use POST /objects.
+            "xet" means the client may upload through XET and link an xet:// physical address.
+
     ObjectUserMetadata:
       type: object
       additionalProperties:
@@ -4900,13 +4913,24 @@ paths:
         required: true
         schema:
           type: string
+      - in: query
+        name: size_bytes
+        description: Size of the object content the client plans to upload.
+        required: false
+        schema:
+          type: integer
+          format: int64
     get:
       tags:
         - internal
       operationId: uploadObjectPreflight
       responses:
-        204:
-          description: User has permissions to upload this object. This does not guarantee that the upload will be successful or even possible. It indicates only the permission at the time of calling this endpoint
+        200:
+          description: User has permissions to upload this object and the server-selected upload mode.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObjectUploadMode"
         401:
           $ref: "#/components/responses/Unauthorized"
         403:

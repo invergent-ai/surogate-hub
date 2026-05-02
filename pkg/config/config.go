@@ -474,6 +474,9 @@ type BaseConfig struct {
 		PrepareInterval    time.Duration `mapstructure:"prepare_interval"`
 	} `mapstructure:"ugc"`
 	XET struct {
+		Upload struct {
+			MinSizeBytes int64 `mapstructure:"min_size_bytes"`
+		} `mapstructure:"upload"`
 		Verify struct {
 			MaxConcurrent int `mapstructure:"max_concurrent"`
 		} `mapstructure:"verify"`

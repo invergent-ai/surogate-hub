@@ -126,6 +126,59 @@ func TestController_LinkXETPhysicalAddressWritesFileRef(t *testing.T) {
 	require.Equal(t, []byte{}, fileRef.Value)
 }
 
+func TestController_UploadObjectPreflightReturnsRegularForSmallObject(t *testing.T) {
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+
+	resp, err := clt.UploadObjectPreflightWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.UploadObjectPreflightParams{
+		Path:      "small.txt",
+		SizeBytes: apiutil.Ptr(int64(1024)),
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode())
+	require.NotNil(t, resp.JSON200)
+	require.Equal(t, "regular", resp.JSON200.UploadMode)
+}
+
+func TestController_UploadObjectPreflightReturnsXETForLargeObject(t *testing.T) {
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+
+	resp, err := clt.UploadObjectPreflightWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.UploadObjectPreflightParams{
+		Path:      "models/model.bin",
+		SizeBytes: apiutil.Ptr(int64(8 * 1024 * 1024)),
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode())
+	require.NotNil(t, resp.JSON200)
+	require.Equal(t, "xet", resp.JSON200.UploadMode)
+}
+
+func TestController_UploadObjectPreflightReturnsRegularWhenSizeUnknown(t *testing.T) {
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+
+	resp, err := clt.UploadObjectPreflightWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.UploadObjectPreflightParams{
+		Path: "stream.bin",
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode())
+	require.NotNil(t, resp.JSON200)
+	require.Equal(t, "regular", resp.JSON200.UploadMode)
+}
+
 func TestController_LinkXETPhysicalAddressRejectsMissingShard(t *testing.T) {
 	clt, deps := setupClientWithAdmin(t)
 	ctx := context.Background()

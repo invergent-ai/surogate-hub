@@ -3298,7 +3298,23 @@ func (c *Controller) UploadObjectPreflight(w http.ResponseWriter, r *http.Reques
 	ctx := r.Context()
 	c.LogAction(ctx, "put_object_preflight", r, repository, branch, "")
 
-	writeResponse(w, r, http.StatusNoContent, nil)
+	writeResponse(w, r, http.StatusOK, apigen.ObjectUploadMode{
+		UploadMode: c.objectUploadMode(params.SizeBytes),
+	})
+}
+
+func (c *Controller) objectUploadMode(sizeBytes *int64) string {
+	if sizeBytes == nil || *sizeBytes <= 0 {
+		return "regular"
+	}
+	minSize := c.Config.GetBaseConfig().XET.Upload.MinSizeBytes
+	if minSize <= 0 {
+		return "regular"
+	}
+	if *sizeBytes >= minSize {
+		return "xet"
+	}
+	return "regular"
 }
 
 func (c *Controller) UploadObject(w http.ResponseWriter, r *http.Request, owner, repository, branch string, params apigen.UploadObjectParams) {
