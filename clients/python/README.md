@@ -100,12 +100,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ActionsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     run_id = 'run_id_example' # str | 
 
     try:
         # get a run
-        api_response = api_instance.get_run(repository, run_id)
+        api_response = api_instance.get_run(user, repository, run_id)
         print("The response of ActionsApi->get_run:\n")
         pprint(api_response)
     except ApiException as e:
@@ -119,10 +120,10 @@ All URIs are relative to */api/v1*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
-*ActionsApi* | [**get_run**](docs/ActionsApi.md#get_run) | **GET** /repositories/{repository}/actions/runs/{run_id} | get a run
-*ActionsApi* | [**get_run_hook_output**](docs/ActionsApi.md#get_run_hook_output) | **GET** /repositories/{repository}/actions/runs/{run_id}/hooks/{hook_run_id}/output | get run hook output
-*ActionsApi* | [**list_repository_runs**](docs/ActionsApi.md#list_repository_runs) | **GET** /repositories/{repository}/actions/runs | list runs
-*ActionsApi* | [**list_run_hooks**](docs/ActionsApi.md#list_run_hooks) | **GET** /repositories/{repository}/actions/runs/{run_id}/hooks | list run hooks
+*ActionsApi* | [**get_run**](docs/ActionsApi.md#get_run) | **GET** /repositories/{user}/{repository}/actions/runs/{run_id} | get a run
+*ActionsApi* | [**get_run_hook_output**](docs/ActionsApi.md#get_run_hook_output) | **GET** /repositories/{user}/{repository}/actions/runs/{run_id}/hooks/{hook_run_id}/output | get run hook output
+*ActionsApi* | [**list_repository_runs**](docs/ActionsApi.md#list_repository_runs) | **GET** /repositories/{user}/{repository}/actions/runs | list runs
+*ActionsApi* | [**list_run_hooks**](docs/ActionsApi.md#list_run_hooks) | **GET** /repositories/{user}/{repository}/actions/runs/{run_id}/hooks | list run hooks
 *AuthApi* | [**add_group_membership**](docs/AuthApi.md#add_group_membership) | **PUT** /auth/groups/{groupId}/members/{userId} | add group membership
 *AuthApi* | [**attach_policy_to_group**](docs/AuthApi.md#attach_policy_to_group) | **PUT** /auth/groups/{groupId}/policies/{policyId} | attach policy to group
 *AuthApi* | [**attach_policy_to_user**](docs/AuthApi.md#attach_policy_to_user) | **PUT** /auth/users/{userId}/policies/{policyId} | attach policy to user
@@ -159,111 +160,111 @@ Class | Method | HTTP request | Description
 *AuthApi* | [**login**](docs/AuthApi.md#login) | **POST** /auth/login | perform a login
 *AuthApi* | [**set_group_acl**](docs/AuthApi.md#set_group_acl) | **POST** /auth/groups/{groupId}/acl | set ACL of group
 *AuthApi* | [**update_policy**](docs/AuthApi.md#update_policy) | **PUT** /auth/policies/{policyId} | update policy
-*BranchesApi* | [**cherry_pick**](docs/BranchesApi.md#cherry_pick) | **POST** /repositories/{repository}/branches/{branch}/cherry-pick | Replay the changes from the given commit on the branch
-*BranchesApi* | [**create_branch**](docs/BranchesApi.md#create_branch) | **POST** /repositories/{repository}/branches | create branch
-*BranchesApi* | [**delete_branch**](docs/BranchesApi.md#delete_branch) | **DELETE** /repositories/{repository}/branches/{branch} | delete branch
-*BranchesApi* | [**diff_branch**](docs/BranchesApi.md#diff_branch) | **GET** /repositories/{repository}/branches/{branch}/diff | diff branch
-*BranchesApi* | [**get_branch**](docs/BranchesApi.md#get_branch) | **GET** /repositories/{repository}/branches/{branch} | get branch
-*BranchesApi* | [**list_branches**](docs/BranchesApi.md#list_branches) | **GET** /repositories/{repository}/branches | list branches
-*BranchesApi* | [**reset_branch**](docs/BranchesApi.md#reset_branch) | **PUT** /repositories/{repository}/branches/{branch} | reset branch
-*BranchesApi* | [**revert_branch**](docs/BranchesApi.md#revert_branch) | **POST** /repositories/{repository}/branches/{branch}/revert | revert
-*CommitsApi* | [**commit**](docs/CommitsApi.md#commit) | **POST** /repositories/{repository}/branches/{branch}/commits | create commit
-*CommitsApi* | [**get_commit**](docs/CommitsApi.md#get_commit) | **GET** /repositories/{repository}/commits/{commitId} | get commit
+*BranchesApi* | [**cherry_pick**](docs/BranchesApi.md#cherry_pick) | **POST** /repositories/{user}/{repository}/branches/{branch}/cherry-pick | Replay the changes from the given commit on the branch
+*BranchesApi* | [**create_branch**](docs/BranchesApi.md#create_branch) | **POST** /repositories/{user}/{repository}/branches | create branch
+*BranchesApi* | [**delete_branch**](docs/BranchesApi.md#delete_branch) | **DELETE** /repositories/{user}/{repository}/branches/{branch} | delete branch
+*BranchesApi* | [**diff_branch**](docs/BranchesApi.md#diff_branch) | **GET** /repositories/{user}/{repository}/branches/{branch}/diff | diff branch
+*BranchesApi* | [**get_branch**](docs/BranchesApi.md#get_branch) | **GET** /repositories/{user}/{repository}/branches/{branch} | get branch
+*BranchesApi* | [**list_branches**](docs/BranchesApi.md#list_branches) | **GET** /repositories/{user}/{repository}/branches | list branches
+*BranchesApi* | [**reset_branch**](docs/BranchesApi.md#reset_branch) | **PUT** /repositories/{user}/{repository}/branches/{branch} | reset branch
+*BranchesApi* | [**revert_branch**](docs/BranchesApi.md#revert_branch) | **POST** /repositories/{user}/{repository}/branches/{branch}/revert | revert
+*CommitsApi* | [**commit**](docs/CommitsApi.md#commit) | **POST** /repositories/{user}/{repository}/branches/{branch}/commits | create commit
+*CommitsApi* | [**get_commit**](docs/CommitsApi.md#get_commit) | **GET** /repositories/{user}/{repository}/commits/{commitId} | get commit
 *ConfigApi* | [**get_config**](docs/ConfigApi.md#get_config) | **GET** /config | 
-*ExperimentalApi* | [**abort_presign_multipart_upload**](docs/ExperimentalApi.md#abort_presign_multipart_upload) | **DELETE** /repositories/{repository}/branches/{branch}/staging/pmpu/{uploadId} | Abort a presign multipart upload
-*ExperimentalApi* | [**complete_presign_multipart_upload**](docs/ExperimentalApi.md#complete_presign_multipart_upload) | **PUT** /repositories/{repository}/branches/{branch}/staging/pmpu/{uploadId} | Complete a presign multipart upload request
-*ExperimentalApi* | [**create_presign_multipart_upload**](docs/ExperimentalApi.md#create_presign_multipart_upload) | **POST** /repositories/{repository}/branches/{branch}/staging/pmpu | Initiate a multipart upload
-*ExperimentalApi* | [**create_pull_request**](docs/ExperimentalApi.md#create_pull_request) | **POST** /repositories/{repository}/pulls | create pull request
+*ExperimentalApi* | [**abort_presign_multipart_upload**](docs/ExperimentalApi.md#abort_presign_multipart_upload) | **DELETE** /repositories/{user}/{repository}/branches/{branch}/staging/pmpu/{uploadId} | Abort a presign multipart upload
+*ExperimentalApi* | [**complete_presign_multipart_upload**](docs/ExperimentalApi.md#complete_presign_multipart_upload) | **PUT** /repositories/{user}/{repository}/branches/{branch}/staging/pmpu/{uploadId} | Complete a presign multipart upload request
+*ExperimentalApi* | [**create_presign_multipart_upload**](docs/ExperimentalApi.md#create_presign_multipart_upload) | **POST** /repositories/{user}/{repository}/branches/{branch}/staging/pmpu | Initiate a multipart upload
+*ExperimentalApi* | [**create_pull_request**](docs/ExperimentalApi.md#create_pull_request) | **POST** /repositories/{user}/{repository}/pulls | create pull request
 *ExperimentalApi* | [**create_user_external_principal**](docs/ExperimentalApi.md#create_user_external_principal) | **POST** /auth/users/{userId}/external/principals | attach external principal to user
 *ExperimentalApi* | [**delete_user_external_principal**](docs/ExperimentalApi.md#delete_user_external_principal) | **DELETE** /auth/users/{userId}/external/principals | delete external principal from user
 *ExperimentalApi* | [**external_principal_login**](docs/ExperimentalApi.md#external_principal_login) | **POST** /auth/external/principal/login | perform a login using an external authenticator
 *ExperimentalApi* | [**get_external_principal**](docs/ExperimentalApi.md#get_external_principal) | **GET** /auth/external/principals | describe external principal by id
-*ExperimentalApi* | [**get_pull_request**](docs/ExperimentalApi.md#get_pull_request) | **GET** /repositories/{repository}/pulls/{pull_request} | get pull request
-*ExperimentalApi* | [**hard_reset_branch**](docs/ExperimentalApi.md#hard_reset_branch) | **PUT** /repositories/{repository}/branches/{branch}/hard_reset | hard reset branch
-*ExperimentalApi* | [**list_pull_requests**](docs/ExperimentalApi.md#list_pull_requests) | **GET** /repositories/{repository}/pulls | list pull requests
+*ExperimentalApi* | [**get_pull_request**](docs/ExperimentalApi.md#get_pull_request) | **GET** /repositories/{user}/{repository}/pulls/{pull_request} | get pull request
+*ExperimentalApi* | [**hard_reset_branch**](docs/ExperimentalApi.md#hard_reset_branch) | **PUT** /repositories/{user}/{repository}/branches/{branch}/hard_reset | hard reset branch
+*ExperimentalApi* | [**list_pull_requests**](docs/ExperimentalApi.md#list_pull_requests) | **GET** /repositories/{user}/{repository}/pulls | list pull requests
 *ExperimentalApi* | [**list_user_external_principals**](docs/ExperimentalApi.md#list_user_external_principals) | **GET** /auth/users/{userId}/external/principals/ls | list user external policies attached to a user
-*ExperimentalApi* | [**merge_pull_request**](docs/ExperimentalApi.md#merge_pull_request) | **PUT** /repositories/{repository}/pulls/{pull_request}/merge | merge pull request
+*ExperimentalApi* | [**merge_pull_request**](docs/ExperimentalApi.md#merge_pull_request) | **PUT** /repositories/{user}/{repository}/pulls/{pull_request}/merge | merge pull request
 *ExperimentalApi* | [**sts_login**](docs/ExperimentalApi.md#sts_login) | **POST** /sts/login | perform a login with STS
-*ExperimentalApi* | [**update_object_user_metadata**](docs/ExperimentalApi.md#update_object_user_metadata) | **PUT** /repositories/{repository}/branches/{branch}/objects/stat/user_metadata | rewrite (all) object metadata
-*ExperimentalApi* | [**update_pull_request**](docs/ExperimentalApi.md#update_pull_request) | **PATCH** /repositories/{repository}/pulls/{pull_request} | update pull request
+*ExperimentalApi* | [**update_object_user_metadata**](docs/ExperimentalApi.md#update_object_user_metadata) | **PUT** /repositories/{user}/{repository}/branches/{branch}/objects/stat/user_metadata | rewrite (all) object metadata
+*ExperimentalApi* | [**update_pull_request**](docs/ExperimentalApi.md#update_pull_request) | **PATCH** /repositories/{user}/{repository}/pulls/{pull_request} | update pull request
 *ExternalApi* | [**create_user_external_principal**](docs/ExternalApi.md#create_user_external_principal) | **POST** /auth/users/{userId}/external/principals | attach external principal to user
 *ExternalApi* | [**delete_user_external_principal**](docs/ExternalApi.md#delete_user_external_principal) | **DELETE** /auth/users/{userId}/external/principals | delete external principal from user
 *ExternalApi* | [**external_principal_login**](docs/ExternalApi.md#external_principal_login) | **POST** /auth/external/principal/login | perform a login using an external authenticator
 *ExternalApi* | [**get_external_principal**](docs/ExternalApi.md#get_external_principal) | **GET** /auth/external/principals | describe external principal by id
 *ExternalApi* | [**list_user_external_principals**](docs/ExternalApi.md#list_user_external_principals) | **GET** /auth/users/{userId}/external/principals/ls | list user external policies attached to a user
 *HealthCheckApi* | [**health_check**](docs/HealthCheckApi.md#health_check) | **GET** /healthcheck | 
-*ImportApi* | [**import_cancel**](docs/ImportApi.md#import_cancel) | **DELETE** /repositories/{repository}/branches/{branch}/import | cancel ongoing import
-*ImportApi* | [**import_start**](docs/ImportApi.md#import_start) | **POST** /repositories/{repository}/branches/{branch}/import | import data from object store
-*ImportApi* | [**import_status**](docs/ImportApi.md#import_status) | **GET** /repositories/{repository}/branches/{branch}/import | get import status
-*InternalApi* | [**create_branch_protection_rule_preflight**](docs/InternalApi.md#create_branch_protection_rule_preflight) | **GET** /repositories/{repository}/branch_protection/set_allowed | 
-*InternalApi* | [**create_commit_record**](docs/InternalApi.md#create_commit_record) | **POST** /repositories/{repository}/commits | create commit record
-*InternalApi* | [**create_symlink_file**](docs/InternalApi.md#create_symlink_file) | **POST** /repositories/{repository}/refs/{branch}/symlink | creates symlink files corresponding to the given directory
-*InternalApi* | [**delete_repository_metadata**](docs/InternalApi.md#delete_repository_metadata) | **DELETE** /repositories/{repository}/metadata | delete repository metadata
-*InternalApi* | [**dump_refs**](docs/InternalApi.md#dump_refs) | **PUT** /repositories/{repository}/refs/dump | Dump repository refs (tags, commits, branches) to object store Deprecated: a new API will introduce long running operations 
+*ImportApi* | [**import_cancel**](docs/ImportApi.md#import_cancel) | **DELETE** /repositories/{user}/{repository}/branches/{branch}/import | cancel ongoing import
+*ImportApi* | [**import_start**](docs/ImportApi.md#import_start) | **POST** /repositories/{user}/{repository}/branches/{branch}/import | import data from object store
+*ImportApi* | [**import_status**](docs/ImportApi.md#import_status) | **GET** /repositories/{user}/{repository}/branches/{branch}/import | get import status
+*InternalApi* | [**create_branch_protection_rule_preflight**](docs/InternalApi.md#create_branch_protection_rule_preflight) | **GET** /repositories/{user}/{repository}/branch_protection/set_allowed | 
+*InternalApi* | [**create_commit_record**](docs/InternalApi.md#create_commit_record) | **POST** /repositories/{user}/{repository}/commits | create commit record
+*InternalApi* | [**create_symlink_file**](docs/InternalApi.md#create_symlink_file) | **POST** /repositories/{user}/{repository}/refs/{branch}/symlink | creates symlink files corresponding to the given directory
+*InternalApi* | [**delete_repository_metadata**](docs/InternalApi.md#delete_repository_metadata) | **DELETE** /repositories/{user}/{repository}/metadata | delete repository metadata
+*InternalApi* | [**dump_refs**](docs/InternalApi.md#dump_refs) | **PUT** /repositories/{user}/{repository}/refs/dump | Dump repository refs (tags, commits, branches) to object store Deprecated: a new API will introduce long running operations 
 *InternalApi* | [**get_auth_capabilities**](docs/InternalApi.md#get_auth_capabilities) | **GET** /auth/capabilities | list authentication capabilities supported
 *InternalApi* | [**get_garbage_collection_config**](docs/InternalApi.md#get_garbage_collection_config) | **GET** /config/garbage-collection | 
 *InternalApi* | [**get_hub_version**](docs/InternalApi.md#get_hub_version) | **GET** /config/version | 
-*InternalApi* | [**get_metadata_object**](docs/InternalApi.md#get_metadata_object) | **GET** /repositories/{repository}/metadata/object/{type}/{object_id} | return a Surogate Hub metadata object by ID
+*InternalApi* | [**get_metadata_object**](docs/InternalApi.md#get_metadata_object) | **GET** /repositories/{user}/{repository}/metadata/object/{type}/{object_id} | return a Surogate Hub metadata object by ID
 *InternalApi* | [**get_setup_state**](docs/InternalApi.md#get_setup_state) | **GET** /setup_sghub | check if the Surogate Hub installation is already set up
 *InternalApi* | [**get_storage_config**](docs/InternalApi.md#get_storage_config) | **GET** /config/storage | 
 *InternalApi* | [**get_usage_report_summary**](docs/InternalApi.md#get_usage_report_summary) | **GET** /usage-report/summary | get usage report summary
-*InternalApi* | [**internal_create_branch_protection_rule**](docs/InternalApi.md#internal_create_branch_protection_rule) | **POST** /repositories/{repository}/branch_protection | 
-*InternalApi* | [**internal_delete_branch_protection_rule**](docs/InternalApi.md#internal_delete_branch_protection_rule) | **DELETE** /repositories/{repository}/branch_protection | 
-*InternalApi* | [**internal_delete_garbage_collection_rules**](docs/InternalApi.md#internal_delete_garbage_collection_rules) | **DELETE** /repositories/{repository}/gc/rules | 
-*InternalApi* | [**internal_get_branch_protection_rules**](docs/InternalApi.md#internal_get_branch_protection_rules) | **GET** /repositories/{repository}/branch_protection | get branch protection rules
-*InternalApi* | [**internal_get_garbage_collection_rules**](docs/InternalApi.md#internal_get_garbage_collection_rules) | **GET** /repositories/{repository}/gc/rules | 
-*InternalApi* | [**internal_set_garbage_collection_rules**](docs/InternalApi.md#internal_set_garbage_collection_rules) | **POST** /repositories/{repository}/gc/rules | 
+*InternalApi* | [**internal_create_branch_protection_rule**](docs/InternalApi.md#internal_create_branch_protection_rule) | **POST** /repositories/{user}/{repository}/branch_protection | 
+*InternalApi* | [**internal_delete_branch_protection_rule**](docs/InternalApi.md#internal_delete_branch_protection_rule) | **DELETE** /repositories/{user}/{repository}/branch_protection | 
+*InternalApi* | [**internal_delete_garbage_collection_rules**](docs/InternalApi.md#internal_delete_garbage_collection_rules) | **DELETE** /repositories/{user}/{repository}/gc/rules | 
+*InternalApi* | [**internal_get_branch_protection_rules**](docs/InternalApi.md#internal_get_branch_protection_rules) | **GET** /repositories/{user}/{repository}/branch_protection | get branch protection rules
+*InternalApi* | [**internal_get_garbage_collection_rules**](docs/InternalApi.md#internal_get_garbage_collection_rules) | **GET** /repositories/{user}/{repository}/gc/rules | 
+*InternalApi* | [**internal_set_garbage_collection_rules**](docs/InternalApi.md#internal_set_garbage_collection_rules) | **POST** /repositories/{user}/{repository}/gc/rules | 
 *InternalApi* | [**post_stats_events**](docs/InternalApi.md#post_stats_events) | **POST** /statistics | post stats events, this endpoint is meant for internal use only
-*InternalApi* | [**prepare_garbage_collection_commits**](docs/InternalApi.md#prepare_garbage_collection_commits) | **POST** /repositories/{repository}/gc/prepare_commits | save lists of active commits for garbage collection
-*InternalApi* | [**prepare_garbage_collection_uncommitted**](docs/InternalApi.md#prepare_garbage_collection_uncommitted) | **POST** /repositories/{repository}/gc/prepare_uncommited | save repository uncommitted metadata for garbage collection
-*InternalApi* | [**restore_refs**](docs/InternalApi.md#restore_refs) | **PUT** /repositories/{repository}/refs/restore | Restore repository refs (tags, commits, branches) from object store. Deprecated: a new API will introduce long running operations 
-*InternalApi* | [**set_garbage_collection_rules_preflight**](docs/InternalApi.md#set_garbage_collection_rules_preflight) | **GET** /repositories/{repository}/gc/rules/set_allowed | 
-*InternalApi* | [**set_repository_metadata**](docs/InternalApi.md#set_repository_metadata) | **POST** /repositories/{repository}/metadata | set repository metadata
+*InternalApi* | [**prepare_garbage_collection_commits**](docs/InternalApi.md#prepare_garbage_collection_commits) | **POST** /repositories/{user}/{repository}/gc/prepare_commits | save lists of active commits for garbage collection
+*InternalApi* | [**prepare_garbage_collection_uncommitted**](docs/InternalApi.md#prepare_garbage_collection_uncommitted) | **POST** /repositories/{user}/{repository}/gc/prepare_uncommited | save repository uncommitted metadata for garbage collection
+*InternalApi* | [**restore_refs**](docs/InternalApi.md#restore_refs) | **PUT** /repositories/{user}/{repository}/refs/restore | Restore repository refs (tags, commits, branches) from object store. Deprecated: a new API will introduce long running operations 
+*InternalApi* | [**set_garbage_collection_rules_preflight**](docs/InternalApi.md#set_garbage_collection_rules_preflight) | **GET** /repositories/{user}/{repository}/gc/rules/set_allowed | 
+*InternalApi* | [**set_repository_metadata**](docs/InternalApi.md#set_repository_metadata) | **POST** /repositories/{user}/{repository}/metadata | set repository metadata
 *InternalApi* | [**setup**](docs/InternalApi.md#setup) | **POST** /setup_sghub | setup Surogate Hub and create a first user
 *InternalApi* | [**setup_comm_prefs**](docs/InternalApi.md#setup_comm_prefs) | **POST** /setup_comm_prefs | setup communications preferences
-*InternalApi* | [**stage_object**](docs/InternalApi.md#stage_object) | **PUT** /repositories/{repository}/branches/{branch}/objects | stage an object&#39;s metadata for the given branch
-*InternalApi* | [**upload_object_preflight**](docs/InternalApi.md#upload_object_preflight) | **GET** /repositories/{repository}/branches/{branch}/objects/stage_allowed | 
-*MetadataApi* | [**get_meta_range**](docs/MetadataApi.md#get_meta_range) | **GET** /repositories/{repository}/metadata/meta_range/{meta_range} | return URI to a meta-range file
-*MetadataApi* | [**get_range**](docs/MetadataApi.md#get_range) | **GET** /repositories/{repository}/metadata/range/{range} | return URI to a range file
-*ObjectsApi* | [**copy_object**](docs/ObjectsApi.md#copy_object) | **POST** /repositories/{repository}/branches/{branch}/objects/copy | create a copy of an object
-*ObjectsApi* | [**delete_object**](docs/ObjectsApi.md#delete_object) | **DELETE** /repositories/{repository}/branches/{branch}/objects | delete object. Missing objects will not return a NotFound error.
-*ObjectsApi* | [**delete_objects**](docs/ObjectsApi.md#delete_objects) | **POST** /repositories/{repository}/branches/{branch}/objects/delete | delete objects. Missing objects will not return a NotFound error.
-*ObjectsApi* | [**get_object**](docs/ObjectsApi.md#get_object) | **GET** /repositories/{repository}/refs/{ref}/objects | get object content
-*ObjectsApi* | [**get_underlying_properties**](docs/ObjectsApi.md#get_underlying_properties) | **GET** /repositories/{repository}/refs/{ref}/objects/underlyingProperties | get object properties on underlying storage
-*ObjectsApi* | [**head_object**](docs/ObjectsApi.md#head_object) | **HEAD** /repositories/{repository}/refs/{ref}/objects | check if object exists
-*ObjectsApi* | [**list_objects**](docs/ObjectsApi.md#list_objects) | **GET** /repositories/{repository}/refs/{ref}/objects/ls | list objects under a given prefix
-*ObjectsApi* | [**stat_object**](docs/ObjectsApi.md#stat_object) | **GET** /repositories/{repository}/refs/{ref}/objects/stat | get object metadata
-*ObjectsApi* | [**update_object_user_metadata**](docs/ObjectsApi.md#update_object_user_metadata) | **PUT** /repositories/{repository}/branches/{branch}/objects/stat/user_metadata | rewrite (all) object metadata
-*ObjectsApi* | [**upload_object**](docs/ObjectsApi.md#upload_object) | **POST** /repositories/{repository}/branches/{branch}/objects | 
-*PullsApi* | [**create_pull_request**](docs/PullsApi.md#create_pull_request) | **POST** /repositories/{repository}/pulls | create pull request
-*PullsApi* | [**get_pull_request**](docs/PullsApi.md#get_pull_request) | **GET** /repositories/{repository}/pulls/{pull_request} | get pull request
-*PullsApi* | [**list_pull_requests**](docs/PullsApi.md#list_pull_requests) | **GET** /repositories/{repository}/pulls | list pull requests
-*PullsApi* | [**merge_pull_request**](docs/PullsApi.md#merge_pull_request) | **PUT** /repositories/{repository}/pulls/{pull_request}/merge | merge pull request
-*PullsApi* | [**update_pull_request**](docs/PullsApi.md#update_pull_request) | **PATCH** /repositories/{repository}/pulls/{pull_request} | update pull request
-*RefsApi* | [**diff_refs**](docs/RefsApi.md#diff_refs) | **GET** /repositories/{repository}/refs/{leftRef}/diff/{rightRef} | diff references
-*RefsApi* | [**find_merge_base**](docs/RefsApi.md#find_merge_base) | **GET** /repositories/{repository}/refs/{sourceRef}/merge/{destinationBranch} | find the merge base for 2 references
-*RefsApi* | [**log_commits**](docs/RefsApi.md#log_commits) | **GET** /repositories/{repository}/refs/{ref}/commits | get commit log from ref. If both objects and prefixes are empty, return all commits.
-*RefsApi* | [**merge_into_branch**](docs/RefsApi.md#merge_into_branch) | **POST** /repositories/{repository}/refs/{sourceRef}/merge/{destinationBranch} | merge references
+*InternalApi* | [**stage_object**](docs/InternalApi.md#stage_object) | **PUT** /repositories/{user}/{repository}/branches/{branch}/objects | stage an object&#39;s metadata for the given branch
+*InternalApi* | [**upload_object_preflight**](docs/InternalApi.md#upload_object_preflight) | **GET** /repositories/{user}/{repository}/branches/{branch}/objects/stage_allowed | 
+*MetadataApi* | [**get_meta_range**](docs/MetadataApi.md#get_meta_range) | **GET** /repositories/{user}/{repository}/metadata/meta_range/{meta_range} | return URI to a meta-range file
+*MetadataApi* | [**get_range**](docs/MetadataApi.md#get_range) | **GET** /repositories/{user}/{repository}/metadata/range/{range} | return URI to a range file
+*ObjectsApi* | [**copy_object**](docs/ObjectsApi.md#copy_object) | **POST** /repositories/{user}/{repository}/branches/{branch}/objects/copy | create a copy of an object
+*ObjectsApi* | [**delete_object**](docs/ObjectsApi.md#delete_object) | **DELETE** /repositories/{user}/{repository}/branches/{branch}/objects | delete object. Missing objects will not return a NotFound error.
+*ObjectsApi* | [**delete_objects**](docs/ObjectsApi.md#delete_objects) | **POST** /repositories/{user}/{repository}/branches/{branch}/objects/delete | delete objects. Missing objects will not return a NotFound error.
+*ObjectsApi* | [**get_object**](docs/ObjectsApi.md#get_object) | **GET** /repositories/{user}/{repository}/refs/{ref}/objects | get object content
+*ObjectsApi* | [**get_underlying_properties**](docs/ObjectsApi.md#get_underlying_properties) | **GET** /repositories/{user}/{repository}/refs/{ref}/objects/underlyingProperties | get object properties on underlying storage
+*ObjectsApi* | [**head_object**](docs/ObjectsApi.md#head_object) | **HEAD** /repositories/{user}/{repository}/refs/{ref}/objects | check if object exists
+*ObjectsApi* | [**list_objects**](docs/ObjectsApi.md#list_objects) | **GET** /repositories/{user}/{repository}/refs/{ref}/objects/ls | list objects under a given prefix
+*ObjectsApi* | [**stat_object**](docs/ObjectsApi.md#stat_object) | **GET** /repositories/{user}/{repository}/refs/{ref}/objects/stat | get object metadata
+*ObjectsApi* | [**update_object_user_metadata**](docs/ObjectsApi.md#update_object_user_metadata) | **PUT** /repositories/{user}/{repository}/branches/{branch}/objects/stat/user_metadata | rewrite (all) object metadata
+*ObjectsApi* | [**upload_object**](docs/ObjectsApi.md#upload_object) | **POST** /repositories/{user}/{repository}/branches/{branch}/objects | 
+*PullsApi* | [**create_pull_request**](docs/PullsApi.md#create_pull_request) | **POST** /repositories/{user}/{repository}/pulls | create pull request
+*PullsApi* | [**get_pull_request**](docs/PullsApi.md#get_pull_request) | **GET** /repositories/{user}/{repository}/pulls/{pull_request} | get pull request
+*PullsApi* | [**list_pull_requests**](docs/PullsApi.md#list_pull_requests) | **GET** /repositories/{user}/{repository}/pulls | list pull requests
+*PullsApi* | [**merge_pull_request**](docs/PullsApi.md#merge_pull_request) | **PUT** /repositories/{user}/{repository}/pulls/{pull_request}/merge | merge pull request
+*PullsApi* | [**update_pull_request**](docs/PullsApi.md#update_pull_request) | **PATCH** /repositories/{user}/{repository}/pulls/{pull_request} | update pull request
+*RefsApi* | [**diff_refs**](docs/RefsApi.md#diff_refs) | **GET** /repositories/{user}/{repository}/refs/{leftRef}/diff/{rightRef} | diff references
+*RefsApi* | [**find_merge_base**](docs/RefsApi.md#find_merge_base) | **GET** /repositories/{user}/{repository}/refs/{sourceRef}/merge/{destinationBranch} | find the merge base for 2 references
+*RefsApi* | [**log_commits**](docs/RefsApi.md#log_commits) | **GET** /repositories/{user}/{repository}/refs/{ref}/commits | get commit log from ref. If both objects and prefixes are empty, return all commits.
+*RefsApi* | [**merge_into_branch**](docs/RefsApi.md#merge_into_branch) | **POST** /repositories/{user}/{repository}/refs/{sourceRef}/merge/{destinationBranch} | merge references
 *RepositoriesApi* | [**create_repository**](docs/RepositoriesApi.md#create_repository) | **POST** /repositories | create repository
-*RepositoriesApi* | [**delete_gc_rules**](docs/RepositoriesApi.md#delete_gc_rules) | **DELETE** /repositories/{repository}/settings/gc_rules | 
-*RepositoriesApi* | [**delete_repository**](docs/RepositoriesApi.md#delete_repository) | **DELETE** /repositories/{repository} | delete repository
-*RepositoriesApi* | [**dump_status**](docs/RepositoriesApi.md#dump_status) | **GET** /repositories/{repository}/dump | Status of a repository dump task
-*RepositoriesApi* | [**dump_submit**](docs/RepositoriesApi.md#dump_submit) | **POST** /repositories/{repository}/dump | Backup the repository metadata (tags, commits, branches) and save the backup to the object store.
-*RepositoriesApi* | [**get_branch_protection_rules**](docs/RepositoriesApi.md#get_branch_protection_rules) | **GET** /repositories/{repository}/settings/branch_protection | get branch protection rules
-*RepositoriesApi* | [**get_gc_rules**](docs/RepositoriesApi.md#get_gc_rules) | **GET** /repositories/{repository}/settings/gc_rules | get repository GC rules
-*RepositoriesApi* | [**get_repository**](docs/RepositoriesApi.md#get_repository) | **GET** /repositories/{repository} | get repository
-*RepositoriesApi* | [**get_repository_metadata**](docs/RepositoriesApi.md#get_repository_metadata) | **GET** /repositories/{repository}/metadata | get repository metadata
+*RepositoriesApi* | [**delete_gc_rules**](docs/RepositoriesApi.md#delete_gc_rules) | **DELETE** /repositories/{user}/{repository}/settings/gc_rules | 
+*RepositoriesApi* | [**delete_repository**](docs/RepositoriesApi.md#delete_repository) | **DELETE** /repositories/{user}/{repository} | delete repository
+*RepositoriesApi* | [**dump_status**](docs/RepositoriesApi.md#dump_status) | **GET** /repositories/{user}/{repository}/dump | Status of a repository dump task
+*RepositoriesApi* | [**dump_submit**](docs/RepositoriesApi.md#dump_submit) | **POST** /repositories/{user}/{repository}/dump | Backup the repository metadata (tags, commits, branches) and save the backup to the object store.
+*RepositoriesApi* | [**get_branch_protection_rules**](docs/RepositoriesApi.md#get_branch_protection_rules) | **GET** /repositories/{user}/{repository}/settings/branch_protection | get branch protection rules
+*RepositoriesApi* | [**get_gc_rules**](docs/RepositoriesApi.md#get_gc_rules) | **GET** /repositories/{user}/{repository}/settings/gc_rules | get repository GC rules
+*RepositoriesApi* | [**get_repository**](docs/RepositoriesApi.md#get_repository) | **GET** /repositories/{user}/{repository} | get repository
+*RepositoriesApi* | [**get_repository_metadata**](docs/RepositoriesApi.md#get_repository_metadata) | **GET** /repositories/{user}/{repository}/metadata | get repository metadata
 *RepositoriesApi* | [**list_repositories**](docs/RepositoriesApi.md#list_repositories) | **GET** /repositories | list repositories
-*RepositoriesApi* | [**restore_status**](docs/RepositoriesApi.md#restore_status) | **GET** /repositories/{repository}/restore | Status of a restore request
-*RepositoriesApi* | [**restore_submit**](docs/RepositoriesApi.md#restore_submit) | **POST** /repositories/{repository}/restore | Restore repository from a dump in the object store
-*RepositoriesApi* | [**set_branch_protection_rules**](docs/RepositoriesApi.md#set_branch_protection_rules) | **PUT** /repositories/{repository}/settings/branch_protection | 
-*RepositoriesApi* | [**set_gc_rules**](docs/RepositoriesApi.md#set_gc_rules) | **PUT** /repositories/{repository}/settings/gc_rules | 
-*StagingApi* | [**get_physical_address**](docs/StagingApi.md#get_physical_address) | **GET** /repositories/{repository}/branches/{branch}/staging/backing | generate an address to which the client can upload an object
-*StagingApi* | [**link_physical_address**](docs/StagingApi.md#link_physical_address) | **PUT** /repositories/{repository}/branches/{branch}/staging/backing | associate staging on this physical address with a path
-*TagsApi* | [**create_tag**](docs/TagsApi.md#create_tag) | **POST** /repositories/{repository}/tags | create tag
-*TagsApi* | [**delete_tag**](docs/TagsApi.md#delete_tag) | **DELETE** /repositories/{repository}/tags/{tag} | delete tag
-*TagsApi* | [**get_tag**](docs/TagsApi.md#get_tag) | **GET** /repositories/{repository}/tags/{tag} | get tag
-*TagsApi* | [**list_tags**](docs/TagsApi.md#list_tags) | **GET** /repositories/{repository}/tags | list tags
+*RepositoriesApi* | [**restore_status**](docs/RepositoriesApi.md#restore_status) | **GET** /repositories/{user}/{repository}/restore | Status of a restore request
+*RepositoriesApi* | [**restore_submit**](docs/RepositoriesApi.md#restore_submit) | **POST** /repositories/{user}/{repository}/restore | Restore repository from a dump in the object store
+*RepositoriesApi* | [**set_branch_protection_rules**](docs/RepositoriesApi.md#set_branch_protection_rules) | **PUT** /repositories/{user}/{repository}/settings/branch_protection | 
+*RepositoriesApi* | [**set_gc_rules**](docs/RepositoriesApi.md#set_gc_rules) | **PUT** /repositories/{user}/{repository}/settings/gc_rules | 
+*StagingApi* | [**get_physical_address**](docs/StagingApi.md#get_physical_address) | **GET** /repositories/{user}/{repository}/branches/{branch}/staging/backing | generate an address to which the client can upload an object
+*StagingApi* | [**link_physical_address**](docs/StagingApi.md#link_physical_address) | **PUT** /repositories/{user}/{repository}/branches/{branch}/staging/backing | associate staging on this physical address with a path
+*TagsApi* | [**create_tag**](docs/TagsApi.md#create_tag) | **POST** /repositories/{user}/{repository}/tags | create tag
+*TagsApi* | [**delete_tag**](docs/TagsApi.md#delete_tag) | **DELETE** /repositories/{user}/{repository}/tags/{tag} | delete tag
+*TagsApi* | [**get_tag**](docs/TagsApi.md#get_tag) | **GET** /repositories/{user}/{repository}/tags/{tag} | get tag
+*TagsApi* | [**list_tags**](docs/TagsApi.md#list_tags) | **GET** /repositories/{user}/{repository}/tags | list tags
 
 
 ## Documentation For Models
@@ -326,6 +327,7 @@ Class | Method | HTTP request | Description
  - [ObjectStageCreation](docs/ObjectStageCreation.md)
  - [ObjectStats](docs/ObjectStats.md)
  - [ObjectStatsList](docs/ObjectStatsList.md)
+ - [ObjectUploadMode](docs/ObjectUploadMode.md)
  - [Pagination](docs/Pagination.md)
  - [PathList](docs/PathList.md)
  - [Policy](docs/Policy.md)

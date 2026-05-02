@@ -72,6 +72,7 @@ from surogate_hub_sdk.models.object_error_list import ObjectErrorList
 from surogate_hub_sdk.models.object_stage_creation import ObjectStageCreation
 from surogate_hub_sdk.models.object_stats import ObjectStats
 from surogate_hub_sdk.models.object_stats_list import ObjectStatsList
+from surogate_hub_sdk.models.object_upload_mode import ObjectUploadMode
 from surogate_hub_sdk.models.pagination import Pagination
 from surogate_hub_sdk.models.path_list import PathList
 from surogate_hub_sdk.models.policy import Policy

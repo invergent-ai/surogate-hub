@@ -5,19 +5,19 @@ All URIs are relative to */api/v1*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**create_repository**](RepositoriesApi.md#create_repository) | **POST** /repositories | create repository
-[**delete_gc_rules**](RepositoriesApi.md#delete_gc_rules) | **DELETE** /repositories/{repository}/settings/gc_rules | 
-[**delete_repository**](RepositoriesApi.md#delete_repository) | **DELETE** /repositories/{repository} | delete repository
-[**dump_status**](RepositoriesApi.md#dump_status) | **GET** /repositories/{repository}/dump | Status of a repository dump task
-[**dump_submit**](RepositoriesApi.md#dump_submit) | **POST** /repositories/{repository}/dump | Backup the repository metadata (tags, commits, branches) and save the backup to the object store.
-[**get_branch_protection_rules**](RepositoriesApi.md#get_branch_protection_rules) | **GET** /repositories/{repository}/settings/branch_protection | get branch protection rules
-[**get_gc_rules**](RepositoriesApi.md#get_gc_rules) | **GET** /repositories/{repository}/settings/gc_rules | get repository GC rules
-[**get_repository**](RepositoriesApi.md#get_repository) | **GET** /repositories/{repository} | get repository
-[**get_repository_metadata**](RepositoriesApi.md#get_repository_metadata) | **GET** /repositories/{repository}/metadata | get repository metadata
+[**delete_gc_rules**](RepositoriesApi.md#delete_gc_rules) | **DELETE** /repositories/{user}/{repository}/settings/gc_rules | 
+[**delete_repository**](RepositoriesApi.md#delete_repository) | **DELETE** /repositories/{user}/{repository} | delete repository
+[**dump_status**](RepositoriesApi.md#dump_status) | **GET** /repositories/{user}/{repository}/dump | Status of a repository dump task
+[**dump_submit**](RepositoriesApi.md#dump_submit) | **POST** /repositories/{user}/{repository}/dump | Backup the repository metadata (tags, commits, branches) and save the backup to the object store.
+[**get_branch_protection_rules**](RepositoriesApi.md#get_branch_protection_rules) | **GET** /repositories/{user}/{repository}/settings/branch_protection | get branch protection rules
+[**get_gc_rules**](RepositoriesApi.md#get_gc_rules) | **GET** /repositories/{user}/{repository}/settings/gc_rules | get repository GC rules
+[**get_repository**](RepositoriesApi.md#get_repository) | **GET** /repositories/{user}/{repository} | get repository
+[**get_repository_metadata**](RepositoriesApi.md#get_repository_metadata) | **GET** /repositories/{user}/{repository}/metadata | get repository metadata
 [**list_repositories**](RepositoriesApi.md#list_repositories) | **GET** /repositories | list repositories
-[**restore_status**](RepositoriesApi.md#restore_status) | **GET** /repositories/{repository}/restore | Status of a restore request
-[**restore_submit**](RepositoriesApi.md#restore_submit) | **POST** /repositories/{repository}/restore | Restore repository from a dump in the object store
-[**set_branch_protection_rules**](RepositoriesApi.md#set_branch_protection_rules) | **PUT** /repositories/{repository}/settings/branch_protection | 
-[**set_gc_rules**](RepositoriesApi.md#set_gc_rules) | **PUT** /repositories/{repository}/settings/gc_rules | 
+[**restore_status**](RepositoriesApi.md#restore_status) | **GET** /repositories/{user}/{repository}/restore | Status of a restore request
+[**restore_submit**](RepositoriesApi.md#restore_submit) | **POST** /repositories/{user}/{repository}/restore | Restore repository from a dump in the object store
+[**set_branch_protection_rules**](RepositoriesApi.md#set_branch_protection_rules) | **PUT** /repositories/{user}/{repository}/settings/branch_protection | 
+[**set_gc_rules**](RepositoriesApi.md#set_gc_rules) | **PUT** /repositories/{user}/{repository}/settings/gc_rules | 
 
 
 # **create_repository**
@@ -133,7 +133,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **delete_gc_rules**
-> delete_gc_rules(repository)
+> delete_gc_rules(user, repository)
 
 ### Example
 
@@ -192,10 +192,11 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.RepositoriesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
 
     try:
-        api_instance.delete_gc_rules(repository)
+        api_instance.delete_gc_rules(user, repository)
     except Exception as e:
         print("Exception when calling RepositoriesApi->delete_gc_rules: %s\n" % e)
 ```
@@ -207,6 +208,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
 
 ### Return type
@@ -236,7 +238,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **delete_repository**
-> delete_repository(repository, force=force)
+> delete_repository(user, repository, force=force)
 
 delete repository
 
@@ -297,12 +299,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.RepositoriesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     force = False # bool | Bypass read-only protection and delete the repository (optional) (default to False)
 
     try:
         # delete repository
-        api_instance.delete_repository(repository, force=force)
+        api_instance.delete_repository(user, repository, force=force)
     except Exception as e:
         print("Exception when calling RepositoriesApi->delete_repository: %s\n" % e)
 ```
@@ -314,6 +317,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **force** | **bool**| Bypass read-only protection and delete the repository | [optional] [default to False]
 
@@ -343,7 +347,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **dump_status**
-> RepositoryDumpStatus dump_status(repository, task_id)
+> RepositoryDumpStatus dump_status(user, repository, task_id)
 
 Status of a repository dump task
 
@@ -405,12 +409,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.RepositoriesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     task_id = 'task_id_example' # str | 
 
     try:
         # Status of a repository dump task
-        api_response = api_instance.dump_status(repository, task_id)
+        api_response = api_instance.dump_status(user, repository, task_id)
         print("The response of RepositoriesApi->dump_status:\n")
         pprint(api_response)
     except Exception as e:
@@ -424,6 +429,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **task_id** | **str**|  | 
 
@@ -454,7 +460,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **dump_submit**
-> TaskInfo dump_submit(repository)
+> TaskInfo dump_submit(user, repository)
 
 Backup the repository metadata (tags, commits, branches) and save the backup to the object store.
 
@@ -516,11 +522,12 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.RepositoriesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
 
     try:
         # Backup the repository metadata (tags, commits, branches) and save the backup to the object store.
-        api_response = api_instance.dump_submit(repository)
+        api_response = api_instance.dump_submit(user, repository)
         print("The response of RepositoriesApi->dump_submit:\n")
         pprint(api_response)
     except Exception as e:
@@ -534,6 +541,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
 
 ### Return type
@@ -562,7 +570,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_branch_protection_rules**
-> List[BranchProtectionRule] get_branch_protection_rules(repository)
+> List[BranchProtectionRule] get_branch_protection_rules(user, repository)
 
 get branch protection rules
 
@@ -624,11 +632,12 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.RepositoriesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
 
     try:
         # get branch protection rules
-        api_response = api_instance.get_branch_protection_rules(repository)
+        api_response = api_instance.get_branch_protection_rules(user, repository)
         print("The response of RepositoriesApi->get_branch_protection_rules:\n")
         pprint(api_response)
     except Exception as e:
@@ -642,6 +651,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
 
 ### Return type
@@ -670,7 +680,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_gc_rules**
-> GarbageCollectionRules get_gc_rules(repository)
+> GarbageCollectionRules get_gc_rules(user, repository)
 
 get repository GC rules
 
@@ -732,11 +742,12 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.RepositoriesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
 
     try:
         # get repository GC rules
-        api_response = api_instance.get_gc_rules(repository)
+        api_response = api_instance.get_gc_rules(user, repository)
         print("The response of RepositoriesApi->get_gc_rules:\n")
         pprint(api_response)
     except Exception as e:
@@ -750,6 +761,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
 
 ### Return type
@@ -778,7 +790,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_repository**
-> Repository get_repository(repository)
+> Repository get_repository(user, repository)
 
 get repository
 
@@ -840,11 +852,12 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.RepositoriesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
 
     try:
         # get repository
-        api_response = api_instance.get_repository(repository)
+        api_response = api_instance.get_repository(user, repository)
         print("The response of RepositoriesApi->get_repository:\n")
         pprint(api_response)
     except Exception as e:
@@ -858,6 +871,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
 
 ### Return type
@@ -886,7 +900,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_repository_metadata**
-> Dict[str, str] get_repository_metadata(repository)
+> Dict[str, str] get_repository_metadata(user, repository)
 
 get repository metadata
 
@@ -947,11 +961,12 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.RepositoriesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
 
     try:
         # get repository metadata
-        api_response = api_instance.get_repository_metadata(repository)
+        api_response = api_instance.get_repository_metadata(user, repository)
         print("The response of RepositoriesApi->get_repository_metadata:\n")
         pprint(api_response)
     except Exception as e:
@@ -965,6 +980,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
 
 ### Return type
@@ -1106,7 +1122,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **restore_status**
-> RepositoryRestoreStatus restore_status(repository, task_id)
+> RepositoryRestoreStatus restore_status(user, repository, task_id)
 
 Status of a restore request
 
@@ -1168,12 +1184,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.RepositoriesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     task_id = 'task_id_example' # str | 
 
     try:
         # Status of a restore request
-        api_response = api_instance.restore_status(repository, task_id)
+        api_response = api_instance.restore_status(user, repository, task_id)
         print("The response of RepositoriesApi->restore_status:\n")
         pprint(api_response)
     except Exception as e:
@@ -1187,6 +1204,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **task_id** | **str**|  | 
 
@@ -1217,7 +1235,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **restore_submit**
-> TaskInfo restore_submit(repository, refs_restore)
+> TaskInfo restore_submit(user, repository, refs_restore)
 
 Restore repository from a dump in the object store
 
@@ -1280,12 +1298,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.RepositoriesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     refs_restore = surogate_hub_sdk.RefsRestore() # RefsRestore | 
 
     try:
         # Restore repository from a dump in the object store
-        api_response = api_instance.restore_submit(repository, refs_restore)
+        api_response = api_instance.restore_submit(user, repository, refs_restore)
         print("The response of RepositoriesApi->restore_submit:\n")
         pprint(api_response)
     except Exception as e:
@@ -1299,6 +1318,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **refs_restore** | [**RefsRestore**](RefsRestore.md)|  | 
 
@@ -1329,7 +1349,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **set_branch_protection_rules**
-> set_branch_protection_rules(repository, branch_protection_rule, if_match=if_match)
+> set_branch_protection_rules(user, repository, branch_protection_rule, if_match=if_match)
 
 ### Example
 
@@ -1389,12 +1409,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.RepositoriesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch_protection_rule = [surogate_hub_sdk.BranchProtectionRule()] # List[BranchProtectionRule] | 
     if_match = 'if_match_example' # str | if provided, the branch protection rules will be updated only if the current ETag match the provided value (optional)
 
     try:
-        api_instance.set_branch_protection_rules(repository, branch_protection_rule, if_match=if_match)
+        api_instance.set_branch_protection_rules(user, repository, branch_protection_rule, if_match=if_match)
     except Exception as e:
         print("Exception when calling RepositoriesApi->set_branch_protection_rules: %s\n" % e)
 ```
@@ -1406,6 +1427,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch_protection_rule** | [**List[BranchProtectionRule]**](BranchProtectionRule.md)|  | 
  **if_match** | **str**| if provided, the branch protection rules will be updated only if the current ETag match the provided value | [optional] 
@@ -1439,7 +1461,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **set_gc_rules**
-> set_gc_rules(repository, garbage_collection_rules)
+> set_gc_rules(user, repository, garbage_collection_rules)
 
 ### Example
 
@@ -1499,11 +1521,12 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.RepositoriesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     garbage_collection_rules = surogate_hub_sdk.GarbageCollectionRules() # GarbageCollectionRules | 
 
     try:
-        api_instance.set_gc_rules(repository, garbage_collection_rules)
+        api_instance.set_gc_rules(user, repository, garbage_collection_rules)
     except Exception as e:
         print("Exception when calling RepositoriesApi->set_gc_rules: %s\n" % e)
 ```
@@ -1515,6 +1538,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **garbage_collection_rules** | [**GarbageCollectionRules**](GarbageCollectionRules.md)|  | 
 

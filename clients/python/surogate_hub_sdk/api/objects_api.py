@@ -48,6 +48,7 @@ class ObjectsApi:
     @validate_call
     def copy_object(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: Annotated[StrictStr, Field(description="destination branch for the copy")],
         dest_path: Annotated[StrictStr, Field(description="destination path relative to the branch")],
@@ -68,6 +69,8 @@ class ObjectsApi:
         """create a copy of an object
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: destination branch for the copy (required)
@@ -99,6 +102,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._copy_object_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             dest_path=dest_path,
@@ -131,6 +135,7 @@ class ObjectsApi:
     @validate_call
     def copy_object_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: Annotated[StrictStr, Field(description="destination branch for the copy")],
         dest_path: Annotated[StrictStr, Field(description="destination path relative to the branch")],
@@ -151,6 +156,8 @@ class ObjectsApi:
         """create a copy of an object
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: destination branch for the copy (required)
@@ -182,6 +189,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._copy_object_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             dest_path=dest_path,
@@ -214,6 +222,7 @@ class ObjectsApi:
     @validate_call
     def copy_object_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: Annotated[StrictStr, Field(description="destination branch for the copy")],
         dest_path: Annotated[StrictStr, Field(description="destination path relative to the branch")],
@@ -234,6 +243,8 @@ class ObjectsApi:
         """create a copy of an object
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: destination branch for the copy (required)
@@ -265,6 +276,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._copy_object_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             dest_path=dest_path,
@@ -292,6 +304,7 @@ class ObjectsApi:
 
     def _copy_object_serialize(
         self,
+        user,
         repository,
         branch,
         dest_path,
@@ -317,6 +330,8 @@ class ObjectsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -366,7 +381,7 @@ class ObjectsApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/branches/{branch}/objects/copy',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/objects/copy',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -385,6 +400,7 @@ class ObjectsApi:
     @validate_call
     def delete_object(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -405,6 +421,8 @@ class ObjectsApi:
         """delete object. Missing objects will not return a NotFound error.
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -436,6 +454,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._delete_object_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -467,6 +486,7 @@ class ObjectsApi:
     @validate_call
     def delete_object_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -487,6 +507,8 @@ class ObjectsApi:
         """delete object. Missing objects will not return a NotFound error.
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -518,6 +540,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._delete_object_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -549,6 +572,7 @@ class ObjectsApi:
     @validate_call
     def delete_object_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -569,6 +593,8 @@ class ObjectsApi:
         """delete object. Missing objects will not return a NotFound error.
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -600,6 +626,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._delete_object_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -626,6 +653,7 @@ class ObjectsApi:
 
     def _delete_object_serialize(
         self,
+        user,
         repository,
         branch,
         path,
@@ -651,6 +679,8 @@ class ObjectsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -689,7 +719,7 @@ class ObjectsApi:
 
         return self.api_client.param_serialize(
             method='DELETE',
-            resource_path='/repositories/{repository}/branches/{branch}/objects',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/objects',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -708,6 +738,7 @@ class ObjectsApi:
     @validate_call
     def delete_objects(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path_list: PathList,
@@ -728,6 +759,8 @@ class ObjectsApi:
         """delete objects. Missing objects will not return a NotFound error.
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -759,6 +792,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._delete_objects_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path_list=path_list,
@@ -790,6 +824,7 @@ class ObjectsApi:
     @validate_call
     def delete_objects_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path_list: PathList,
@@ -810,6 +845,8 @@ class ObjectsApi:
         """delete objects. Missing objects will not return a NotFound error.
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -841,6 +878,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._delete_objects_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path_list=path_list,
@@ -872,6 +910,7 @@ class ObjectsApi:
     @validate_call
     def delete_objects_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path_list: PathList,
@@ -892,6 +931,8 @@ class ObjectsApi:
         """delete objects. Missing objects will not return a NotFound error.
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -923,6 +964,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._delete_objects_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path_list=path_list,
@@ -949,6 +991,7 @@ class ObjectsApi:
 
     def _delete_objects_serialize(
         self,
+        user,
         repository,
         branch,
         path_list,
@@ -974,6 +1017,8 @@ class ObjectsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -1023,7 +1068,7 @@ class ObjectsApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/branches/{branch}/objects/delete',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/objects/delete',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -1042,6 +1087,7 @@ class ObjectsApi:
     @validate_call
     def get_object(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         path: Annotated[StrictStr, Field(description="relative to the ref")],
@@ -1064,6 +1110,8 @@ class ObjectsApi:
         """get object content
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: a reference (could be either a branch or a commit ID) (required)
@@ -1099,6 +1147,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._get_object_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             path=path,
@@ -1136,6 +1185,7 @@ class ObjectsApi:
     @validate_call
     def get_object_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         path: Annotated[StrictStr, Field(description="relative to the ref")],
@@ -1158,6 +1208,8 @@ class ObjectsApi:
         """get object content
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: a reference (could be either a branch or a commit ID) (required)
@@ -1193,6 +1245,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._get_object_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             path=path,
@@ -1230,6 +1283,7 @@ class ObjectsApi:
     @validate_call
     def get_object_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         path: Annotated[StrictStr, Field(description="relative to the ref")],
@@ -1252,6 +1306,8 @@ class ObjectsApi:
         """get object content
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: a reference (could be either a branch or a commit ID) (required)
@@ -1287,6 +1343,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._get_object_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             path=path,
@@ -1319,6 +1376,7 @@ class ObjectsApi:
 
     def _get_object_serialize(
         self,
+        user,
         repository,
         ref,
         path,
@@ -1346,6 +1404,8 @@ class ObjectsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if ref is not None:
@@ -1389,7 +1449,7 @@ class ObjectsApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/refs/{ref}/objects',
+            resource_path='/repositories/{user}/{repository}/refs/{ref}/objects',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -1408,6 +1468,7 @@ class ObjectsApi:
     @validate_call
     def get_underlying_properties(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -1427,6 +1488,8 @@ class ObjectsApi:
         """get object properties on underlying storage
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: a reference (could be either a branch or a commit ID) (required)
@@ -1456,6 +1519,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._get_underlying_properties_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             path=path,
@@ -1485,6 +1549,7 @@ class ObjectsApi:
     @validate_call
     def get_underlying_properties_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -1504,6 +1569,8 @@ class ObjectsApi:
         """get object properties on underlying storage
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: a reference (could be either a branch or a commit ID) (required)
@@ -1533,6 +1600,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._get_underlying_properties_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             path=path,
@@ -1562,6 +1630,7 @@ class ObjectsApi:
     @validate_call
     def get_underlying_properties_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -1581,6 +1650,8 @@ class ObjectsApi:
         """get object properties on underlying storage
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: a reference (could be either a branch or a commit ID) (required)
@@ -1610,6 +1681,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._get_underlying_properties_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             path=path,
@@ -1634,6 +1706,7 @@ class ObjectsApi:
 
     def _get_underlying_properties_serialize(
         self,
+        user,
         repository,
         ref,
         path,
@@ -1658,6 +1731,8 @@ class ObjectsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if ref is not None:
@@ -1692,7 +1767,7 @@ class ObjectsApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/refs/{ref}/objects/underlyingProperties',
+            resource_path='/repositories/{user}/{repository}/refs/{ref}/objects/underlyingProperties',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -1711,6 +1786,7 @@ class ObjectsApi:
     @validate_call
     def head_object(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         path: Annotated[StrictStr, Field(description="relative to the ref")],
@@ -1731,6 +1807,8 @@ class ObjectsApi:
         """check if object exists
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: a reference (could be either a branch or a commit ID) (required)
@@ -1762,6 +1840,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._head_object_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             path=path,
@@ -1795,6 +1874,7 @@ class ObjectsApi:
     @validate_call
     def head_object_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         path: Annotated[StrictStr, Field(description="relative to the ref")],
@@ -1815,6 +1895,8 @@ class ObjectsApi:
         """check if object exists
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: a reference (could be either a branch or a commit ID) (required)
@@ -1846,6 +1928,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._head_object_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             path=path,
@@ -1879,6 +1962,7 @@ class ObjectsApi:
     @validate_call
     def head_object_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         path: Annotated[StrictStr, Field(description="relative to the ref")],
@@ -1899,6 +1983,8 @@ class ObjectsApi:
         """check if object exists
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: a reference (could be either a branch or a commit ID) (required)
@@ -1930,6 +2016,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._head_object_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             path=path,
@@ -1958,6 +2045,7 @@ class ObjectsApi:
 
     def _head_object_serialize(
         self,
+        user,
         repository,
         ref,
         path,
@@ -1983,6 +2071,8 @@ class ObjectsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if ref is not None:
@@ -2012,7 +2102,7 @@ class ObjectsApi:
 
         return self.api_client.param_serialize(
             method='HEAD',
-            resource_path='/repositories/{repository}/refs/{ref}/objects',
+            resource_path='/repositories/{user}/{repository}/refs/{ref}/objects',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -2031,6 +2121,7 @@ class ObjectsApi:
     @validate_call
     def list_objects(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         user_metadata: Optional[StrictBool] = None,
@@ -2055,6 +2146,8 @@ class ObjectsApi:
         """list objects under a given prefix
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: a reference (could be either a branch or a commit ID) (required)
@@ -2094,6 +2187,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._list_objects_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             user_metadata=user_metadata,
@@ -2128,6 +2222,7 @@ class ObjectsApi:
     @validate_call
     def list_objects_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         user_metadata: Optional[StrictBool] = None,
@@ -2152,6 +2247,8 @@ class ObjectsApi:
         """list objects under a given prefix
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: a reference (could be either a branch or a commit ID) (required)
@@ -2191,6 +2288,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._list_objects_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             user_metadata=user_metadata,
@@ -2225,6 +2323,7 @@ class ObjectsApi:
     @validate_call
     def list_objects_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         user_metadata: Optional[StrictBool] = None,
@@ -2249,6 +2348,8 @@ class ObjectsApi:
         """list objects under a given prefix
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: a reference (could be either a branch or a commit ID) (required)
@@ -2288,6 +2389,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._list_objects_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             user_metadata=user_metadata,
@@ -2317,6 +2419,7 @@ class ObjectsApi:
 
     def _list_objects_serialize(
         self,
+        user,
         repository,
         ref,
         user_metadata,
@@ -2346,6 +2449,8 @@ class ObjectsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if ref is not None:
@@ -2400,7 +2505,7 @@ class ObjectsApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/refs/{ref}/objects/ls',
+            resource_path='/repositories/{user}/{repository}/refs/{ref}/objects/ls',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -2419,6 +2524,7 @@ class ObjectsApi:
     @validate_call
     def stat_object(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -2440,6 +2546,8 @@ class ObjectsApi:
         """get object metadata
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: a reference (could be either a branch or a commit ID) (required)
@@ -2473,6 +2581,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._stat_object_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             path=path,
@@ -2506,6 +2615,7 @@ class ObjectsApi:
     @validate_call
     def stat_object_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -2527,6 +2637,8 @@ class ObjectsApi:
         """get object metadata
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: a reference (could be either a branch or a commit ID) (required)
@@ -2560,6 +2672,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._stat_object_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             path=path,
@@ -2593,6 +2706,7 @@ class ObjectsApi:
     @validate_call
     def stat_object_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -2614,6 +2728,8 @@ class ObjectsApi:
         """get object metadata
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: a reference (could be either a branch or a commit ID) (required)
@@ -2647,6 +2763,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._stat_object_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             path=path,
@@ -2675,6 +2792,7 @@ class ObjectsApi:
 
     def _stat_object_serialize(
         self,
+        user,
         repository,
         ref,
         path,
@@ -2701,6 +2819,8 @@ class ObjectsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if ref is not None:
@@ -2743,7 +2863,7 @@ class ObjectsApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/refs/{ref}/objects/stat',
+            resource_path='/repositories/{user}/{repository}/refs/{ref}/objects/stat',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -2762,6 +2882,7 @@ class ObjectsApi:
     @validate_call
     def update_object_user_metadata(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: Annotated[StrictStr, Field(description="branch to update")],
         path: Annotated[StrictStr, Field(description="path to object relative to the branch")],
@@ -2782,6 +2903,8 @@ class ObjectsApi:
         """rewrite (all) object metadata
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: branch to update (required)
@@ -2813,6 +2936,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._update_object_user_metadata_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -2844,6 +2968,7 @@ class ObjectsApi:
     @validate_call
     def update_object_user_metadata_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: Annotated[StrictStr, Field(description="branch to update")],
         path: Annotated[StrictStr, Field(description="path to object relative to the branch")],
@@ -2864,6 +2989,8 @@ class ObjectsApi:
         """rewrite (all) object metadata
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: branch to update (required)
@@ -2895,6 +3022,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._update_object_user_metadata_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -2926,6 +3054,7 @@ class ObjectsApi:
     @validate_call
     def update_object_user_metadata_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: Annotated[StrictStr, Field(description="branch to update")],
         path: Annotated[StrictStr, Field(description="path to object relative to the branch")],
@@ -2946,6 +3075,8 @@ class ObjectsApi:
         """rewrite (all) object metadata
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: branch to update (required)
@@ -2977,6 +3108,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._update_object_user_metadata_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -3003,6 +3135,7 @@ class ObjectsApi:
 
     def _update_object_user_metadata_serialize(
         self,
+        user,
         repository,
         branch,
         path,
@@ -3028,6 +3161,8 @@ class ObjectsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -3077,7 +3212,7 @@ class ObjectsApi:
 
         return self.api_client.param_serialize(
             method='PUT',
-            resource_path='/repositories/{repository}/branches/{branch}/objects/stat/user_metadata',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/objects/stat/user_metadata',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -3096,6 +3231,7 @@ class ObjectsApi:
     @validate_call
     def upload_object(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -3119,6 +3255,8 @@ class ObjectsApi:
         """upload_object
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -3156,6 +3294,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._upload_object_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -3192,6 +3331,7 @@ class ObjectsApi:
     @validate_call
     def upload_object_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -3215,6 +3355,8 @@ class ObjectsApi:
         """upload_object
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -3252,6 +3394,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._upload_object_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -3288,6 +3431,7 @@ class ObjectsApi:
     @validate_call
     def upload_object_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -3311,6 +3455,8 @@ class ObjectsApi:
         """upload_object
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -3348,6 +3494,7 @@ class ObjectsApi:
         """ # noqa: E501
 
         _param = self._upload_object_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -3379,6 +3526,7 @@ class ObjectsApi:
 
     def _upload_object_serialize(
         self,
+        user,
         repository,
         branch,
         path,
@@ -3407,6 +3555,8 @@ class ObjectsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -3467,7 +3617,7 @@ class ObjectsApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/branches/{branch}/objects',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/objects',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,

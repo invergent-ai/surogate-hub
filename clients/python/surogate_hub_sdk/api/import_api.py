@@ -43,6 +43,7 @@ class ImportApi:
     @validate_call
     def import_cancel(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         id: Annotated[StrictStr, Field(description="Unique identifier of the import process")],
@@ -62,6 +63,8 @@ class ImportApi:
         """cancel ongoing import
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -91,6 +94,7 @@ class ImportApi:
         """ # noqa: E501
 
         _param = self._import_cancel_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             id=id,
@@ -122,6 +126,7 @@ class ImportApi:
     @validate_call
     def import_cancel_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         id: Annotated[StrictStr, Field(description="Unique identifier of the import process")],
@@ -141,6 +146,8 @@ class ImportApi:
         """cancel ongoing import
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -170,6 +177,7 @@ class ImportApi:
         """ # noqa: E501
 
         _param = self._import_cancel_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             id=id,
@@ -201,6 +209,7 @@ class ImportApi:
     @validate_call
     def import_cancel_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         id: Annotated[StrictStr, Field(description="Unique identifier of the import process")],
@@ -220,6 +229,8 @@ class ImportApi:
         """cancel ongoing import
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -249,6 +260,7 @@ class ImportApi:
         """ # noqa: E501
 
         _param = self._import_cancel_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             id=id,
@@ -275,6 +287,7 @@ class ImportApi:
 
     def _import_cancel_serialize(
         self,
+        user,
         repository,
         branch,
         id,
@@ -299,6 +312,8 @@ class ImportApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -333,7 +348,7 @@ class ImportApi:
 
         return self.api_client.param_serialize(
             method='DELETE',
-            resource_path='/repositories/{repository}/branches/{branch}/import',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/import',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -352,6 +367,7 @@ class ImportApi:
     @validate_call
     def import_start(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         import_creation: ImportCreation,
@@ -371,6 +387,8 @@ class ImportApi:
         """import data from object store
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -400,6 +418,7 @@ class ImportApi:
         """ # noqa: E501
 
         _param = self._import_start_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             import_creation=import_creation,
@@ -431,6 +450,7 @@ class ImportApi:
     @validate_call
     def import_start_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         import_creation: ImportCreation,
@@ -450,6 +470,8 @@ class ImportApi:
         """import data from object store
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -479,6 +501,7 @@ class ImportApi:
         """ # noqa: E501
 
         _param = self._import_start_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             import_creation=import_creation,
@@ -510,6 +533,7 @@ class ImportApi:
     @validate_call
     def import_start_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         import_creation: ImportCreation,
@@ -529,6 +553,8 @@ class ImportApi:
         """import data from object store
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -558,6 +584,7 @@ class ImportApi:
         """ # noqa: E501
 
         _param = self._import_start_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             import_creation=import_creation,
@@ -584,6 +611,7 @@ class ImportApi:
 
     def _import_start_serialize(
         self,
+        user,
         repository,
         branch,
         import_creation,
@@ -608,6 +636,8 @@ class ImportApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -653,7 +683,7 @@ class ImportApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/branches/{branch}/import',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/import',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -672,6 +702,7 @@ class ImportApi:
     @validate_call
     def import_status(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         id: Annotated[StrictStr, Field(description="Unique identifier of the import process")],
@@ -691,6 +722,8 @@ class ImportApi:
         """get import status
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -720,6 +753,7 @@ class ImportApi:
         """ # noqa: E501
 
         _param = self._import_status_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             id=id,
@@ -749,6 +783,7 @@ class ImportApi:
     @validate_call
     def import_status_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         id: Annotated[StrictStr, Field(description="Unique identifier of the import process")],
@@ -768,6 +803,8 @@ class ImportApi:
         """get import status
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -797,6 +834,7 @@ class ImportApi:
         """ # noqa: E501
 
         _param = self._import_status_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             id=id,
@@ -826,6 +864,7 @@ class ImportApi:
     @validate_call
     def import_status_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         id: Annotated[StrictStr, Field(description="Unique identifier of the import process")],
@@ -845,6 +884,8 @@ class ImportApi:
         """get import status
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -874,6 +915,7 @@ class ImportApi:
         """ # noqa: E501
 
         _param = self._import_status_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             id=id,
@@ -898,6 +940,7 @@ class ImportApi:
 
     def _import_status_serialize(
         self,
+        user,
         repository,
         branch,
         id,
@@ -922,6 +965,8 @@ class ImportApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -956,7 +1001,7 @@ class ImportApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/branches/{branch}/import',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/import',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,

@@ -4,18 +4,18 @@ All URIs are relative to */api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**cherry_pick**](BranchesApi.md#cherry_pick) | **POST** /repositories/{repository}/branches/{branch}/cherry-pick | Replay the changes from the given commit on the branch
-[**create_branch**](BranchesApi.md#create_branch) | **POST** /repositories/{repository}/branches | create branch
-[**delete_branch**](BranchesApi.md#delete_branch) | **DELETE** /repositories/{repository}/branches/{branch} | delete branch
-[**diff_branch**](BranchesApi.md#diff_branch) | **GET** /repositories/{repository}/branches/{branch}/diff | diff branch
-[**get_branch**](BranchesApi.md#get_branch) | **GET** /repositories/{repository}/branches/{branch} | get branch
-[**list_branches**](BranchesApi.md#list_branches) | **GET** /repositories/{repository}/branches | list branches
-[**reset_branch**](BranchesApi.md#reset_branch) | **PUT** /repositories/{repository}/branches/{branch} | reset branch
-[**revert_branch**](BranchesApi.md#revert_branch) | **POST** /repositories/{repository}/branches/{branch}/revert | revert
+[**cherry_pick**](BranchesApi.md#cherry_pick) | **POST** /repositories/{user}/{repository}/branches/{branch}/cherry-pick | Replay the changes from the given commit on the branch
+[**create_branch**](BranchesApi.md#create_branch) | **POST** /repositories/{user}/{repository}/branches | create branch
+[**delete_branch**](BranchesApi.md#delete_branch) | **DELETE** /repositories/{user}/{repository}/branches/{branch} | delete branch
+[**diff_branch**](BranchesApi.md#diff_branch) | **GET** /repositories/{user}/{repository}/branches/{branch}/diff | diff branch
+[**get_branch**](BranchesApi.md#get_branch) | **GET** /repositories/{user}/{repository}/branches/{branch} | get branch
+[**list_branches**](BranchesApi.md#list_branches) | **GET** /repositories/{user}/{repository}/branches | list branches
+[**reset_branch**](BranchesApi.md#reset_branch) | **PUT** /repositories/{user}/{repository}/branches/{branch} | reset branch
+[**revert_branch**](BranchesApi.md#revert_branch) | **POST** /repositories/{user}/{repository}/branches/{branch}/revert | revert
 
 
 # **cherry_pick**
-> Commit cherry_pick(repository, branch, cherry_pick_creation)
+> Commit cherry_pick(user, repository, branch, cherry_pick_creation)
 
 Replay the changes from the given commit on the branch
 
@@ -78,13 +78,14 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.BranchesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     cherry_pick_creation = surogate_hub_sdk.CherryPickCreation() # CherryPickCreation | 
 
     try:
         # Replay the changes from the given commit on the branch
-        api_response = api_instance.cherry_pick(repository, branch, cherry_pick_creation)
+        api_response = api_instance.cherry_pick(user, repository, branch, cherry_pick_creation)
         print("The response of BranchesApi->cherry_pick:\n")
         pprint(api_response)
     except Exception as e:
@@ -98,6 +99,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **cherry_pick_creation** | [**CherryPickCreation**](CherryPickCreation.md)|  | 
@@ -131,7 +133,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **create_branch**
-> str create_branch(repository, branch_creation)
+> str create_branch(user, repository, branch_creation)
 
 create branch
 
@@ -193,12 +195,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.BranchesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch_creation = surogate_hub_sdk.BranchCreation() # BranchCreation | 
 
     try:
         # create branch
-        api_response = api_instance.create_branch(repository, branch_creation)
+        api_response = api_instance.create_branch(user, repository, branch_creation)
         print("The response of BranchesApi->create_branch:\n")
         pprint(api_response)
     except Exception as e:
@@ -212,6 +215,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch_creation** | [**BranchCreation**](BranchCreation.md)|  | 
 
@@ -244,7 +248,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **delete_branch**
-> delete_branch(repository, branch, force=force)
+> delete_branch(user, repository, branch, force=force)
 
 delete branch
 
@@ -305,13 +309,14 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.BranchesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     force = False # bool |  (optional) (default to False)
 
     try:
         # delete branch
-        api_instance.delete_branch(repository, branch, force=force)
+        api_instance.delete_branch(user, repository, branch, force=force)
     except Exception as e:
         print("Exception when calling BranchesApi->delete_branch: %s\n" % e)
 ```
@@ -323,6 +328,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **force** | **bool**|  | [optional] [default to False]
@@ -354,7 +360,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **diff_branch**
-> DiffList diff_branch(repository, branch, after=after, amount=amount, prefix=prefix, delimiter=delimiter)
+> DiffList diff_branch(user, repository, branch, after=after, amount=amount, prefix=prefix, delimiter=delimiter)
 
 diff branch
 
@@ -416,6 +422,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.BranchesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     after = 'after_example' # str | return items after this value (optional)
@@ -425,7 +432,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # diff branch
-        api_response = api_instance.diff_branch(repository, branch, after=after, amount=amount, prefix=prefix, delimiter=delimiter)
+        api_response = api_instance.diff_branch(user, repository, branch, after=after, amount=amount, prefix=prefix, delimiter=delimiter)
         print("The response of BranchesApi->diff_branch:\n")
         pprint(api_response)
     except Exception as e:
@@ -439,6 +446,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **after** | **str**| return items after this value | [optional] 
@@ -472,7 +480,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_branch**
-> Ref get_branch(repository, branch)
+> Ref get_branch(user, repository, branch)
 
 get branch
 
@@ -534,12 +542,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.BranchesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
 
     try:
         # get branch
-        api_response = api_instance.get_branch(repository, branch)
+        api_response = api_instance.get_branch(user, repository, branch)
         print("The response of BranchesApi->get_branch:\n")
         pprint(api_response)
     except Exception as e:
@@ -553,6 +562,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
 
@@ -582,7 +592,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **list_branches**
-> RefList list_branches(repository, prefix=prefix, after=after, amount=amount, show_hidden=show_hidden)
+> RefList list_branches(user, repository, prefix=prefix, after=after, amount=amount, show_hidden=show_hidden)
 
 list branches
 
@@ -644,6 +654,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.BranchesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     prefix = 'prefix_example' # str | return items prefixed with this value (optional)
     after = 'after_example' # str | return items after this value (optional)
@@ -652,7 +663,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # list branches
-        api_response = api_instance.list_branches(repository, prefix=prefix, after=after, amount=amount, show_hidden=show_hidden)
+        api_response = api_instance.list_branches(user, repository, prefix=prefix, after=after, amount=amount, show_hidden=show_hidden)
         print("The response of BranchesApi->list_branches:\n")
         pprint(api_response)
     except Exception as e:
@@ -666,6 +677,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **prefix** | **str**| return items prefixed with this value | [optional] 
  **after** | **str**| return items after this value | [optional] 
@@ -698,7 +710,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **reset_branch**
-> reset_branch(repository, branch, reset_creation)
+> reset_branch(user, repository, branch, reset_creation)
 
 reset branch
 
@@ -760,13 +772,14 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.BranchesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     reset_creation = surogate_hub_sdk.ResetCreation() # ResetCreation | 
 
     try:
         # reset branch
-        api_instance.reset_branch(repository, branch, reset_creation)
+        api_instance.reset_branch(user, repository, branch, reset_creation)
     except Exception as e:
         print("Exception when calling BranchesApi->reset_branch: %s\n" % e)
 ```
@@ -778,6 +791,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **reset_creation** | [**ResetCreation**](ResetCreation.md)|  | 
@@ -810,7 +824,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **revert_branch**
-> revert_branch(repository, branch, revert_creation)
+> revert_branch(user, repository, branch, revert_creation)
 
 revert
 
@@ -872,13 +886,14 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.BranchesApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     revert_creation = surogate_hub_sdk.RevertCreation() # RevertCreation | 
 
     try:
         # revert
-        api_instance.revert_branch(repository, branch, revert_creation)
+        api_instance.revert_branch(user, repository, branch, revert_creation)
     except Exception as e:
         print("Exception when calling BranchesApi->revert_branch: %s\n" % e)
 ```
@@ -890,6 +905,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **revert_creation** | [**RevertCreation**](RevertCreation.md)|  | 

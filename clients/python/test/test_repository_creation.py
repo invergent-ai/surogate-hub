@@ -36,7 +36,7 @@ class TestRepositoryCreation(unittest.TestCase):
         model = RepositoryCreation()
         if include_optional:
             return RepositoryCreation(
-                name = 'gA9LCSLv1C1ylmgd0.Y',
+                name = 'gA9LCSLv1C1ylmgd0.Y/aA5TkIRHRRA401iz1CiIykN',
                 storage_id = '',
                 storage_namespace = 's3://example-bucket/',
                 default_branch = 'main',
@@ -48,7 +48,7 @@ class TestRepositoryCreation(unittest.TestCase):
             )
         else:
             return RepositoryCreation(
-                name = 'gA9LCSLv1C1ylmgd0.Y',
+                name = 'gA9LCSLv1C1ylmgd0.Y/aA5TkIRHRRA401iz1CiIykN',
                 storage_namespace = 's3://example-bucket/',
         )
         """

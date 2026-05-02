@@ -4,12 +4,12 @@ All URIs are relative to */api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**get_meta_range**](MetadataApi.md#get_meta_range) | **GET** /repositories/{repository}/metadata/meta_range/{meta_range} | return URI to a meta-range file
-[**get_range**](MetadataApi.md#get_range) | **GET** /repositories/{repository}/metadata/range/{range} | return URI to a range file
+[**get_meta_range**](MetadataApi.md#get_meta_range) | **GET** /repositories/{user}/{repository}/metadata/meta_range/{meta_range} | return URI to a meta-range file
+[**get_range**](MetadataApi.md#get_range) | **GET** /repositories/{user}/{repository}/metadata/range/{range} | return URI to a range file
 
 
 # **get_meta_range**
-> StorageURI get_meta_range(repository, meta_range)
+> StorageURI get_meta_range(user, repository, meta_range)
 
 return URI to a meta-range file
 
@@ -71,12 +71,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.MetadataApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     meta_range = 'meta_range_example' # str | 
 
     try:
         # return URI to a meta-range file
-        api_response = api_instance.get_meta_range(repository, meta_range)
+        api_response = api_instance.get_meta_range(user, repository, meta_range)
         print("The response of MetadataApi->get_meta_range:\n")
         pprint(api_response)
     except Exception as e:
@@ -90,6 +91,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **meta_range** | **str**|  | 
 
@@ -119,7 +121,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_range**
-> StorageURI get_range(repository, range)
+> StorageURI get_range(user, repository, range)
 
 return URI to a range file
 
@@ -181,12 +183,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.MetadataApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     range = 'range_example' # str | 
 
     try:
         # return URI to a range file
-        api_response = api_instance.get_range(repository, range)
+        api_response = api_instance.get_range(user, repository, range)
         print("The response of MetadataApi->get_range:\n")
         pprint(api_response)
     except Exception as e:
@@ -200,6 +203,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **range** | **str**|  | 
 

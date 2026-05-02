@@ -40,8 +40,8 @@ class RepositoryCreation(BaseModel):
     @field_validator('name')
     def name_validate_regular_expression(cls, value):
         """Validates the regular expression"""
-        if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9-.]{2,62}$", value):
-            raise ValueError(r"must validate the regular expression /^[a-zA-Z0-9][a-zA-Z0-9-.]{2,62}$/")
+        if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9-.]{2,62}\/[a-zA-Z0-9][a-zA-Z0-9-.]{2,62}$", value):
+            raise ValueError(r"must validate the regular expression /^[a-zA-Z0-9][a-zA-Z0-9-.]{2,62}\/[a-zA-Z0-9][a-zA-Z0-9-.]{2,62}$/")
         return value
 
     @field_validator('storage_namespace')

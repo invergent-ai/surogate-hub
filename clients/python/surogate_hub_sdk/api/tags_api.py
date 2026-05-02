@@ -44,6 +44,7 @@ class TagsApi:
     @validate_call
     def create_tag(
         self,
+        user: StrictStr,
         repository: StrictStr,
         tag_creation: TagCreation,
         _request_timeout: Union[
@@ -62,6 +63,8 @@ class TagsApi:
         """create tag
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param tag_creation: (required)
@@ -89,6 +92,7 @@ class TagsApi:
         """ # noqa: E501
 
         _param = self._create_tag_serialize(
+            user=user,
             repository=repository,
             tag_creation=tag_creation,
             _request_auth=_request_auth,
@@ -120,6 +124,7 @@ class TagsApi:
     @validate_call
     def create_tag_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         tag_creation: TagCreation,
         _request_timeout: Union[
@@ -138,6 +143,8 @@ class TagsApi:
         """create tag
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param tag_creation: (required)
@@ -165,6 +172,7 @@ class TagsApi:
         """ # noqa: E501
 
         _param = self._create_tag_serialize(
+            user=user,
             repository=repository,
             tag_creation=tag_creation,
             _request_auth=_request_auth,
@@ -196,6 +204,7 @@ class TagsApi:
     @validate_call
     def create_tag_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         tag_creation: TagCreation,
         _request_timeout: Union[
@@ -214,6 +223,8 @@ class TagsApi:
         """create tag
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param tag_creation: (required)
@@ -241,6 +252,7 @@ class TagsApi:
         """ # noqa: E501
 
         _param = self._create_tag_serialize(
+            user=user,
             repository=repository,
             tag_creation=tag_creation,
             _request_auth=_request_auth,
@@ -267,6 +279,7 @@ class TagsApi:
 
     def _create_tag_serialize(
         self,
+        user,
         repository,
         tag_creation,
         _request_auth,
@@ -290,6 +303,8 @@ class TagsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -333,7 +348,7 @@ class TagsApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/tags',
+            resource_path='/repositories/{user}/{repository}/tags',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -352,6 +367,7 @@ class TagsApi:
     @validate_call
     def delete_tag(
         self,
+        user: StrictStr,
         repository: StrictStr,
         tag: StrictStr,
         force: Optional[StrictBool] = None,
@@ -371,6 +387,8 @@ class TagsApi:
         """delete tag
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param tag: (required)
@@ -400,6 +418,7 @@ class TagsApi:
         """ # noqa: E501
 
         _param = self._delete_tag_serialize(
+            user=user,
             repository=repository,
             tag=tag,
             force=force,
@@ -430,6 +449,7 @@ class TagsApi:
     @validate_call
     def delete_tag_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         tag: StrictStr,
         force: Optional[StrictBool] = None,
@@ -449,6 +469,8 @@ class TagsApi:
         """delete tag
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param tag: (required)
@@ -478,6 +500,7 @@ class TagsApi:
         """ # noqa: E501
 
         _param = self._delete_tag_serialize(
+            user=user,
             repository=repository,
             tag=tag,
             force=force,
@@ -508,6 +531,7 @@ class TagsApi:
     @validate_call
     def delete_tag_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         tag: StrictStr,
         force: Optional[StrictBool] = None,
@@ -527,6 +551,8 @@ class TagsApi:
         """delete tag
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param tag: (required)
@@ -556,6 +582,7 @@ class TagsApi:
         """ # noqa: E501
 
         _param = self._delete_tag_serialize(
+            user=user,
             repository=repository,
             tag=tag,
             force=force,
@@ -581,6 +608,7 @@ class TagsApi:
 
     def _delete_tag_serialize(
         self,
+        user,
         repository,
         tag,
         force,
@@ -605,6 +633,8 @@ class TagsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if tag is not None:
@@ -639,7 +669,7 @@ class TagsApi:
 
         return self.api_client.param_serialize(
             method='DELETE',
-            resource_path='/repositories/{repository}/tags/{tag}',
+            resource_path='/repositories/{user}/{repository}/tags/{tag}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -658,6 +688,7 @@ class TagsApi:
     @validate_call
     def get_tag(
         self,
+        user: StrictStr,
         repository: StrictStr,
         tag: StrictStr,
         _request_timeout: Union[
@@ -676,6 +707,8 @@ class TagsApi:
         """get tag
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param tag: (required)
@@ -703,6 +736,7 @@ class TagsApi:
         """ # noqa: E501
 
         _param = self._get_tag_serialize(
+            user=user,
             repository=repository,
             tag=tag,
             _request_auth=_request_auth,
@@ -731,6 +765,7 @@ class TagsApi:
     @validate_call
     def get_tag_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         tag: StrictStr,
         _request_timeout: Union[
@@ -749,6 +784,8 @@ class TagsApi:
         """get tag
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param tag: (required)
@@ -776,6 +813,7 @@ class TagsApi:
         """ # noqa: E501
 
         _param = self._get_tag_serialize(
+            user=user,
             repository=repository,
             tag=tag,
             _request_auth=_request_auth,
@@ -804,6 +842,7 @@ class TagsApi:
     @validate_call
     def get_tag_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         tag: StrictStr,
         _request_timeout: Union[
@@ -822,6 +861,8 @@ class TagsApi:
         """get tag
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param tag: (required)
@@ -849,6 +890,7 @@ class TagsApi:
         """ # noqa: E501
 
         _param = self._get_tag_serialize(
+            user=user,
             repository=repository,
             tag=tag,
             _request_auth=_request_auth,
@@ -872,6 +914,7 @@ class TagsApi:
 
     def _get_tag_serialize(
         self,
+        user,
         repository,
         tag,
         _request_auth,
@@ -895,6 +938,8 @@ class TagsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if tag is not None:
@@ -925,7 +970,7 @@ class TagsApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/tags/{tag}',
+            resource_path='/repositories/{user}/{repository}/tags/{tag}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -944,6 +989,7 @@ class TagsApi:
     @validate_call
     def list_tags(
         self,
+        user: StrictStr,
         repository: StrictStr,
         prefix: Annotated[Optional[StrictStr], Field(description="return items prefixed with this value")] = None,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -964,6 +1010,8 @@ class TagsApi:
         """list tags
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param prefix: return items prefixed with this value
@@ -995,6 +1043,7 @@ class TagsApi:
         """ # noqa: E501
 
         _param = self._list_tags_serialize(
+            user=user,
             repository=repository,
             prefix=prefix,
             after=after,
@@ -1025,6 +1074,7 @@ class TagsApi:
     @validate_call
     def list_tags_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         prefix: Annotated[Optional[StrictStr], Field(description="return items prefixed with this value")] = None,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -1045,6 +1095,8 @@ class TagsApi:
         """list tags
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param prefix: return items prefixed with this value
@@ -1076,6 +1128,7 @@ class TagsApi:
         """ # noqa: E501
 
         _param = self._list_tags_serialize(
+            user=user,
             repository=repository,
             prefix=prefix,
             after=after,
@@ -1106,6 +1159,7 @@ class TagsApi:
     @validate_call
     def list_tags_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         prefix: Annotated[Optional[StrictStr], Field(description="return items prefixed with this value")] = None,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -1126,6 +1180,8 @@ class TagsApi:
         """list tags
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param prefix: return items prefixed with this value
@@ -1157,6 +1213,7 @@ class TagsApi:
         """ # noqa: E501
 
         _param = self._list_tags_serialize(
+            user=user,
             repository=repository,
             prefix=prefix,
             after=after,
@@ -1182,6 +1239,7 @@ class TagsApi:
 
     def _list_tags_serialize(
         self,
+        user,
         repository,
         prefix,
         after,
@@ -1207,6 +1265,8 @@ class TagsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -1247,7 +1307,7 @@ class TagsApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/tags',
+            resource_path='/repositories/{user}/{repository}/tags',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,

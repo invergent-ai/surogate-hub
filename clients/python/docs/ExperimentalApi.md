@@ -4,26 +4,26 @@ All URIs are relative to */api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**abort_presign_multipart_upload**](ExperimentalApi.md#abort_presign_multipart_upload) | **DELETE** /repositories/{repository}/branches/{branch}/staging/pmpu/{uploadId} | Abort a presign multipart upload
-[**complete_presign_multipart_upload**](ExperimentalApi.md#complete_presign_multipart_upload) | **PUT** /repositories/{repository}/branches/{branch}/staging/pmpu/{uploadId} | Complete a presign multipart upload request
-[**create_presign_multipart_upload**](ExperimentalApi.md#create_presign_multipart_upload) | **POST** /repositories/{repository}/branches/{branch}/staging/pmpu | Initiate a multipart upload
-[**create_pull_request**](ExperimentalApi.md#create_pull_request) | **POST** /repositories/{repository}/pulls | create pull request
+[**abort_presign_multipart_upload**](ExperimentalApi.md#abort_presign_multipart_upload) | **DELETE** /repositories/{user}/{repository}/branches/{branch}/staging/pmpu/{uploadId} | Abort a presign multipart upload
+[**complete_presign_multipart_upload**](ExperimentalApi.md#complete_presign_multipart_upload) | **PUT** /repositories/{user}/{repository}/branches/{branch}/staging/pmpu/{uploadId} | Complete a presign multipart upload request
+[**create_presign_multipart_upload**](ExperimentalApi.md#create_presign_multipart_upload) | **POST** /repositories/{user}/{repository}/branches/{branch}/staging/pmpu | Initiate a multipart upload
+[**create_pull_request**](ExperimentalApi.md#create_pull_request) | **POST** /repositories/{user}/{repository}/pulls | create pull request
 [**create_user_external_principal**](ExperimentalApi.md#create_user_external_principal) | **POST** /auth/users/{userId}/external/principals | attach external principal to user
 [**delete_user_external_principal**](ExperimentalApi.md#delete_user_external_principal) | **DELETE** /auth/users/{userId}/external/principals | delete external principal from user
 [**external_principal_login**](ExperimentalApi.md#external_principal_login) | **POST** /auth/external/principal/login | perform a login using an external authenticator
 [**get_external_principal**](ExperimentalApi.md#get_external_principal) | **GET** /auth/external/principals | describe external principal by id
-[**get_pull_request**](ExperimentalApi.md#get_pull_request) | **GET** /repositories/{repository}/pulls/{pull_request} | get pull request
-[**hard_reset_branch**](ExperimentalApi.md#hard_reset_branch) | **PUT** /repositories/{repository}/branches/{branch}/hard_reset | hard reset branch
-[**list_pull_requests**](ExperimentalApi.md#list_pull_requests) | **GET** /repositories/{repository}/pulls | list pull requests
+[**get_pull_request**](ExperimentalApi.md#get_pull_request) | **GET** /repositories/{user}/{repository}/pulls/{pull_request} | get pull request
+[**hard_reset_branch**](ExperimentalApi.md#hard_reset_branch) | **PUT** /repositories/{user}/{repository}/branches/{branch}/hard_reset | hard reset branch
+[**list_pull_requests**](ExperimentalApi.md#list_pull_requests) | **GET** /repositories/{user}/{repository}/pulls | list pull requests
 [**list_user_external_principals**](ExperimentalApi.md#list_user_external_principals) | **GET** /auth/users/{userId}/external/principals/ls | list user external policies attached to a user
-[**merge_pull_request**](ExperimentalApi.md#merge_pull_request) | **PUT** /repositories/{repository}/pulls/{pull_request}/merge | merge pull request
+[**merge_pull_request**](ExperimentalApi.md#merge_pull_request) | **PUT** /repositories/{user}/{repository}/pulls/{pull_request}/merge | merge pull request
 [**sts_login**](ExperimentalApi.md#sts_login) | **POST** /sts/login | perform a login with STS
-[**update_object_user_metadata**](ExperimentalApi.md#update_object_user_metadata) | **PUT** /repositories/{repository}/branches/{branch}/objects/stat/user_metadata | rewrite (all) object metadata
-[**update_pull_request**](ExperimentalApi.md#update_pull_request) | **PATCH** /repositories/{repository}/pulls/{pull_request} | update pull request
+[**update_object_user_metadata**](ExperimentalApi.md#update_object_user_metadata) | **PUT** /repositories/{user}/{repository}/branches/{branch}/objects/stat/user_metadata | rewrite (all) object metadata
+[**update_pull_request**](ExperimentalApi.md#update_pull_request) | **PATCH** /repositories/{user}/{repository}/pulls/{pull_request} | update pull request
 
 
 # **abort_presign_multipart_upload**
-> abort_presign_multipart_upload(repository, branch, upload_id, path, abort_presign_multipart_upload=abort_presign_multipart_upload)
+> abort_presign_multipart_upload(user, repository, branch, upload_id, path, abort_presign_multipart_upload=abort_presign_multipart_upload)
 
 Abort a presign multipart upload
 
@@ -87,6 +87,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ExperimentalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     upload_id = 'upload_id_example' # str | 
@@ -95,7 +96,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # Abort a presign multipart upload
-        api_instance.abort_presign_multipart_upload(repository, branch, upload_id, path, abort_presign_multipart_upload=abort_presign_multipart_upload)
+        api_instance.abort_presign_multipart_upload(user, repository, branch, upload_id, path, abort_presign_multipart_upload=abort_presign_multipart_upload)
     except Exception as e:
         print("Exception when calling ExperimentalApi->abort_presign_multipart_upload: %s\n" % e)
 ```
@@ -107,6 +108,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **upload_id** | **str**|  | 
@@ -140,7 +142,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **complete_presign_multipart_upload**
-> ObjectStats complete_presign_multipart_upload(repository, branch, upload_id, path, complete_presign_multipart_upload=complete_presign_multipart_upload)
+> ObjectStats complete_presign_multipart_upload(user, repository, branch, upload_id, path, complete_presign_multipart_upload=complete_presign_multipart_upload)
 
 Complete a presign multipart upload request
 
@@ -205,6 +207,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ExperimentalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     upload_id = 'upload_id_example' # str | 
@@ -213,7 +216,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # Complete a presign multipart upload request
-        api_response = api_instance.complete_presign_multipart_upload(repository, branch, upload_id, path, complete_presign_multipart_upload=complete_presign_multipart_upload)
+        api_response = api_instance.complete_presign_multipart_upload(user, repository, branch, upload_id, path, complete_presign_multipart_upload=complete_presign_multipart_upload)
         print("The response of ExperimentalApi->complete_presign_multipart_upload:\n")
         pprint(api_response)
     except Exception as e:
@@ -227,6 +230,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **upload_id** | **str**|  | 
@@ -261,7 +265,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **create_presign_multipart_upload**
-> PresignMultipartUpload create_presign_multipart_upload(repository, branch, path, parts=parts)
+> PresignMultipartUpload create_presign_multipart_upload(user, repository, branch, path, parts=parts)
 
 Initiate a multipart upload
 
@@ -328,6 +332,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ExperimentalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     path = 'path_example' # str | relative to the branch
@@ -335,7 +340,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # Initiate a multipart upload
-        api_response = api_instance.create_presign_multipart_upload(repository, branch, path, parts=parts)
+        api_response = api_instance.create_presign_multipart_upload(user, repository, branch, path, parts=parts)
         print("The response of ExperimentalApi->create_presign_multipart_upload:\n")
         pprint(api_response)
     except Exception as e:
@@ -349,6 +354,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **path** | **str**| relative to the branch | 
@@ -381,7 +387,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **create_pull_request**
-> PullRequestCreationResponse create_pull_request(repository, pull_request_creation)
+> PullRequestCreationResponse create_pull_request(user, repository, pull_request_creation)
 
 create pull request
 
@@ -444,12 +450,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ExperimentalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     pull_request_creation = surogate_hub_sdk.PullRequestCreation() # PullRequestCreation | 
 
     try:
         # create pull request
-        api_response = api_instance.create_pull_request(repository, pull_request_creation)
+        api_response = api_instance.create_pull_request(user, repository, pull_request_creation)
         print("The response of ExperimentalApi->create_pull_request:\n")
         pprint(api_response)
     except Exception as e:
@@ -463,6 +470,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **pull_request_creation** | [**PullRequestCreation**](PullRequestCreation.md)|  | 
 
@@ -894,7 +902,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_pull_request**
-> PullRequest get_pull_request(repository, pull_request)
+> PullRequest get_pull_request(user, repository, pull_request)
 
 get pull request
 
@@ -956,12 +964,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ExperimentalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     pull_request = 'pull_request_example' # str | pull request id
 
     try:
         # get pull request
-        api_response = api_instance.get_pull_request(repository, pull_request)
+        api_response = api_instance.get_pull_request(user, repository, pull_request)
         print("The response of ExperimentalApi->get_pull_request:\n")
         pprint(api_response)
     except Exception as e:
@@ -975,6 +984,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **pull_request** | **str**| pull request id | 
 
@@ -1005,7 +1015,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **hard_reset_branch**
-> hard_reset_branch(repository, branch, ref, force=force)
+> hard_reset_branch(user, repository, branch, ref, force=force)
 
 hard reset branch
 
@@ -1068,6 +1078,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ExperimentalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     ref = 'ref_example' # str | After reset, branch will point at this reference.
@@ -1075,7 +1086,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # hard reset branch
-        api_instance.hard_reset_branch(repository, branch, ref, force=force)
+        api_instance.hard_reset_branch(user, repository, branch, ref, force=force)
     except Exception as e:
         print("Exception when calling ExperimentalApi->hard_reset_branch: %s\n" % e)
 ```
@@ -1087,6 +1098,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **ref** | **str**| After reset, branch will point at this reference. | 
@@ -1120,7 +1132,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **list_pull_requests**
-> PullRequestsList list_pull_requests(repository, prefix=prefix, after=after, amount=amount, status=status)
+> PullRequestsList list_pull_requests(user, repository, prefix=prefix, after=after, amount=amount, status=status)
 
 list pull requests
 
@@ -1182,6 +1194,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ExperimentalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     prefix = 'prefix_example' # str | return items prefixed with this value (optional)
     after = 'after_example' # str | return items after this value (optional)
@@ -1190,7 +1203,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # list pull requests
-        api_response = api_instance.list_pull_requests(repository, prefix=prefix, after=after, amount=amount, status=status)
+        api_response = api_instance.list_pull_requests(user, repository, prefix=prefix, after=after, amount=amount, status=status)
         print("The response of ExperimentalApi->list_pull_requests:\n")
         pprint(api_response)
     except Exception as e:
@@ -1204,6 +1217,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **prefix** | **str**| return items prefixed with this value | [optional] 
  **after** | **str**| return items after this value | [optional] 
@@ -1350,7 +1364,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **merge_pull_request**
-> MergeResult merge_pull_request(repository, pull_request)
+> MergeResult merge_pull_request(user, repository, pull_request)
 
 merge pull request
 
@@ -1412,12 +1426,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ExperimentalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     pull_request = 'pull_request_example' # str | pull request id
 
     try:
         # merge pull request
-        api_response = api_instance.merge_pull_request(repository, pull_request)
+        api_response = api_instance.merge_pull_request(user, repository, pull_request)
         print("The response of ExperimentalApi->merge_pull_request:\n")
         pprint(api_response)
     except Exception as e:
@@ -1431,6 +1446,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **pull_request** | **str**| pull request id | 
 
@@ -1534,7 +1550,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **update_object_user_metadata**
-> update_object_user_metadata(repository, branch, path, update_object_user_metadata)
+> update_object_user_metadata(user, repository, branch, path, update_object_user_metadata)
 
 rewrite (all) object metadata
 
@@ -1596,6 +1612,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ExperimentalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | branch to update
     path = 'path_example' # str | path to object relative to the branch
@@ -1603,7 +1620,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # rewrite (all) object metadata
-        api_instance.update_object_user_metadata(repository, branch, path, update_object_user_metadata)
+        api_instance.update_object_user_metadata(user, repository, branch, path, update_object_user_metadata)
     except Exception as e:
         print("Exception when calling ExperimentalApi->update_object_user_metadata: %s\n" % e)
 ```
@@ -1615,6 +1632,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**| branch to update | 
  **path** | **str**| path to object relative to the branch | 
@@ -1647,7 +1665,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **update_pull_request**
-> update_pull_request(repository, pull_request, pull_request_basic)
+> update_pull_request(user, repository, pull_request, pull_request_basic)
 
 update pull request
 
@@ -1709,13 +1727,14 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ExperimentalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     pull_request = 'pull_request_example' # str | pull request id
     pull_request_basic = surogate_hub_sdk.PullRequestBasic() # PullRequestBasic | 
 
     try:
         # update pull request
-        api_instance.update_pull_request(repository, pull_request, pull_request_basic)
+        api_instance.update_pull_request(user, repository, pull_request, pull_request_basic)
     except Exception as e:
         print("Exception when calling ExperimentalApi->update_pull_request: %s\n" % e)
 ```
@@ -1727,6 +1746,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **pull_request** | **str**| pull request id | 
  **pull_request_basic** | [**PullRequestBasic**](PullRequestBasic.md)|  | 

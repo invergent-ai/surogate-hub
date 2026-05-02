@@ -4,14 +4,14 @@ All URIs are relative to */api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**get_run**](ActionsApi.md#get_run) | **GET** /repositories/{repository}/actions/runs/{run_id} | get a run
-[**get_run_hook_output**](ActionsApi.md#get_run_hook_output) | **GET** /repositories/{repository}/actions/runs/{run_id}/hooks/{hook_run_id}/output | get run hook output
-[**list_repository_runs**](ActionsApi.md#list_repository_runs) | **GET** /repositories/{repository}/actions/runs | list runs
-[**list_run_hooks**](ActionsApi.md#list_run_hooks) | **GET** /repositories/{repository}/actions/runs/{run_id}/hooks | list run hooks
+[**get_run**](ActionsApi.md#get_run) | **GET** /repositories/{user}/{repository}/actions/runs/{run_id} | get a run
+[**get_run_hook_output**](ActionsApi.md#get_run_hook_output) | **GET** /repositories/{user}/{repository}/actions/runs/{run_id}/hooks/{hook_run_id}/output | get run hook output
+[**list_repository_runs**](ActionsApi.md#list_repository_runs) | **GET** /repositories/{user}/{repository}/actions/runs | list runs
+[**list_run_hooks**](ActionsApi.md#list_run_hooks) | **GET** /repositories/{user}/{repository}/actions/runs/{run_id}/hooks | list run hooks
 
 
 # **get_run**
-> ActionRun get_run(repository, run_id)
+> ActionRun get_run(user, repository, run_id)
 
 get a run
 
@@ -73,12 +73,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ActionsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     run_id = 'run_id_example' # str | 
 
     try:
         # get a run
-        api_response = api_instance.get_run(repository, run_id)
+        api_response = api_instance.get_run(user, repository, run_id)
         print("The response of ActionsApi->get_run:\n")
         pprint(api_response)
     except Exception as e:
@@ -92,6 +93,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **run_id** | **str**|  | 
 
@@ -121,7 +123,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_run_hook_output**
-> bytearray get_run_hook_output(repository, run_id, hook_run_id)
+> bytearray get_run_hook_output(user, repository, run_id, hook_run_id)
 
 get run hook output
 
@@ -182,13 +184,14 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ActionsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     run_id = 'run_id_example' # str | 
     hook_run_id = 'hook_run_id_example' # str | 
 
     try:
         # get run hook output
-        api_response = api_instance.get_run_hook_output(repository, run_id, hook_run_id)
+        api_response = api_instance.get_run_hook_output(user, repository, run_id, hook_run_id)
         print("The response of ActionsApi->get_run_hook_output:\n")
         pprint(api_response)
     except Exception as e:
@@ -202,6 +205,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **run_id** | **str**|  | 
  **hook_run_id** | **str**|  | 
@@ -232,7 +236,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **list_repository_runs**
-> ActionRunList list_repository_runs(repository, after=after, amount=amount, branch=branch, commit=commit)
+> ActionRunList list_repository_runs(user, repository, after=after, amount=amount, branch=branch, commit=commit)
 
 list runs
 
@@ -294,6 +298,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ActionsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     after = 'after_example' # str | return items after this value (optional)
     amount = 100 # int | how many items to return (optional) (default to 100)
@@ -302,7 +307,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # list runs
-        api_response = api_instance.list_repository_runs(repository, after=after, amount=amount, branch=branch, commit=commit)
+        api_response = api_instance.list_repository_runs(user, repository, after=after, amount=amount, branch=branch, commit=commit)
         print("The response of ActionsApi->list_repository_runs:\n")
         pprint(api_response)
     except Exception as e:
@@ -316,6 +321,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **after** | **str**| return items after this value | [optional] 
  **amount** | **int**| how many items to return | [optional] [default to 100]
@@ -348,7 +354,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **list_run_hooks**
-> HookRunList list_run_hooks(repository, run_id, after=after, amount=amount)
+> HookRunList list_run_hooks(user, repository, run_id, after=after, amount=amount)
 
 list run hooks
 
@@ -410,6 +416,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ActionsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     run_id = 'run_id_example' # str | 
     after = 'after_example' # str | return items after this value (optional)
@@ -417,7 +424,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # list run hooks
-        api_response = api_instance.list_run_hooks(repository, run_id, after=after, amount=amount)
+        api_response = api_instance.list_run_hooks(user, repository, run_id, after=after, amount=amount)
         print("The response of ActionsApi->list_run_hooks:\n")
         pprint(api_response)
     except Exception as e:
@@ -431,6 +438,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **run_id** | **str**|  | 
  **after** | **str**| return items after this value | [optional] 

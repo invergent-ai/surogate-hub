@@ -47,6 +47,7 @@ class PullsApi:
     @validate_call
     def create_pull_request(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request_creation: PullRequestCreation,
         _request_timeout: Union[
@@ -65,6 +66,8 @@ class PullsApi:
         """create pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request_creation: (required)
@@ -92,6 +95,7 @@ class PullsApi:
         """ # noqa: E501
 
         _param = self._create_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request_creation=pull_request_creation,
             _request_auth=_request_auth,
@@ -123,6 +127,7 @@ class PullsApi:
     @validate_call
     def create_pull_request_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request_creation: PullRequestCreation,
         _request_timeout: Union[
@@ -141,6 +146,8 @@ class PullsApi:
         """create pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request_creation: (required)
@@ -168,6 +175,7 @@ class PullsApi:
         """ # noqa: E501
 
         _param = self._create_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request_creation=pull_request_creation,
             _request_auth=_request_auth,
@@ -199,6 +207,7 @@ class PullsApi:
     @validate_call
     def create_pull_request_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request_creation: PullRequestCreation,
         _request_timeout: Union[
@@ -217,6 +226,8 @@ class PullsApi:
         """create pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request_creation: (required)
@@ -244,6 +255,7 @@ class PullsApi:
         """ # noqa: E501
 
         _param = self._create_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request_creation=pull_request_creation,
             _request_auth=_request_auth,
@@ -270,6 +282,7 @@ class PullsApi:
 
     def _create_pull_request_serialize(
         self,
+        user,
         repository,
         pull_request_creation,
         _request_auth,
@@ -293,6 +306,8 @@ class PullsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -336,7 +351,7 @@ class PullsApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/pulls',
+            resource_path='/repositories/{user}/{repository}/pulls',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -355,6 +370,7 @@ class PullsApi:
     @validate_call
     def get_pull_request(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         _request_timeout: Union[
@@ -373,6 +389,8 @@ class PullsApi:
         """get pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -400,6 +418,7 @@ class PullsApi:
         """ # noqa: E501
 
         _param = self._get_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             _request_auth=_request_auth,
@@ -429,6 +448,7 @@ class PullsApi:
     @validate_call
     def get_pull_request_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         _request_timeout: Union[
@@ -447,6 +467,8 @@ class PullsApi:
         """get pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -474,6 +496,7 @@ class PullsApi:
         """ # noqa: E501
 
         _param = self._get_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             _request_auth=_request_auth,
@@ -503,6 +526,7 @@ class PullsApi:
     @validate_call
     def get_pull_request_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         _request_timeout: Union[
@@ -521,6 +545,8 @@ class PullsApi:
         """get pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -548,6 +574,7 @@ class PullsApi:
         """ # noqa: E501
 
         _param = self._get_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             _request_auth=_request_auth,
@@ -572,6 +599,7 @@ class PullsApi:
 
     def _get_pull_request_serialize(
         self,
+        user,
         repository,
         pull_request,
         _request_auth,
@@ -595,6 +623,8 @@ class PullsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if pull_request is not None:
@@ -625,7 +655,7 @@ class PullsApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/pulls/{pull_request}',
+            resource_path='/repositories/{user}/{repository}/pulls/{pull_request}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -644,6 +674,7 @@ class PullsApi:
     @validate_call
     def list_pull_requests(
         self,
+        user: StrictStr,
         repository: StrictStr,
         prefix: Annotated[Optional[StrictStr], Field(description="return items prefixed with this value")] = None,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -665,6 +696,8 @@ class PullsApi:
         """list pull requests
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param prefix: return items prefixed with this value
@@ -698,6 +731,7 @@ class PullsApi:
         """ # noqa: E501
 
         _param = self._list_pull_requests_serialize(
+            user=user,
             repository=repository,
             prefix=prefix,
             after=after,
@@ -729,6 +763,7 @@ class PullsApi:
     @validate_call
     def list_pull_requests_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         prefix: Annotated[Optional[StrictStr], Field(description="return items prefixed with this value")] = None,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -750,6 +785,8 @@ class PullsApi:
         """list pull requests
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param prefix: return items prefixed with this value
@@ -783,6 +820,7 @@ class PullsApi:
         """ # noqa: E501
 
         _param = self._list_pull_requests_serialize(
+            user=user,
             repository=repository,
             prefix=prefix,
             after=after,
@@ -814,6 +852,7 @@ class PullsApi:
     @validate_call
     def list_pull_requests_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         prefix: Annotated[Optional[StrictStr], Field(description="return items prefixed with this value")] = None,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -835,6 +874,8 @@ class PullsApi:
         """list pull requests
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param prefix: return items prefixed with this value
@@ -868,6 +909,7 @@ class PullsApi:
         """ # noqa: E501
 
         _param = self._list_pull_requests_serialize(
+            user=user,
             repository=repository,
             prefix=prefix,
             after=after,
@@ -894,6 +936,7 @@ class PullsApi:
 
     def _list_pull_requests_serialize(
         self,
+        user,
         repository,
         prefix,
         after,
@@ -920,6 +963,8 @@ class PullsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -964,7 +1009,7 @@ class PullsApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/pulls',
+            resource_path='/repositories/{user}/{repository}/pulls',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -983,6 +1028,7 @@ class PullsApi:
     @validate_call
     def merge_pull_request(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         _request_timeout: Union[
@@ -1001,6 +1047,8 @@ class PullsApi:
         """merge pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -1028,6 +1076,7 @@ class PullsApi:
         """ # noqa: E501
 
         _param = self._merge_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             _request_auth=_request_auth,
@@ -1060,6 +1109,7 @@ class PullsApi:
     @validate_call
     def merge_pull_request_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         _request_timeout: Union[
@@ -1078,6 +1128,8 @@ class PullsApi:
         """merge pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -1105,6 +1157,7 @@ class PullsApi:
         """ # noqa: E501
 
         _param = self._merge_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             _request_auth=_request_auth,
@@ -1137,6 +1190,7 @@ class PullsApi:
     @validate_call
     def merge_pull_request_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         _request_timeout: Union[
@@ -1155,6 +1209,8 @@ class PullsApi:
         """merge pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -1182,6 +1238,7 @@ class PullsApi:
         """ # noqa: E501
 
         _param = self._merge_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             _request_auth=_request_auth,
@@ -1209,6 +1266,7 @@ class PullsApi:
 
     def _merge_pull_request_serialize(
         self,
+        user,
         repository,
         pull_request,
         _request_auth,
@@ -1232,6 +1290,8 @@ class PullsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if pull_request is not None:
@@ -1262,7 +1322,7 @@ class PullsApi:
 
         return self.api_client.param_serialize(
             method='PUT',
-            resource_path='/repositories/{repository}/pulls/{pull_request}/merge',
+            resource_path='/repositories/{user}/{repository}/pulls/{pull_request}/merge',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -1281,6 +1341,7 @@ class PullsApi:
     @validate_call
     def update_pull_request(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         pull_request_basic: PullRequestBasic,
@@ -1300,6 +1361,8 @@ class PullsApi:
         """update pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -1329,6 +1392,7 @@ class PullsApi:
         """ # noqa: E501
 
         _param = self._update_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             pull_request_basic=pull_request_basic,
@@ -1360,6 +1424,7 @@ class PullsApi:
     @validate_call
     def update_pull_request_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         pull_request_basic: PullRequestBasic,
@@ -1379,6 +1444,8 @@ class PullsApi:
         """update pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -1408,6 +1475,7 @@ class PullsApi:
         """ # noqa: E501
 
         _param = self._update_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             pull_request_basic=pull_request_basic,
@@ -1439,6 +1507,7 @@ class PullsApi:
     @validate_call
     def update_pull_request_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         pull_request_basic: PullRequestBasic,
@@ -1458,6 +1527,8 @@ class PullsApi:
         """update pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -1487,6 +1558,7 @@ class PullsApi:
         """ # noqa: E501
 
         _param = self._update_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             pull_request_basic=pull_request_basic,
@@ -1513,6 +1585,7 @@ class PullsApi:
 
     def _update_pull_request_serialize(
         self,
+        user,
         repository,
         pull_request,
         pull_request_basic,
@@ -1537,6 +1610,8 @@ class PullsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if pull_request is not None:
@@ -1582,7 +1657,7 @@ class PullsApi:
 
         return self.api_client.param_serialize(
             method='PATCH',
-            resource_path='/repositories/{repository}/pulls/{pull_request}',
+            resource_path='/repositories/{user}/{repository}/pulls/{pull_request}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,

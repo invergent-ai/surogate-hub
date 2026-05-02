@@ -4,12 +4,12 @@ All URIs are relative to */api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**get_physical_address**](StagingApi.md#get_physical_address) | **GET** /repositories/{repository}/branches/{branch}/staging/backing | generate an address to which the client can upload an object
-[**link_physical_address**](StagingApi.md#link_physical_address) | **PUT** /repositories/{repository}/branches/{branch}/staging/backing | associate staging on this physical address with a path
+[**get_physical_address**](StagingApi.md#get_physical_address) | **GET** /repositories/{user}/{repository}/branches/{branch}/staging/backing | generate an address to which the client can upload an object
+[**link_physical_address**](StagingApi.md#link_physical_address) | **PUT** /repositories/{user}/{repository}/branches/{branch}/staging/backing | associate staging on this physical address with a path
 
 
 # **get_physical_address**
-> StagingLocation get_physical_address(repository, branch, path, presign=presign)
+> StagingLocation get_physical_address(user, repository, branch, path, presign=presign)
 
 generate an address to which the client can upload an object
 
@@ -71,6 +71,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.StagingApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     path = 'path_example' # str | relative to the branch
@@ -78,7 +79,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # generate an address to which the client can upload an object
-        api_response = api_instance.get_physical_address(repository, branch, path, presign=presign)
+        api_response = api_instance.get_physical_address(user, repository, branch, path, presign=presign)
         print("The response of StagingApi->get_physical_address:\n")
         pprint(api_response)
     except Exception as e:
@@ -92,6 +93,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **path** | **str**| relative to the branch | 
@@ -123,7 +125,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **link_physical_address**
-> ObjectStats link_physical_address(repository, branch, path, staging_metadata, if_none_match=if_none_match)
+> ObjectStats link_physical_address(user, repository, branch, path, staging_metadata, if_none_match=if_none_match)
 
 associate staging on this physical address with a path
 
@@ -190,6 +192,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.StagingApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     path = 'path_example' # str | relative to the branch
@@ -198,7 +201,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # associate staging on this physical address with a path
-        api_response = api_instance.link_physical_address(repository, branch, path, staging_metadata, if_none_match=if_none_match)
+        api_response = api_instance.link_physical_address(user, repository, branch, path, staging_metadata, if_none_match=if_none_match)
         print("The response of StagingApi->link_physical_address:\n")
         pprint(api_response)
     except Exception as e:
@@ -212,6 +215,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **path** | **str**| relative to the branch | 

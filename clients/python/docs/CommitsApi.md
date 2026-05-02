@@ -4,12 +4,12 @@ All URIs are relative to */api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**commit**](CommitsApi.md#commit) | **POST** /repositories/{repository}/branches/{branch}/commits | create commit
-[**get_commit**](CommitsApi.md#get_commit) | **GET** /repositories/{repository}/commits/{commitId} | get commit
+[**commit**](CommitsApi.md#commit) | **POST** /repositories/{user}/{repository}/branches/{branch}/commits | create commit
+[**get_commit**](CommitsApi.md#get_commit) | **GET** /repositories/{user}/{repository}/commits/{commitId} | get commit
 
 
 # **commit**
-> Commit commit(repository, branch, commit_creation, source_metarange=source_metarange)
+> Commit commit(user, repository, branch, commit_creation, source_metarange=source_metarange)
 
 create commit
 
@@ -72,6 +72,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.CommitsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     commit_creation = surogate_hub_sdk.CommitCreation() # CommitCreation | 
@@ -79,7 +80,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # create commit
-        api_response = api_instance.commit(repository, branch, commit_creation, source_metarange=source_metarange)
+        api_response = api_instance.commit(user, repository, branch, commit_creation, source_metarange=source_metarange)
         print("The response of CommitsApi->commit:\n")
         pprint(api_response)
     except Exception as e:
@@ -93,6 +94,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **commit_creation** | [**CommitCreation**](CommitCreation.md)|  | 
@@ -128,7 +130,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_commit**
-> Commit get_commit(repository, commit_id)
+> Commit get_commit(user, repository, commit_id)
 
 get commit
 
@@ -190,12 +192,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.CommitsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     commit_id = 'commit_id_example' # str | 
 
     try:
         # get commit
-        api_response = api_instance.get_commit(repository, commit_id)
+        api_response = api_instance.get_commit(user, repository, commit_id)
         print("The response of CommitsApi->get_commit:\n")
         pprint(api_response)
     except Exception as e:
@@ -209,6 +212,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **commit_id** | **str**|  | 
 

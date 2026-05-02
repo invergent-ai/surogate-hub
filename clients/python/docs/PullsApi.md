@@ -4,15 +4,15 @@ All URIs are relative to */api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**create_pull_request**](PullsApi.md#create_pull_request) | **POST** /repositories/{repository}/pulls | create pull request
-[**get_pull_request**](PullsApi.md#get_pull_request) | **GET** /repositories/{repository}/pulls/{pull_request} | get pull request
-[**list_pull_requests**](PullsApi.md#list_pull_requests) | **GET** /repositories/{repository}/pulls | list pull requests
-[**merge_pull_request**](PullsApi.md#merge_pull_request) | **PUT** /repositories/{repository}/pulls/{pull_request}/merge | merge pull request
-[**update_pull_request**](PullsApi.md#update_pull_request) | **PATCH** /repositories/{repository}/pulls/{pull_request} | update pull request
+[**create_pull_request**](PullsApi.md#create_pull_request) | **POST** /repositories/{user}/{repository}/pulls | create pull request
+[**get_pull_request**](PullsApi.md#get_pull_request) | **GET** /repositories/{user}/{repository}/pulls/{pull_request} | get pull request
+[**list_pull_requests**](PullsApi.md#list_pull_requests) | **GET** /repositories/{user}/{repository}/pulls | list pull requests
+[**merge_pull_request**](PullsApi.md#merge_pull_request) | **PUT** /repositories/{user}/{repository}/pulls/{pull_request}/merge | merge pull request
+[**update_pull_request**](PullsApi.md#update_pull_request) | **PATCH** /repositories/{user}/{repository}/pulls/{pull_request} | update pull request
 
 
 # **create_pull_request**
-> PullRequestCreationResponse create_pull_request(repository, pull_request_creation)
+> PullRequestCreationResponse create_pull_request(user, repository, pull_request_creation)
 
 create pull request
 
@@ -75,12 +75,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.PullsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     pull_request_creation = surogate_hub_sdk.PullRequestCreation() # PullRequestCreation | 
 
     try:
         # create pull request
-        api_response = api_instance.create_pull_request(repository, pull_request_creation)
+        api_response = api_instance.create_pull_request(user, repository, pull_request_creation)
         print("The response of PullsApi->create_pull_request:\n")
         pprint(api_response)
     except Exception as e:
@@ -94,6 +95,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **pull_request_creation** | [**PullRequestCreation**](PullRequestCreation.md)|  | 
 
@@ -126,7 +128,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_pull_request**
-> PullRequest get_pull_request(repository, pull_request)
+> PullRequest get_pull_request(user, repository, pull_request)
 
 get pull request
 
@@ -188,12 +190,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.PullsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     pull_request = 'pull_request_example' # str | pull request id
 
     try:
         # get pull request
-        api_response = api_instance.get_pull_request(repository, pull_request)
+        api_response = api_instance.get_pull_request(user, repository, pull_request)
         print("The response of PullsApi->get_pull_request:\n")
         pprint(api_response)
     except Exception as e:
@@ -207,6 +210,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **pull_request** | **str**| pull request id | 
 
@@ -237,7 +241,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **list_pull_requests**
-> PullRequestsList list_pull_requests(repository, prefix=prefix, after=after, amount=amount, status=status)
+> PullRequestsList list_pull_requests(user, repository, prefix=prefix, after=after, amount=amount, status=status)
 
 list pull requests
 
@@ -299,6 +303,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.PullsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     prefix = 'prefix_example' # str | return items prefixed with this value (optional)
     after = 'after_example' # str | return items after this value (optional)
@@ -307,7 +312,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # list pull requests
-        api_response = api_instance.list_pull_requests(repository, prefix=prefix, after=after, amount=amount, status=status)
+        api_response = api_instance.list_pull_requests(user, repository, prefix=prefix, after=after, amount=amount, status=status)
         print("The response of PullsApi->list_pull_requests:\n")
         pprint(api_response)
     except Exception as e:
@@ -321,6 +326,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **prefix** | **str**| return items prefixed with this value | [optional] 
  **after** | **str**| return items after this value | [optional] 
@@ -353,7 +359,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **merge_pull_request**
-> MergeResult merge_pull_request(repository, pull_request)
+> MergeResult merge_pull_request(user, repository, pull_request)
 
 merge pull request
 
@@ -415,12 +421,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.PullsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     pull_request = 'pull_request_example' # str | pull request id
 
     try:
         # merge pull request
-        api_response = api_instance.merge_pull_request(repository, pull_request)
+        api_response = api_instance.merge_pull_request(user, repository, pull_request)
         print("The response of PullsApi->merge_pull_request:\n")
         pprint(api_response)
     except Exception as e:
@@ -434,6 +441,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **pull_request** | **str**| pull request id | 
 
@@ -467,7 +475,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **update_pull_request**
-> update_pull_request(repository, pull_request, pull_request_basic)
+> update_pull_request(user, repository, pull_request, pull_request_basic)
 
 update pull request
 
@@ -529,13 +537,14 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.PullsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     pull_request = 'pull_request_example' # str | pull request id
     pull_request_basic = surogate_hub_sdk.PullRequestBasic() # PullRequestBasic | 
 
     try:
         # update pull request
-        api_instance.update_pull_request(repository, pull_request, pull_request_basic)
+        api_instance.update_pull_request(user, repository, pull_request, pull_request_basic)
     except Exception as e:
         print("Exception when calling PullsApi->update_pull_request: %s\n" % e)
 ```
@@ -547,6 +556,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **pull_request** | **str**| pull request id | 
  **pull_request_basic** | [**PullRequestBasic**](PullRequestBasic.md)|  | 

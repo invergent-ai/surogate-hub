@@ -40,6 +40,7 @@ class MetadataApi:
     @validate_call
     def get_meta_range(
         self,
+        user: StrictStr,
         repository: StrictStr,
         meta_range: StrictStr,
         _request_timeout: Union[
@@ -58,6 +59,8 @@ class MetadataApi:
         """return URI to a meta-range file
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param meta_range: (required)
@@ -85,6 +88,7 @@ class MetadataApi:
         """ # noqa: E501
 
         _param = self._get_meta_range_serialize(
+            user=user,
             repository=repository,
             meta_range=meta_range,
             _request_auth=_request_auth,
@@ -113,6 +117,7 @@ class MetadataApi:
     @validate_call
     def get_meta_range_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         meta_range: StrictStr,
         _request_timeout: Union[
@@ -131,6 +136,8 @@ class MetadataApi:
         """return URI to a meta-range file
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param meta_range: (required)
@@ -158,6 +165,7 @@ class MetadataApi:
         """ # noqa: E501
 
         _param = self._get_meta_range_serialize(
+            user=user,
             repository=repository,
             meta_range=meta_range,
             _request_auth=_request_auth,
@@ -186,6 +194,7 @@ class MetadataApi:
     @validate_call
     def get_meta_range_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         meta_range: StrictStr,
         _request_timeout: Union[
@@ -204,6 +213,8 @@ class MetadataApi:
         """return URI to a meta-range file
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param meta_range: (required)
@@ -231,6 +242,7 @@ class MetadataApi:
         """ # noqa: E501
 
         _param = self._get_meta_range_serialize(
+            user=user,
             repository=repository,
             meta_range=meta_range,
             _request_auth=_request_auth,
@@ -254,6 +266,7 @@ class MetadataApi:
 
     def _get_meta_range_serialize(
         self,
+        user,
         repository,
         meta_range,
         _request_auth,
@@ -277,6 +290,8 @@ class MetadataApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if meta_range is not None:
@@ -307,7 +322,7 @@ class MetadataApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/metadata/meta_range/{meta_range}',
+            resource_path='/repositories/{user}/{repository}/metadata/meta_range/{meta_range}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -326,6 +341,7 @@ class MetadataApi:
     @validate_call
     def get_range(
         self,
+        user: StrictStr,
         repository: StrictStr,
         range: StrictStr,
         _request_timeout: Union[
@@ -344,6 +360,8 @@ class MetadataApi:
         """return URI to a range file
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param range: (required)
@@ -371,6 +389,7 @@ class MetadataApi:
         """ # noqa: E501
 
         _param = self._get_range_serialize(
+            user=user,
             repository=repository,
             range=range,
             _request_auth=_request_auth,
@@ -399,6 +418,7 @@ class MetadataApi:
     @validate_call
     def get_range_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         range: StrictStr,
         _request_timeout: Union[
@@ -417,6 +437,8 @@ class MetadataApi:
         """return URI to a range file
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param range: (required)
@@ -444,6 +466,7 @@ class MetadataApi:
         """ # noqa: E501
 
         _param = self._get_range_serialize(
+            user=user,
             repository=repository,
             range=range,
             _request_auth=_request_auth,
@@ -472,6 +495,7 @@ class MetadataApi:
     @validate_call
     def get_range_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         range: StrictStr,
         _request_timeout: Union[
@@ -490,6 +514,8 @@ class MetadataApi:
         """return URI to a range file
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param range: (required)
@@ -517,6 +543,7 @@ class MetadataApi:
         """ # noqa: E501
 
         _param = self._get_range_serialize(
+            user=user,
             repository=repository,
             range=range,
             _request_auth=_request_auth,
@@ -540,6 +567,7 @@ class MetadataApi:
 
     def _get_range_serialize(
         self,
+        user,
         repository,
         range,
         _request_auth,
@@ -563,6 +591,8 @@ class MetadataApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if range is not None:
@@ -593,7 +623,7 @@ class MetadataApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/metadata/range/{range}',
+            resource_path='/repositories/{user}/{repository}/metadata/range/{range}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,

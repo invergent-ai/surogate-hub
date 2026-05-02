@@ -4,38 +4,38 @@ All URIs are relative to */api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**create_branch_protection_rule_preflight**](InternalApi.md#create_branch_protection_rule_preflight) | **GET** /repositories/{repository}/branch_protection/set_allowed | 
-[**create_commit_record**](InternalApi.md#create_commit_record) | **POST** /repositories/{repository}/commits | create commit record
-[**create_symlink_file**](InternalApi.md#create_symlink_file) | **POST** /repositories/{repository}/refs/{branch}/symlink | creates symlink files corresponding to the given directory
-[**delete_repository_metadata**](InternalApi.md#delete_repository_metadata) | **DELETE** /repositories/{repository}/metadata | delete repository metadata
-[**dump_refs**](InternalApi.md#dump_refs) | **PUT** /repositories/{repository}/refs/dump | Dump repository refs (tags, commits, branches) to object store Deprecated: a new API will introduce long running operations 
+[**create_branch_protection_rule_preflight**](InternalApi.md#create_branch_protection_rule_preflight) | **GET** /repositories/{user}/{repository}/branch_protection/set_allowed | 
+[**create_commit_record**](InternalApi.md#create_commit_record) | **POST** /repositories/{user}/{repository}/commits | create commit record
+[**create_symlink_file**](InternalApi.md#create_symlink_file) | **POST** /repositories/{user}/{repository}/refs/{branch}/symlink | creates symlink files corresponding to the given directory
+[**delete_repository_metadata**](InternalApi.md#delete_repository_metadata) | **DELETE** /repositories/{user}/{repository}/metadata | delete repository metadata
+[**dump_refs**](InternalApi.md#dump_refs) | **PUT** /repositories/{user}/{repository}/refs/dump | Dump repository refs (tags, commits, branches) to object store Deprecated: a new API will introduce long running operations 
 [**get_auth_capabilities**](InternalApi.md#get_auth_capabilities) | **GET** /auth/capabilities | list authentication capabilities supported
 [**get_garbage_collection_config**](InternalApi.md#get_garbage_collection_config) | **GET** /config/garbage-collection | 
 [**get_hub_version**](InternalApi.md#get_hub_version) | **GET** /config/version | 
-[**get_metadata_object**](InternalApi.md#get_metadata_object) | **GET** /repositories/{repository}/metadata/object/{type}/{object_id} | return a Surogate Hub metadata object by ID
+[**get_metadata_object**](InternalApi.md#get_metadata_object) | **GET** /repositories/{user}/{repository}/metadata/object/{type}/{object_id} | return a Surogate Hub metadata object by ID
 [**get_setup_state**](InternalApi.md#get_setup_state) | **GET** /setup_sghub | check if the Surogate Hub installation is already set up
 [**get_storage_config**](InternalApi.md#get_storage_config) | **GET** /config/storage | 
 [**get_usage_report_summary**](InternalApi.md#get_usage_report_summary) | **GET** /usage-report/summary | get usage report summary
-[**internal_create_branch_protection_rule**](InternalApi.md#internal_create_branch_protection_rule) | **POST** /repositories/{repository}/branch_protection | 
-[**internal_delete_branch_protection_rule**](InternalApi.md#internal_delete_branch_protection_rule) | **DELETE** /repositories/{repository}/branch_protection | 
-[**internal_delete_garbage_collection_rules**](InternalApi.md#internal_delete_garbage_collection_rules) | **DELETE** /repositories/{repository}/gc/rules | 
-[**internal_get_branch_protection_rules**](InternalApi.md#internal_get_branch_protection_rules) | **GET** /repositories/{repository}/branch_protection | get branch protection rules
-[**internal_get_garbage_collection_rules**](InternalApi.md#internal_get_garbage_collection_rules) | **GET** /repositories/{repository}/gc/rules | 
-[**internal_set_garbage_collection_rules**](InternalApi.md#internal_set_garbage_collection_rules) | **POST** /repositories/{repository}/gc/rules | 
+[**internal_create_branch_protection_rule**](InternalApi.md#internal_create_branch_protection_rule) | **POST** /repositories/{user}/{repository}/branch_protection | 
+[**internal_delete_branch_protection_rule**](InternalApi.md#internal_delete_branch_protection_rule) | **DELETE** /repositories/{user}/{repository}/branch_protection | 
+[**internal_delete_garbage_collection_rules**](InternalApi.md#internal_delete_garbage_collection_rules) | **DELETE** /repositories/{user}/{repository}/gc/rules | 
+[**internal_get_branch_protection_rules**](InternalApi.md#internal_get_branch_protection_rules) | **GET** /repositories/{user}/{repository}/branch_protection | get branch protection rules
+[**internal_get_garbage_collection_rules**](InternalApi.md#internal_get_garbage_collection_rules) | **GET** /repositories/{user}/{repository}/gc/rules | 
+[**internal_set_garbage_collection_rules**](InternalApi.md#internal_set_garbage_collection_rules) | **POST** /repositories/{user}/{repository}/gc/rules | 
 [**post_stats_events**](InternalApi.md#post_stats_events) | **POST** /statistics | post stats events, this endpoint is meant for internal use only
-[**prepare_garbage_collection_commits**](InternalApi.md#prepare_garbage_collection_commits) | **POST** /repositories/{repository}/gc/prepare_commits | save lists of active commits for garbage collection
-[**prepare_garbage_collection_uncommitted**](InternalApi.md#prepare_garbage_collection_uncommitted) | **POST** /repositories/{repository}/gc/prepare_uncommited | save repository uncommitted metadata for garbage collection
-[**restore_refs**](InternalApi.md#restore_refs) | **PUT** /repositories/{repository}/refs/restore | Restore repository refs (tags, commits, branches) from object store. Deprecated: a new API will introduce long running operations 
-[**set_garbage_collection_rules_preflight**](InternalApi.md#set_garbage_collection_rules_preflight) | **GET** /repositories/{repository}/gc/rules/set_allowed | 
-[**set_repository_metadata**](InternalApi.md#set_repository_metadata) | **POST** /repositories/{repository}/metadata | set repository metadata
+[**prepare_garbage_collection_commits**](InternalApi.md#prepare_garbage_collection_commits) | **POST** /repositories/{user}/{repository}/gc/prepare_commits | save lists of active commits for garbage collection
+[**prepare_garbage_collection_uncommitted**](InternalApi.md#prepare_garbage_collection_uncommitted) | **POST** /repositories/{user}/{repository}/gc/prepare_uncommited | save repository uncommitted metadata for garbage collection
+[**restore_refs**](InternalApi.md#restore_refs) | **PUT** /repositories/{user}/{repository}/refs/restore | Restore repository refs (tags, commits, branches) from object store. Deprecated: a new API will introduce long running operations 
+[**set_garbage_collection_rules_preflight**](InternalApi.md#set_garbage_collection_rules_preflight) | **GET** /repositories/{user}/{repository}/gc/rules/set_allowed | 
+[**set_repository_metadata**](InternalApi.md#set_repository_metadata) | **POST** /repositories/{user}/{repository}/metadata | set repository metadata
 [**setup**](InternalApi.md#setup) | **POST** /setup_sghub | setup Surogate Hub and create a first user
 [**setup_comm_prefs**](InternalApi.md#setup_comm_prefs) | **POST** /setup_comm_prefs | setup communications preferences
-[**stage_object**](InternalApi.md#stage_object) | **PUT** /repositories/{repository}/branches/{branch}/objects | stage an object&#39;s metadata for the given branch
-[**upload_object_preflight**](InternalApi.md#upload_object_preflight) | **GET** /repositories/{repository}/branches/{branch}/objects/stage_allowed | 
+[**stage_object**](InternalApi.md#stage_object) | **PUT** /repositories/{user}/{repository}/branches/{branch}/objects | stage an object&#39;s metadata for the given branch
+[**upload_object_preflight**](InternalApi.md#upload_object_preflight) | **GET** /repositories/{user}/{repository}/branches/{branch}/objects/stage_allowed | 
 
 
 # **create_branch_protection_rule_preflight**
-> create_branch_protection_rule_preflight(repository)
+> create_branch_protection_rule_preflight(user, repository)
 
 ### Example
 
@@ -94,10 +94,11 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
 
     try:
-        api_instance.create_branch_protection_rule_preflight(repository)
+        api_instance.create_branch_protection_rule_preflight(user, repository)
     except Exception as e:
         print("Exception when calling InternalApi->create_branch_protection_rule_preflight: %s\n" % e)
 ```
@@ -109,6 +110,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
 
 ### Return type
@@ -138,7 +140,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **create_commit_record**
-> create_commit_record(repository, commit_record_creation)
+> create_commit_record(user, repository, commit_record_creation)
 
 create commit record
 
@@ -200,12 +202,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     commit_record_creation = surogate_hub_sdk.CommitRecordCreation() # CommitRecordCreation | 
 
     try:
         # create commit record
-        api_instance.create_commit_record(repository, commit_record_creation)
+        api_instance.create_commit_record(user, repository, commit_record_creation)
     except Exception as e:
         print("Exception when calling InternalApi->create_commit_record: %s\n" % e)
 ```
@@ -217,6 +220,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **commit_record_creation** | [**CommitRecordCreation**](CommitRecordCreation.md)|  | 
 
@@ -248,7 +252,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **create_symlink_file**
-> StorageURI create_symlink_file(repository, branch, location=location)
+> StorageURI create_symlink_file(user, repository, branch, location=location)
 
 creates symlink files corresponding to the given directory
 
@@ -310,13 +314,14 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     location = 'location_example' # str | path to the table data (optional)
 
     try:
         # creates symlink files corresponding to the given directory
-        api_response = api_instance.create_symlink_file(repository, branch, location=location)
+        api_response = api_instance.create_symlink_file(user, repository, branch, location=location)
         print("The response of InternalApi->create_symlink_file:\n")
         pprint(api_response)
     except Exception as e:
@@ -330,6 +335,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **location** | **str**| path to the table data | [optional] 
@@ -360,7 +366,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **delete_repository_metadata**
-> delete_repository_metadata(repository, repository_metadata_keys)
+> delete_repository_metadata(user, repository, repository_metadata_keys)
 
 delete repository metadata
 
@@ -425,12 +431,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     repository_metadata_keys = surogate_hub_sdk.RepositoryMetadataKeys() # RepositoryMetadataKeys | 
 
     try:
         # delete repository metadata
-        api_instance.delete_repository_metadata(repository, repository_metadata_keys)
+        api_instance.delete_repository_metadata(user, repository, repository_metadata_keys)
     except Exception as e:
         print("Exception when calling InternalApi->delete_repository_metadata: %s\n" % e)
 ```
@@ -442,6 +449,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **repository_metadata_keys** | [**RepositoryMetadataKeys**](RepositoryMetadataKeys.md)|  | 
 
@@ -470,7 +478,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **dump_refs**
-> RefsDump dump_refs(repository)
+> RefsDump dump_refs(user, repository)
 
 Dump repository refs (tags, commits, branches) to object store Deprecated: a new API will introduce long running operations 
 
@@ -532,11 +540,12 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
 
     try:
         # Dump repository refs (tags, commits, branches) to object store Deprecated: a new API will introduce long running operations 
-        api_response = api_instance.dump_refs(repository)
+        api_response = api_instance.dump_refs(user, repository)
         print("The response of InternalApi->dump_refs:\n")
         pprint(api_response)
     except Exception as e:
@@ -550,6 +559,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
 
 ### Return type
@@ -843,7 +853,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_metadata_object**
-> bytearray get_metadata_object(repository, object_id, type, presign=presign)
+> bytearray get_metadata_object(user, repository, object_id, type, presign=presign)
 
 return a Surogate Hub metadata object by ID
 
@@ -904,6 +914,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     object_id = 'object_id_example' # str | 
     type = 'type_example' # str | 
@@ -911,7 +922,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # return a Surogate Hub metadata object by ID
-        api_response = api_instance.get_metadata_object(repository, object_id, type, presign=presign)
+        api_response = api_instance.get_metadata_object(user, repository, object_id, type, presign=presign)
         print("The response of InternalApi->get_metadata_object:\n")
         pprint(api_response)
     except Exception as e:
@@ -925,6 +936,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **object_id** | **str**|  | 
  **type** | **str**|  | 
@@ -1226,7 +1238,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **internal_create_branch_protection_rule**
-> internal_create_branch_protection_rule(repository, branch_protection_rule)
+> internal_create_branch_protection_rule(user, repository, branch_protection_rule)
 
 ### Example
 
@@ -1286,11 +1298,12 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch_protection_rule = surogate_hub_sdk.BranchProtectionRule() # BranchProtectionRule | 
 
     try:
-        api_instance.internal_create_branch_protection_rule(repository, branch_protection_rule)
+        api_instance.internal_create_branch_protection_rule(user, repository, branch_protection_rule)
     except Exception as e:
         print("Exception when calling InternalApi->internal_create_branch_protection_rule: %s\n" % e)
 ```
@@ -1302,6 +1315,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch_protection_rule** | [**BranchProtectionRule**](BranchProtectionRule.md)|  | 
 
@@ -1331,7 +1345,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **internal_delete_branch_protection_rule**
-> internal_delete_branch_protection_rule(repository, internal_delete_branch_protection_rule_request)
+> internal_delete_branch_protection_rule(user, repository, internal_delete_branch_protection_rule_request)
 
 ### Example
 
@@ -1391,11 +1405,12 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     internal_delete_branch_protection_rule_request = surogate_hub_sdk.InternalDeleteBranchProtectionRuleRequest() # InternalDeleteBranchProtectionRuleRequest | 
 
     try:
-        api_instance.internal_delete_branch_protection_rule(repository, internal_delete_branch_protection_rule_request)
+        api_instance.internal_delete_branch_protection_rule(user, repository, internal_delete_branch_protection_rule_request)
     except Exception as e:
         print("Exception when calling InternalApi->internal_delete_branch_protection_rule: %s\n" % e)
 ```
@@ -1407,6 +1422,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **internal_delete_branch_protection_rule_request** | [**InternalDeleteBranchProtectionRuleRequest**](InternalDeleteBranchProtectionRuleRequest.md)|  | 
 
@@ -1436,7 +1452,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **internal_delete_garbage_collection_rules**
-> internal_delete_garbage_collection_rules(repository)
+> internal_delete_garbage_collection_rules(user, repository)
 
 ### Example
 
@@ -1495,10 +1511,11 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
 
     try:
-        api_instance.internal_delete_garbage_collection_rules(repository)
+        api_instance.internal_delete_garbage_collection_rules(user, repository)
     except Exception as e:
         print("Exception when calling InternalApi->internal_delete_garbage_collection_rules: %s\n" % e)
 ```
@@ -1510,6 +1527,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
 
 ### Return type
@@ -1538,7 +1556,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **internal_get_branch_protection_rules**
-> List[BranchProtectionRule] internal_get_branch_protection_rules(repository)
+> List[BranchProtectionRule] internal_get_branch_protection_rules(user, repository)
 
 get branch protection rules
 
@@ -1600,11 +1618,12 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
 
     try:
         # get branch protection rules
-        api_response = api_instance.internal_get_branch_protection_rules(repository)
+        api_response = api_instance.internal_get_branch_protection_rules(user, repository)
         print("The response of InternalApi->internal_get_branch_protection_rules:\n")
         pprint(api_response)
     except Exception as e:
@@ -1618,6 +1637,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
 
 ### Return type
@@ -1646,7 +1666,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **internal_get_garbage_collection_rules**
-> GarbageCollectionRules internal_get_garbage_collection_rules(repository)
+> GarbageCollectionRules internal_get_garbage_collection_rules(user, repository)
 
 ### Example
 
@@ -1706,10 +1726,11 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
 
     try:
-        api_response = api_instance.internal_get_garbage_collection_rules(repository)
+        api_response = api_instance.internal_get_garbage_collection_rules(user, repository)
         print("The response of InternalApi->internal_get_garbage_collection_rules:\n")
         pprint(api_response)
     except Exception as e:
@@ -1723,6 +1744,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
 
 ### Return type
@@ -1751,7 +1773,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **internal_set_garbage_collection_rules**
-> internal_set_garbage_collection_rules(repository, garbage_collection_rules)
+> internal_set_garbage_collection_rules(user, repository, garbage_collection_rules)
 
 ### Example
 
@@ -1811,11 +1833,12 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     garbage_collection_rules = surogate_hub_sdk.GarbageCollectionRules() # GarbageCollectionRules | 
 
     try:
-        api_instance.internal_set_garbage_collection_rules(repository, garbage_collection_rules)
+        api_instance.internal_set_garbage_collection_rules(user, repository, garbage_collection_rules)
     except Exception as e:
         print("Exception when calling InternalApi->internal_set_garbage_collection_rules: %s\n" % e)
 ```
@@ -1827,6 +1850,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **garbage_collection_rules** | [**GarbageCollectionRules**](GarbageCollectionRules.md)|  | 
 
@@ -1962,7 +1986,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **prepare_garbage_collection_commits**
-> GarbageCollectionPrepareResponse prepare_garbage_collection_commits(repository)
+> GarbageCollectionPrepareResponse prepare_garbage_collection_commits(user, repository)
 
 save lists of active commits for garbage collection
 
@@ -2024,11 +2048,12 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
 
     try:
         # save lists of active commits for garbage collection
-        api_response = api_instance.prepare_garbage_collection_commits(repository)
+        api_response = api_instance.prepare_garbage_collection_commits(user, repository)
         print("The response of InternalApi->prepare_garbage_collection_commits:\n")
         pprint(api_response)
     except Exception as e:
@@ -2042,6 +2067,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
 
 ### Return type
@@ -2071,7 +2097,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **prepare_garbage_collection_uncommitted**
-> PrepareGCUncommittedResponse prepare_garbage_collection_uncommitted(repository, prepare_gc_uncommitted_request=prepare_gc_uncommitted_request)
+> PrepareGCUncommittedResponse prepare_garbage_collection_uncommitted(user, repository, prepare_gc_uncommitted_request=prepare_gc_uncommitted_request)
 
 save repository uncommitted metadata for garbage collection
 
@@ -2134,12 +2160,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     prepare_gc_uncommitted_request = surogate_hub_sdk.PrepareGCUncommittedRequest() # PrepareGCUncommittedRequest |  (optional)
 
     try:
         # save repository uncommitted metadata for garbage collection
-        api_response = api_instance.prepare_garbage_collection_uncommitted(repository, prepare_gc_uncommitted_request=prepare_gc_uncommitted_request)
+        api_response = api_instance.prepare_garbage_collection_uncommitted(user, repository, prepare_gc_uncommitted_request=prepare_gc_uncommitted_request)
         print("The response of InternalApi->prepare_garbage_collection_uncommitted:\n")
         pprint(api_response)
     except Exception as e:
@@ -2153,6 +2180,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **prepare_gc_uncommitted_request** | [**PrepareGCUncommittedRequest**](PrepareGCUncommittedRequest.md)|  | [optional] 
 
@@ -2184,7 +2212,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **restore_refs**
-> restore_refs(repository, refs_restore)
+> restore_refs(user, repository, refs_restore)
 
 Restore repository refs (tags, commits, branches) from object store. Deprecated: a new API will introduce long running operations 
 
@@ -2246,12 +2274,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     refs_restore = surogate_hub_sdk.RefsRestore() # RefsRestore | 
 
     try:
         # Restore repository refs (tags, commits, branches) from object store. Deprecated: a new API will introduce long running operations 
-        api_instance.restore_refs(repository, refs_restore)
+        api_instance.restore_refs(user, repository, refs_restore)
     except Exception as e:
         print("Exception when calling InternalApi->restore_refs: %s\n" % e)
 ```
@@ -2263,6 +2292,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **refs_restore** | [**RefsRestore**](RefsRestore.md)|  | 
 
@@ -2293,7 +2323,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **set_garbage_collection_rules_preflight**
-> set_garbage_collection_rules_preflight(repository)
+> set_garbage_collection_rules_preflight(user, repository)
 
 ### Example
 
@@ -2352,10 +2382,11 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
 
     try:
-        api_instance.set_garbage_collection_rules_preflight(repository)
+        api_instance.set_garbage_collection_rules_preflight(user, repository)
     except Exception as e:
         print("Exception when calling InternalApi->set_garbage_collection_rules_preflight: %s\n" % e)
 ```
@@ -2367,6 +2398,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
 
 ### Return type
@@ -2395,7 +2427,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **set_repository_metadata**
-> set_repository_metadata(repository, repository_metadata_set)
+> set_repository_metadata(user, repository, repository_metadata_set)
 
 set repository metadata
 
@@ -2460,12 +2492,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     repository_metadata_set = surogate_hub_sdk.RepositoryMetadataSet() # RepositoryMetadataSet | 
 
     try:
         # set repository metadata
-        api_instance.set_repository_metadata(repository, repository_metadata_set)
+        api_instance.set_repository_metadata(user, repository, repository_metadata_set)
     except Exception as e:
         print("Exception when calling InternalApi->set_repository_metadata: %s\n" % e)
 ```
@@ -2477,6 +2510,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **repository_metadata_set** | [**RepositoryMetadataSet**](RepositoryMetadataSet.md)|  | 
 
@@ -2645,7 +2679,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **stage_object**
-> ObjectStats stage_object(repository, branch, path, object_stage_creation)
+> ObjectStats stage_object(user, repository, branch, path, object_stage_creation)
 
 stage an object's metadata for the given branch
 
@@ -2708,6 +2742,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     path = 'path_example' # str | relative to the branch
@@ -2715,7 +2750,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # stage an object's metadata for the given branch
-        api_response = api_instance.stage_object(repository, branch, path, object_stage_creation)
+        api_response = api_instance.stage_object(user, repository, branch, path, object_stage_creation)
         print("The response of InternalApi->stage_object:\n")
         pprint(api_response)
     except Exception as e:
@@ -2729,6 +2764,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **path** | **str**| relative to the branch | 
@@ -2762,7 +2798,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **upload_object_preflight**
-> upload_object_preflight(repository, branch, path)
+> ObjectUploadMode upload_object_preflight(user, repository, branch, path, size_bytes=size_bytes)
 
 ### Example
 
@@ -2774,6 +2810,7 @@ Name | Type | Description  | Notes
 
 ```python
 import surogate_hub_sdk
+from surogate_hub_sdk.models.object_upload_mode import ObjectUploadMode
 from surogate_hub_sdk.rest import ApiException
 from pprint import pprint
 
@@ -2821,12 +2858,16 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.InternalApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     path = 'path_example' # str | relative to the branch
+    size_bytes = 56 # int | Size of the object content the client plans to upload. (optional)
 
     try:
-        api_instance.upload_object_preflight(repository, branch, path)
+        api_response = api_instance.upload_object_preflight(user, repository, branch, path, size_bytes=size_bytes)
+        print("The response of InternalApi->upload_object_preflight:\n")
+        pprint(api_response)
     except Exception as e:
         print("Exception when calling InternalApi->upload_object_preflight: %s\n" % e)
 ```
@@ -2838,13 +2879,15 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **path** | **str**| relative to the branch | 
+ **size_bytes** | **int**| Size of the object content the client plans to upload. | [optional] 
 
 ### Return type
 
-void (empty response body)
+[**ObjectUploadMode**](ObjectUploadMode.md)
 
 ### Authorization
 
@@ -2859,7 +2902,7 @@ void (empty response body)
 
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-**204** | User has permissions to upload this object. This does not guarantee that the upload will be successful or even possible. It indicates only the permission at the time of calling this endpoint |  -  |
+**200** | User has permissions to upload this object and the server-selected upload mode. |  -  |
 **401** | Unauthorized |  -  |
 **403** | Forbidden |  -  |
 **404** | Resource Not Found |  -  |

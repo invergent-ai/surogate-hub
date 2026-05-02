@@ -58,6 +58,7 @@ class ExperimentalApi:
     @validate_call
     def abort_presign_multipart_upload(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         upload_id: StrictStr,
@@ -80,6 +81,8 @@ class ExperimentalApi:
 
         Aborts a presign multipart upload.
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -113,6 +116,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._abort_presign_multipart_upload_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             upload_id=upload_id,
@@ -145,6 +149,7 @@ class ExperimentalApi:
     @validate_call
     def abort_presign_multipart_upload_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         upload_id: StrictStr,
@@ -167,6 +172,8 @@ class ExperimentalApi:
 
         Aborts a presign multipart upload.
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -200,6 +207,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._abort_presign_multipart_upload_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             upload_id=upload_id,
@@ -232,6 +240,7 @@ class ExperimentalApi:
     @validate_call
     def abort_presign_multipart_upload_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         upload_id: StrictStr,
@@ -254,6 +263,8 @@ class ExperimentalApi:
 
         Aborts a presign multipart upload.
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -287,6 +298,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._abort_presign_multipart_upload_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             upload_id=upload_id,
@@ -314,6 +326,7 @@ class ExperimentalApi:
 
     def _abort_presign_multipart_upload_serialize(
         self,
+        user,
         repository,
         branch,
         upload_id,
@@ -340,6 +353,8 @@ class ExperimentalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -391,7 +406,7 @@ class ExperimentalApi:
 
         return self.api_client.param_serialize(
             method='DELETE',
-            resource_path='/repositories/{repository}/branches/{branch}/staging/pmpu/{uploadId}',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/staging/pmpu/{uploadId}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -410,6 +425,7 @@ class ExperimentalApi:
     @validate_call
     def complete_presign_multipart_upload(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         upload_id: StrictStr,
@@ -432,6 +448,8 @@ class ExperimentalApi:
 
         Completes a presign multipart upload by assembling the uploaded parts.
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -465,6 +483,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._complete_presign_multipart_upload_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             upload_id=upload_id,
@@ -498,6 +517,7 @@ class ExperimentalApi:
     @validate_call
     def complete_presign_multipart_upload_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         upload_id: StrictStr,
@@ -520,6 +540,8 @@ class ExperimentalApi:
 
         Completes a presign multipart upload by assembling the uploaded parts.
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -553,6 +575,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._complete_presign_multipart_upload_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             upload_id=upload_id,
@@ -586,6 +609,7 @@ class ExperimentalApi:
     @validate_call
     def complete_presign_multipart_upload_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         upload_id: StrictStr,
@@ -608,6 +632,8 @@ class ExperimentalApi:
 
         Completes a presign multipart upload by assembling the uploaded parts.
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -641,6 +667,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._complete_presign_multipart_upload_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             upload_id=upload_id,
@@ -669,6 +696,7 @@ class ExperimentalApi:
 
     def _complete_presign_multipart_upload_serialize(
         self,
+        user,
         repository,
         branch,
         upload_id,
@@ -695,6 +723,8 @@ class ExperimentalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -746,7 +776,7 @@ class ExperimentalApi:
 
         return self.api_client.param_serialize(
             method='PUT',
-            resource_path='/repositories/{repository}/branches/{branch}/staging/pmpu/{uploadId}',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/staging/pmpu/{uploadId}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -765,6 +795,7 @@ class ExperimentalApi:
     @validate_call
     def create_presign_multipart_upload(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -786,6 +817,8 @@ class ExperimentalApi:
 
         Initiates a multipart upload and returns an upload ID with presigned URLs for each part (optional). Part numbers starts with 1. Each part except the last one has minimum size depends on the underlying blockstore implementation. For example working with S3 blockstore, minimum size is 5MB (excluding the last part). 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -817,6 +850,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._create_presign_multipart_upload_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -848,6 +882,7 @@ class ExperimentalApi:
     @validate_call
     def create_presign_multipart_upload_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -869,6 +904,8 @@ class ExperimentalApi:
 
         Initiates a multipart upload and returns an upload ID with presigned URLs for each part (optional). Part numbers starts with 1. Each part except the last one has minimum size depends on the underlying blockstore implementation. For example working with S3 blockstore, minimum size is 5MB (excluding the last part). 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -900,6 +937,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._create_presign_multipart_upload_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -931,6 +969,7 @@ class ExperimentalApi:
     @validate_call
     def create_presign_multipart_upload_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -952,6 +991,8 @@ class ExperimentalApi:
 
         Initiates a multipart upload and returns an upload ID with presigned URLs for each part (optional). Part numbers starts with 1. Each part except the last one has minimum size depends on the underlying blockstore implementation. For example working with S3 blockstore, minimum size is 5MB (excluding the last part). 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -983,6 +1024,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._create_presign_multipart_upload_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -1009,6 +1051,7 @@ class ExperimentalApi:
 
     def _create_presign_multipart_upload_serialize(
         self,
+        user,
         repository,
         branch,
         path,
@@ -1034,6 +1077,8 @@ class ExperimentalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -1072,7 +1117,7 @@ class ExperimentalApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/branches/{branch}/staging/pmpu',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/staging/pmpu',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -1091,6 +1136,7 @@ class ExperimentalApi:
     @validate_call
     def create_pull_request(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request_creation: PullRequestCreation,
         _request_timeout: Union[
@@ -1109,6 +1155,8 @@ class ExperimentalApi:
         """create pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request_creation: (required)
@@ -1136,6 +1184,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._create_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request_creation=pull_request_creation,
             _request_auth=_request_auth,
@@ -1167,6 +1216,7 @@ class ExperimentalApi:
     @validate_call
     def create_pull_request_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request_creation: PullRequestCreation,
         _request_timeout: Union[
@@ -1185,6 +1235,8 @@ class ExperimentalApi:
         """create pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request_creation: (required)
@@ -1212,6 +1264,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._create_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request_creation=pull_request_creation,
             _request_auth=_request_auth,
@@ -1243,6 +1296,7 @@ class ExperimentalApi:
     @validate_call
     def create_pull_request_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request_creation: PullRequestCreation,
         _request_timeout: Union[
@@ -1261,6 +1315,8 @@ class ExperimentalApi:
         """create pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request_creation: (required)
@@ -1288,6 +1344,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._create_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request_creation=pull_request_creation,
             _request_auth=_request_auth,
@@ -1314,6 +1371,7 @@ class ExperimentalApi:
 
     def _create_pull_request_serialize(
         self,
+        user,
         repository,
         pull_request_creation,
         _request_auth,
@@ -1337,6 +1395,8 @@ class ExperimentalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -1380,7 +1440,7 @@ class ExperimentalApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/pulls',
+            resource_path='/repositories/{user}/{repository}/pulls',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -2564,6 +2624,7 @@ class ExperimentalApi:
     @validate_call
     def get_pull_request(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         _request_timeout: Union[
@@ -2582,6 +2643,8 @@ class ExperimentalApi:
         """get pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -2609,6 +2672,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._get_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             _request_auth=_request_auth,
@@ -2638,6 +2702,7 @@ class ExperimentalApi:
     @validate_call
     def get_pull_request_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         _request_timeout: Union[
@@ -2656,6 +2721,8 @@ class ExperimentalApi:
         """get pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -2683,6 +2750,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._get_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             _request_auth=_request_auth,
@@ -2712,6 +2780,7 @@ class ExperimentalApi:
     @validate_call
     def get_pull_request_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         _request_timeout: Union[
@@ -2730,6 +2799,8 @@ class ExperimentalApi:
         """get pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -2757,6 +2828,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._get_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             _request_auth=_request_auth,
@@ -2781,6 +2853,7 @@ class ExperimentalApi:
 
     def _get_pull_request_serialize(
         self,
+        user,
         repository,
         pull_request,
         _request_auth,
@@ -2804,6 +2877,8 @@ class ExperimentalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if pull_request is not None:
@@ -2834,7 +2909,7 @@ class ExperimentalApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/pulls/{pull_request}',
+            resource_path='/repositories/{user}/{repository}/pulls/{pull_request}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -2853,6 +2928,7 @@ class ExperimentalApi:
     @validate_call
     def hard_reset_branch(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         ref: Annotated[StrictStr, Field(description="After reset, branch will point at this reference.")],
@@ -2874,6 +2950,8 @@ class ExperimentalApi:
 
         Relocate branch to refer to ref.  Branch must not contain uncommitted data.
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -2905,6 +2983,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._hard_reset_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             ref=ref,
@@ -2937,6 +3016,7 @@ class ExperimentalApi:
     @validate_call
     def hard_reset_branch_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         ref: Annotated[StrictStr, Field(description="After reset, branch will point at this reference.")],
@@ -2958,6 +3038,8 @@ class ExperimentalApi:
 
         Relocate branch to refer to ref.  Branch must not contain uncommitted data.
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -2989,6 +3071,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._hard_reset_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             ref=ref,
@@ -3021,6 +3104,7 @@ class ExperimentalApi:
     @validate_call
     def hard_reset_branch_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         ref: Annotated[StrictStr, Field(description="After reset, branch will point at this reference.")],
@@ -3042,6 +3126,8 @@ class ExperimentalApi:
 
         Relocate branch to refer to ref.  Branch must not contain uncommitted data.
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -3073,6 +3159,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._hard_reset_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             ref=ref,
@@ -3100,6 +3187,7 @@ class ExperimentalApi:
 
     def _hard_reset_branch_serialize(
         self,
+        user,
         repository,
         branch,
         ref,
@@ -3125,6 +3213,8 @@ class ExperimentalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -3163,7 +3253,7 @@ class ExperimentalApi:
 
         return self.api_client.param_serialize(
             method='PUT',
-            resource_path='/repositories/{repository}/branches/{branch}/hard_reset',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/hard_reset',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -3182,6 +3272,7 @@ class ExperimentalApi:
     @validate_call
     def list_pull_requests(
         self,
+        user: StrictStr,
         repository: StrictStr,
         prefix: Annotated[Optional[StrictStr], Field(description="return items prefixed with this value")] = None,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -3203,6 +3294,8 @@ class ExperimentalApi:
         """list pull requests
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param prefix: return items prefixed with this value
@@ -3236,6 +3329,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._list_pull_requests_serialize(
+            user=user,
             repository=repository,
             prefix=prefix,
             after=after,
@@ -3267,6 +3361,7 @@ class ExperimentalApi:
     @validate_call
     def list_pull_requests_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         prefix: Annotated[Optional[StrictStr], Field(description="return items prefixed with this value")] = None,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -3288,6 +3383,8 @@ class ExperimentalApi:
         """list pull requests
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param prefix: return items prefixed with this value
@@ -3321,6 +3418,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._list_pull_requests_serialize(
+            user=user,
             repository=repository,
             prefix=prefix,
             after=after,
@@ -3352,6 +3450,7 @@ class ExperimentalApi:
     @validate_call
     def list_pull_requests_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         prefix: Annotated[Optional[StrictStr], Field(description="return items prefixed with this value")] = None,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -3373,6 +3472,8 @@ class ExperimentalApi:
         """list pull requests
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param prefix: return items prefixed with this value
@@ -3406,6 +3507,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._list_pull_requests_serialize(
+            user=user,
             repository=repository,
             prefix=prefix,
             after=after,
@@ -3432,6 +3534,7 @@ class ExperimentalApi:
 
     def _list_pull_requests_serialize(
         self,
+        user,
         repository,
         prefix,
         after,
@@ -3458,6 +3561,8 @@ class ExperimentalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -3502,7 +3607,7 @@ class ExperimentalApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/pulls',
+            resource_path='/repositories/{user}/{repository}/pulls',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -3843,6 +3948,7 @@ class ExperimentalApi:
     @validate_call
     def merge_pull_request(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         _request_timeout: Union[
@@ -3861,6 +3967,8 @@ class ExperimentalApi:
         """merge pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -3888,6 +3996,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._merge_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             _request_auth=_request_auth,
@@ -3920,6 +4029,7 @@ class ExperimentalApi:
     @validate_call
     def merge_pull_request_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         _request_timeout: Union[
@@ -3938,6 +4048,8 @@ class ExperimentalApi:
         """merge pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -3965,6 +4077,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._merge_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             _request_auth=_request_auth,
@@ -3997,6 +4110,7 @@ class ExperimentalApi:
     @validate_call
     def merge_pull_request_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         _request_timeout: Union[
@@ -4015,6 +4129,8 @@ class ExperimentalApi:
         """merge pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -4042,6 +4158,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._merge_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             _request_auth=_request_auth,
@@ -4069,6 +4186,7 @@ class ExperimentalApi:
 
     def _merge_pull_request_serialize(
         self,
+        user,
         repository,
         pull_request,
         _request_auth,
@@ -4092,6 +4210,8 @@ class ExperimentalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if pull_request is not None:
@@ -4122,7 +4242,7 @@ class ExperimentalApi:
 
         return self.api_client.param_serialize(
             method='PUT',
-            resource_path='/repositories/{repository}/pulls/{pull_request}/merge',
+            resource_path='/repositories/{user}/{repository}/pulls/{pull_request}/merge',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -4417,6 +4537,7 @@ class ExperimentalApi:
     @validate_call
     def update_object_user_metadata(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: Annotated[StrictStr, Field(description="branch to update")],
         path: Annotated[StrictStr, Field(description="path to object relative to the branch")],
@@ -4437,6 +4558,8 @@ class ExperimentalApi:
         """rewrite (all) object metadata
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: branch to update (required)
@@ -4468,6 +4591,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._update_object_user_metadata_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -4499,6 +4623,7 @@ class ExperimentalApi:
     @validate_call
     def update_object_user_metadata_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: Annotated[StrictStr, Field(description="branch to update")],
         path: Annotated[StrictStr, Field(description="path to object relative to the branch")],
@@ -4519,6 +4644,8 @@ class ExperimentalApi:
         """rewrite (all) object metadata
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: branch to update (required)
@@ -4550,6 +4677,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._update_object_user_metadata_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -4581,6 +4709,7 @@ class ExperimentalApi:
     @validate_call
     def update_object_user_metadata_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: Annotated[StrictStr, Field(description="branch to update")],
         path: Annotated[StrictStr, Field(description="path to object relative to the branch")],
@@ -4601,6 +4730,8 @@ class ExperimentalApi:
         """rewrite (all) object metadata
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: branch to update (required)
@@ -4632,6 +4763,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._update_object_user_metadata_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -4658,6 +4790,7 @@ class ExperimentalApi:
 
     def _update_object_user_metadata_serialize(
         self,
+        user,
         repository,
         branch,
         path,
@@ -4683,6 +4816,8 @@ class ExperimentalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -4732,7 +4867,7 @@ class ExperimentalApi:
 
         return self.api_client.param_serialize(
             method='PUT',
-            resource_path='/repositories/{repository}/branches/{branch}/objects/stat/user_metadata',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/objects/stat/user_metadata',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -4751,6 +4886,7 @@ class ExperimentalApi:
     @validate_call
     def update_pull_request(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         pull_request_basic: PullRequestBasic,
@@ -4770,6 +4906,8 @@ class ExperimentalApi:
         """update pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -4799,6 +4937,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._update_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             pull_request_basic=pull_request_basic,
@@ -4830,6 +4969,7 @@ class ExperimentalApi:
     @validate_call
     def update_pull_request_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         pull_request_basic: PullRequestBasic,
@@ -4849,6 +4989,8 @@ class ExperimentalApi:
         """update pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -4878,6 +5020,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._update_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             pull_request_basic=pull_request_basic,
@@ -4909,6 +5052,7 @@ class ExperimentalApi:
     @validate_call
     def update_pull_request_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         pull_request: Annotated[StrictStr, Field(description="pull request id")],
         pull_request_basic: PullRequestBasic,
@@ -4928,6 +5072,8 @@ class ExperimentalApi:
         """update pull request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param pull_request: pull request id (required)
@@ -4957,6 +5103,7 @@ class ExperimentalApi:
         """ # noqa: E501
 
         _param = self._update_pull_request_serialize(
+            user=user,
             repository=repository,
             pull_request=pull_request,
             pull_request_basic=pull_request_basic,
@@ -4983,6 +5130,7 @@ class ExperimentalApi:
 
     def _update_pull_request_serialize(
         self,
+        user,
         repository,
         pull_request,
         pull_request_basic,
@@ -5007,6 +5155,8 @@ class ExperimentalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if pull_request is not None:
@@ -5052,7 +5202,7 @@ class ExperimentalApi:
 
         return self.api_client.param_serialize(
             method='PATCH',
-            resource_path='/repositories/{repository}/pulls/{pull_request}',
+            resource_path='/repositories/{user}/{repository}/pulls/{pull_request}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,

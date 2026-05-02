@@ -43,6 +43,7 @@ class CommitsApi:
     @validate_call
     def commit(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         commit_creation: CommitCreation,
@@ -63,6 +64,8 @@ class CommitsApi:
         """create commit
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -94,6 +97,7 @@ class CommitsApi:
         """ # noqa: E501
 
         _param = self._commit_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             commit_creation=commit_creation,
@@ -128,6 +132,7 @@ class CommitsApi:
     @validate_call
     def commit_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         commit_creation: CommitCreation,
@@ -148,6 +153,8 @@ class CommitsApi:
         """create commit
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -179,6 +186,7 @@ class CommitsApi:
         """ # noqa: E501
 
         _param = self._commit_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             commit_creation=commit_creation,
@@ -213,6 +221,7 @@ class CommitsApi:
     @validate_call
     def commit_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         commit_creation: CommitCreation,
@@ -233,6 +242,8 @@ class CommitsApi:
         """create commit
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -264,6 +275,7 @@ class CommitsApi:
         """ # noqa: E501
 
         _param = self._commit_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             commit_creation=commit_creation,
@@ -293,6 +305,7 @@ class CommitsApi:
 
     def _commit_serialize(
         self,
+        user,
         repository,
         branch,
         commit_creation,
@@ -318,6 +331,8 @@ class CommitsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -367,7 +382,7 @@ class CommitsApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/branches/{branch}/commits',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/commits',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -386,6 +401,7 @@ class CommitsApi:
     @validate_call
     def get_commit(
         self,
+        user: StrictStr,
         repository: StrictStr,
         commit_id: StrictStr,
         _request_timeout: Union[
@@ -404,6 +420,8 @@ class CommitsApi:
         """get commit
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param commit_id: (required)
@@ -431,6 +449,7 @@ class CommitsApi:
         """ # noqa: E501
 
         _param = self._get_commit_serialize(
+            user=user,
             repository=repository,
             commit_id=commit_id,
             _request_auth=_request_auth,
@@ -459,6 +478,7 @@ class CommitsApi:
     @validate_call
     def get_commit_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         commit_id: StrictStr,
         _request_timeout: Union[
@@ -477,6 +497,8 @@ class CommitsApi:
         """get commit
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param commit_id: (required)
@@ -504,6 +526,7 @@ class CommitsApi:
         """ # noqa: E501
 
         _param = self._get_commit_serialize(
+            user=user,
             repository=repository,
             commit_id=commit_id,
             _request_auth=_request_auth,
@@ -532,6 +555,7 @@ class CommitsApi:
     @validate_call
     def get_commit_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         commit_id: StrictStr,
         _request_timeout: Union[
@@ -550,6 +574,8 @@ class CommitsApi:
         """get commit
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param commit_id: (required)
@@ -577,6 +603,7 @@ class CommitsApi:
         """ # noqa: E501
 
         _param = self._get_commit_serialize(
+            user=user,
             repository=repository,
             commit_id=commit_id,
             _request_auth=_request_auth,
@@ -600,6 +627,7 @@ class CommitsApi:
 
     def _get_commit_serialize(
         self,
+        user,
         repository,
         commit_id,
         _request_auth,
@@ -623,6 +651,8 @@ class CommitsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if commit_id is not None:
@@ -653,7 +683,7 @@ class CommitsApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/commits/{commitId}',
+            resource_path='/repositories/{user}/{repository}/commits/{commitId}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,

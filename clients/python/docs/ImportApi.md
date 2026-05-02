@@ -4,13 +4,13 @@ All URIs are relative to */api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**import_cancel**](ImportApi.md#import_cancel) | **DELETE** /repositories/{repository}/branches/{branch}/import | cancel ongoing import
-[**import_start**](ImportApi.md#import_start) | **POST** /repositories/{repository}/branches/{branch}/import | import data from object store
-[**import_status**](ImportApi.md#import_status) | **GET** /repositories/{repository}/branches/{branch}/import | get import status
+[**import_cancel**](ImportApi.md#import_cancel) | **DELETE** /repositories/{user}/{repository}/branches/{branch}/import | cancel ongoing import
+[**import_start**](ImportApi.md#import_start) | **POST** /repositories/{user}/{repository}/branches/{branch}/import | import data from object store
+[**import_status**](ImportApi.md#import_status) | **GET** /repositories/{user}/{repository}/branches/{branch}/import | get import status
 
 
 # **import_cancel**
-> import_cancel(repository, branch, id)
+> import_cancel(user, repository, branch, id)
 
 cancel ongoing import
 
@@ -71,13 +71,14 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ImportApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     id = 'id_example' # str | Unique identifier of the import process
 
     try:
         # cancel ongoing import
-        api_instance.import_cancel(repository, branch, id)
+        api_instance.import_cancel(user, repository, branch, id)
     except Exception as e:
         print("Exception when calling ImportApi->import_cancel: %s\n" % e)
 ```
@@ -89,6 +90,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **id** | **str**| Unique identifier of the import process | 
@@ -121,7 +123,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **import_start**
-> ImportCreationResponse import_start(repository, branch, import_creation)
+> ImportCreationResponse import_start(user, repository, branch, import_creation)
 
 import data from object store
 
@@ -184,13 +186,14 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ImportApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     import_creation = surogate_hub_sdk.ImportCreation() # ImportCreation | 
 
     try:
         # import data from object store
-        api_response = api_instance.import_start(repository, branch, import_creation)
+        api_response = api_instance.import_start(user, repository, branch, import_creation)
         print("The response of ImportApi->import_start:\n")
         pprint(api_response)
     except Exception as e:
@@ -204,6 +207,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **import_creation** | [**ImportCreation**](ImportCreation.md)|  | 
@@ -236,7 +240,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **import_status**
-> ImportStatus import_status(repository, branch, id)
+> ImportStatus import_status(user, repository, branch, id)
 
 get import status
 
@@ -298,13 +302,14 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ImportApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     id = 'id_example' # str | Unique identifier of the import process
 
     try:
         # get import status
-        api_response = api_instance.import_status(repository, branch, id)
+        api_response = api_instance.import_status(user, repository, branch, id)
         print("The response of ImportApi->import_status:\n")
         pprint(api_response)
     except Exception as e:
@@ -318,6 +323,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **id** | **str**| Unique identifier of the import process | 

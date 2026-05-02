@@ -4,20 +4,20 @@ All URIs are relative to */api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**copy_object**](ObjectsApi.md#copy_object) | **POST** /repositories/{repository}/branches/{branch}/objects/copy | create a copy of an object
-[**delete_object**](ObjectsApi.md#delete_object) | **DELETE** /repositories/{repository}/branches/{branch}/objects | delete object. Missing objects will not return a NotFound error.
-[**delete_objects**](ObjectsApi.md#delete_objects) | **POST** /repositories/{repository}/branches/{branch}/objects/delete | delete objects. Missing objects will not return a NotFound error.
-[**get_object**](ObjectsApi.md#get_object) | **GET** /repositories/{repository}/refs/{ref}/objects | get object content
-[**get_underlying_properties**](ObjectsApi.md#get_underlying_properties) | **GET** /repositories/{repository}/refs/{ref}/objects/underlyingProperties | get object properties on underlying storage
-[**head_object**](ObjectsApi.md#head_object) | **HEAD** /repositories/{repository}/refs/{ref}/objects | check if object exists
-[**list_objects**](ObjectsApi.md#list_objects) | **GET** /repositories/{repository}/refs/{ref}/objects/ls | list objects under a given prefix
-[**stat_object**](ObjectsApi.md#stat_object) | **GET** /repositories/{repository}/refs/{ref}/objects/stat | get object metadata
-[**update_object_user_metadata**](ObjectsApi.md#update_object_user_metadata) | **PUT** /repositories/{repository}/branches/{branch}/objects/stat/user_metadata | rewrite (all) object metadata
-[**upload_object**](ObjectsApi.md#upload_object) | **POST** /repositories/{repository}/branches/{branch}/objects | 
+[**copy_object**](ObjectsApi.md#copy_object) | **POST** /repositories/{user}/{repository}/branches/{branch}/objects/copy | create a copy of an object
+[**delete_object**](ObjectsApi.md#delete_object) | **DELETE** /repositories/{user}/{repository}/branches/{branch}/objects | delete object. Missing objects will not return a NotFound error.
+[**delete_objects**](ObjectsApi.md#delete_objects) | **POST** /repositories/{user}/{repository}/branches/{branch}/objects/delete | delete objects. Missing objects will not return a NotFound error.
+[**get_object**](ObjectsApi.md#get_object) | **GET** /repositories/{user}/{repository}/refs/{ref}/objects | get object content
+[**get_underlying_properties**](ObjectsApi.md#get_underlying_properties) | **GET** /repositories/{user}/{repository}/refs/{ref}/objects/underlyingProperties | get object properties on underlying storage
+[**head_object**](ObjectsApi.md#head_object) | **HEAD** /repositories/{user}/{repository}/refs/{ref}/objects | check if object exists
+[**list_objects**](ObjectsApi.md#list_objects) | **GET** /repositories/{user}/{repository}/refs/{ref}/objects/ls | list objects under a given prefix
+[**stat_object**](ObjectsApi.md#stat_object) | **GET** /repositories/{user}/{repository}/refs/{ref}/objects/stat | get object metadata
+[**update_object_user_metadata**](ObjectsApi.md#update_object_user_metadata) | **PUT** /repositories/{user}/{repository}/branches/{branch}/objects/stat/user_metadata | rewrite (all) object metadata
+[**upload_object**](ObjectsApi.md#upload_object) | **POST** /repositories/{user}/{repository}/branches/{branch}/objects | 
 
 
 # **copy_object**
-> ObjectStats copy_object(repository, branch, dest_path, object_copy_creation)
+> ObjectStats copy_object(user, repository, branch, dest_path, object_copy_creation)
 
 create a copy of an object
 
@@ -80,6 +80,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ObjectsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | destination branch for the copy
     dest_path = 'dest_path_example' # str | destination path relative to the branch
@@ -87,7 +88,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # create a copy of an object
-        api_response = api_instance.copy_object(repository, branch, dest_path, object_copy_creation)
+        api_response = api_instance.copy_object(user, repository, branch, dest_path, object_copy_creation)
         print("The response of ObjectsApi->copy_object:\n")
         pprint(api_response)
     except Exception as e:
@@ -101,6 +102,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**| destination branch for the copy | 
  **dest_path** | **str**| destination path relative to the branch | 
@@ -134,7 +136,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **delete_object**
-> delete_object(repository, branch, path, force=force)
+> delete_object(user, repository, branch, path, force=force)
 
 delete object. Missing objects will not return a NotFound error.
 
@@ -195,6 +197,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ObjectsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     path = 'path_example' # str | relative to the branch
@@ -202,7 +205,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # delete object. Missing objects will not return a NotFound error.
-        api_instance.delete_object(repository, branch, path, force=force)
+        api_instance.delete_object(user, repository, branch, path, force=force)
     except Exception as e:
         print("Exception when calling ObjectsApi->delete_object: %s\n" % e)
 ```
@@ -214,6 +217,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **path** | **str**| relative to the branch | 
@@ -246,7 +250,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **delete_objects**
-> ObjectErrorList delete_objects(repository, branch, path_list, force=force)
+> ObjectErrorList delete_objects(user, repository, branch, path_list, force=force)
 
 delete objects. Missing objects will not return a NotFound error.
 
@@ -309,6 +313,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ObjectsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     path_list = surogate_hub_sdk.PathList() # PathList | 
@@ -316,7 +321,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # delete objects. Missing objects will not return a NotFound error.
-        api_response = api_instance.delete_objects(repository, branch, path_list, force=force)
+        api_response = api_instance.delete_objects(user, repository, branch, path_list, force=force)
         print("The response of ObjectsApi->delete_objects:\n")
         pprint(api_response)
     except Exception as e:
@@ -330,6 +335,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **path_list** | [**PathList**](PathList.md)|  | 
@@ -362,7 +368,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_object**
-> bytearray get_object(repository, ref, path, range=range, if_none_match=if_none_match, presign=presign)
+> bytearray get_object(user, repository, ref, path, range=range, if_none_match=if_none_match, presign=presign)
 
 get object content
 
@@ -423,6 +429,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ObjectsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     ref = 'ref_example' # str | a reference (could be either a branch or a commit ID)
     path = 'path_example' # str | relative to the ref
@@ -432,7 +439,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # get object content
-        api_response = api_instance.get_object(repository, ref, path, range=range, if_none_match=if_none_match, presign=presign)
+        api_response = api_instance.get_object(user, repository, ref, path, range=range, if_none_match=if_none_match, presign=presign)
         print("The response of ObjectsApi->get_object:\n")
         pprint(api_response)
     except Exception as e:
@@ -446,6 +453,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **ref** | **str**| a reference (could be either a branch or a commit ID) | 
  **path** | **str**| relative to the ref | 
@@ -484,7 +492,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_underlying_properties**
-> UnderlyingObjectProperties get_underlying_properties(repository, ref, path)
+> UnderlyingObjectProperties get_underlying_properties(user, repository, ref, path)
 
 get object properties on underlying storage
 
@@ -546,13 +554,14 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ObjectsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     ref = 'ref_example' # str | a reference (could be either a branch or a commit ID)
     path = 'path_example' # str | relative to the branch
 
     try:
         # get object properties on underlying storage
-        api_response = api_instance.get_underlying_properties(repository, ref, path)
+        api_response = api_instance.get_underlying_properties(user, repository, ref, path)
         print("The response of ObjectsApi->get_underlying_properties:\n")
         pprint(api_response)
     except Exception as e:
@@ -566,6 +575,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **ref** | **str**| a reference (could be either a branch or a commit ID) | 
  **path** | **str**| relative to the branch | 
@@ -596,7 +606,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **head_object**
-> head_object(repository, ref, path, range=range)
+> head_object(user, repository, ref, path, range=range)
 
 check if object exists
 
@@ -657,6 +667,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ObjectsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     ref = 'ref_example' # str | a reference (could be either a branch or a commit ID)
     path = 'path_example' # str | relative to the ref
@@ -664,7 +675,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # check if object exists
-        api_instance.head_object(repository, ref, path, range=range)
+        api_instance.head_object(user, repository, ref, path, range=range)
     except Exception as e:
         print("Exception when calling ObjectsApi->head_object: %s\n" % e)
 ```
@@ -676,6 +687,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **ref** | **str**| a reference (could be either a branch or a commit ID) | 
  **path** | **str**| relative to the ref | 
@@ -710,7 +722,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **list_objects**
-> ObjectStatsList list_objects(repository, ref, user_metadata=user_metadata, presign=presign, after=after, amount=amount, delimiter=delimiter, prefix=prefix)
+> ObjectStatsList list_objects(user, repository, ref, user_metadata=user_metadata, presign=presign, after=after, amount=amount, delimiter=delimiter, prefix=prefix)
 
 list objects under a given prefix
 
@@ -772,6 +784,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ObjectsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     ref = 'ref_example' # str | a reference (could be either a branch or a commit ID)
     user_metadata = True # bool |  (optional) (default to True)
@@ -783,7 +796,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # list objects under a given prefix
-        api_response = api_instance.list_objects(repository, ref, user_metadata=user_metadata, presign=presign, after=after, amount=amount, delimiter=delimiter, prefix=prefix)
+        api_response = api_instance.list_objects(user, repository, ref, user_metadata=user_metadata, presign=presign, after=after, amount=amount, delimiter=delimiter, prefix=prefix)
         print("The response of ObjectsApi->list_objects:\n")
         pprint(api_response)
     except Exception as e:
@@ -797,6 +810,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **ref** | **str**| a reference (could be either a branch or a commit ID) | 
  **user_metadata** | **bool**|  | [optional] [default to True]
@@ -832,7 +846,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **stat_object**
-> ObjectStats stat_object(repository, ref, path, user_metadata=user_metadata, presign=presign)
+> ObjectStats stat_object(user, repository, ref, path, user_metadata=user_metadata, presign=presign)
 
 get object metadata
 
@@ -894,6 +908,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ObjectsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     ref = 'ref_example' # str | a reference (could be either a branch or a commit ID)
     path = 'path_example' # str | relative to the branch
@@ -902,7 +917,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # get object metadata
-        api_response = api_instance.stat_object(repository, ref, path, user_metadata=user_metadata, presign=presign)
+        api_response = api_instance.stat_object(user, repository, ref, path, user_metadata=user_metadata, presign=presign)
         print("The response of ObjectsApi->stat_object:\n")
         pprint(api_response)
     except Exception as e:
@@ -916,6 +931,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **ref** | **str**| a reference (could be either a branch or a commit ID) | 
  **path** | **str**| relative to the branch | 
@@ -950,7 +966,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **update_object_user_metadata**
-> update_object_user_metadata(repository, branch, path, update_object_user_metadata)
+> update_object_user_metadata(user, repository, branch, path, update_object_user_metadata)
 
 rewrite (all) object metadata
 
@@ -1012,6 +1028,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ObjectsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | branch to update
     path = 'path_example' # str | path to object relative to the branch
@@ -1019,7 +1036,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # rewrite (all) object metadata
-        api_instance.update_object_user_metadata(repository, branch, path, update_object_user_metadata)
+        api_instance.update_object_user_metadata(user, repository, branch, path, update_object_user_metadata)
     except Exception as e:
         print("Exception when calling ObjectsApi->update_object_user_metadata: %s\n" % e)
 ```
@@ -1031,6 +1048,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**| branch to update | 
  **path** | **str**| path to object relative to the branch | 
@@ -1063,7 +1081,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **upload_object**
-> ObjectStats upload_object(repository, branch, path, if_none_match=if_none_match, storage_class=storage_class, force=force, content=content)
+> ObjectStats upload_object(user, repository, branch, path, if_none_match=if_none_match, storage_class=storage_class, force=force, content=content)
 
 ### Example
 
@@ -1123,6 +1141,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.ObjectsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     branch = 'branch_example' # str | 
     path = 'path_example' # str | relative to the branch
@@ -1132,7 +1151,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
     content = None # bytearray | Only a single file per upload which must be named \\\"content\\\". (optional)
 
     try:
-        api_response = api_instance.upload_object(repository, branch, path, if_none_match=if_none_match, storage_class=storage_class, force=force, content=content)
+        api_response = api_instance.upload_object(user, repository, branch, path, if_none_match=if_none_match, storage_class=storage_class, force=force, content=content)
         print("The response of ObjectsApi->upload_object:\n")
         pprint(api_response)
     except Exception as e:
@@ -1146,6 +1165,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **branch** | **str**|  | 
  **path** | **str**| relative to the branch | 

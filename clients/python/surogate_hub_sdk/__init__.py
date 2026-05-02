@@ -103,6 +103,7 @@ __all__ = [
     "ObjectStageCreation",
     "ObjectStats",
     "ObjectStatsList",
+    "ObjectUploadMode",
     "Pagination",
     "PathList",
     "Policy",
@@ -241,6 +242,7 @@ from surogate_hub_sdk.models.object_error_list import ObjectErrorList as ObjectE
 from surogate_hub_sdk.models.object_stage_creation import ObjectStageCreation as ObjectStageCreation
 from surogate_hub_sdk.models.object_stats import ObjectStats as ObjectStats
 from surogate_hub_sdk.models.object_stats_list import ObjectStatsList as ObjectStatsList
+from surogate_hub_sdk.models.object_upload_mode import ObjectUploadMode as ObjectUploadMode
 from surogate_hub_sdk.models.pagination import Pagination as Pagination
 from surogate_hub_sdk.models.path_list import PathList as PathList
 from surogate_hub_sdk.models.policy import Policy as Policy

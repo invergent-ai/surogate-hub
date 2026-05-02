@@ -47,6 +47,7 @@ class RefsApi:
     @validate_call
     def diff_refs(
         self,
+        user: StrictStr,
         repository: StrictStr,
         left_ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         right_ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID) to compare against")],
@@ -71,6 +72,8 @@ class RefsApi:
         """diff references
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param left_ref: a reference (could be either a branch or a commit ID) (required)
@@ -110,6 +113,7 @@ class RefsApi:
         """ # noqa: E501
 
         _param = self._diff_refs_serialize(
+            user=user,
             repository=repository,
             left_ref=left_ref,
             right_ref=right_ref,
@@ -144,6 +148,7 @@ class RefsApi:
     @validate_call
     def diff_refs_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         left_ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         right_ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID) to compare against")],
@@ -168,6 +173,8 @@ class RefsApi:
         """diff references
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param left_ref: a reference (could be either a branch or a commit ID) (required)
@@ -207,6 +214,7 @@ class RefsApi:
         """ # noqa: E501
 
         _param = self._diff_refs_serialize(
+            user=user,
             repository=repository,
             left_ref=left_ref,
             right_ref=right_ref,
@@ -241,6 +249,7 @@ class RefsApi:
     @validate_call
     def diff_refs_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         left_ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID)")],
         right_ref: Annotated[StrictStr, Field(description="a reference (could be either a branch or a commit ID) to compare against")],
@@ -265,6 +274,8 @@ class RefsApi:
         """diff references
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param left_ref: a reference (could be either a branch or a commit ID) (required)
@@ -304,6 +315,7 @@ class RefsApi:
         """ # noqa: E501
 
         _param = self._diff_refs_serialize(
+            user=user,
             repository=repository,
             left_ref=left_ref,
             right_ref=right_ref,
@@ -333,6 +345,7 @@ class RefsApi:
 
     def _diff_refs_serialize(
         self,
+        user,
         repository,
         left_ref,
         right_ref,
@@ -362,6 +375,8 @@ class RefsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if left_ref is not None:
@@ -414,7 +429,7 @@ class RefsApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/refs/{leftRef}/diff/{rightRef}',
+            resource_path='/repositories/{user}/{repository}/refs/{leftRef}/diff/{rightRef}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -433,6 +448,7 @@ class RefsApi:
     @validate_call
     def find_merge_base(
         self,
+        user: StrictStr,
         repository: StrictStr,
         source_ref: Annotated[StrictStr, Field(description="source ref")],
         destination_branch: Annotated[StrictStr, Field(description="destination branch name")],
@@ -452,6 +468,8 @@ class RefsApi:
         """find the merge base for 2 references
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param source_ref: source ref (required)
@@ -481,6 +499,7 @@ class RefsApi:
         """ # noqa: E501
 
         _param = self._find_merge_base_serialize(
+            user=user,
             repository=repository,
             source_ref=source_ref,
             destination_branch=destination_branch,
@@ -511,6 +530,7 @@ class RefsApi:
     @validate_call
     def find_merge_base_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         source_ref: Annotated[StrictStr, Field(description="source ref")],
         destination_branch: Annotated[StrictStr, Field(description="destination branch name")],
@@ -530,6 +550,8 @@ class RefsApi:
         """find the merge base for 2 references
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param source_ref: source ref (required)
@@ -559,6 +581,7 @@ class RefsApi:
         """ # noqa: E501
 
         _param = self._find_merge_base_serialize(
+            user=user,
             repository=repository,
             source_ref=source_ref,
             destination_branch=destination_branch,
@@ -589,6 +612,7 @@ class RefsApi:
     @validate_call
     def find_merge_base_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         source_ref: Annotated[StrictStr, Field(description="source ref")],
         destination_branch: Annotated[StrictStr, Field(description="destination branch name")],
@@ -608,6 +632,8 @@ class RefsApi:
         """find the merge base for 2 references
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param source_ref: source ref (required)
@@ -637,6 +663,7 @@ class RefsApi:
         """ # noqa: E501
 
         _param = self._find_merge_base_serialize(
+            user=user,
             repository=repository,
             source_ref=source_ref,
             destination_branch=destination_branch,
@@ -662,6 +689,7 @@ class RefsApi:
 
     def _find_merge_base_serialize(
         self,
+        user,
         repository,
         source_ref,
         destination_branch,
@@ -686,6 +714,8 @@ class RefsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if source_ref is not None:
@@ -718,7 +748,7 @@ class RefsApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/refs/{sourceRef}/merge/{destinationBranch}',
+            resource_path='/repositories/{user}/{repository}/refs/{sourceRef}/merge/{destinationBranch}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -737,6 +767,7 @@ class RefsApi:
     @validate_call
     def log_commits(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: StrictStr,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -763,6 +794,8 @@ class RefsApi:
         """get commit log from ref. If both objects and prefixes are empty, return all commits.
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: (required)
@@ -806,6 +839,7 @@ class RefsApi:
         """ # noqa: E501
 
         _param = self._log_commits_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             after=after,
@@ -842,6 +876,7 @@ class RefsApi:
     @validate_call
     def log_commits_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: StrictStr,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -868,6 +903,8 @@ class RefsApi:
         """get commit log from ref. If both objects and prefixes are empty, return all commits.
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: (required)
@@ -911,6 +948,7 @@ class RefsApi:
         """ # noqa: E501
 
         _param = self._log_commits_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             after=after,
@@ -947,6 +985,7 @@ class RefsApi:
     @validate_call
     def log_commits_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         ref: StrictStr,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -973,6 +1012,8 @@ class RefsApi:
         """get commit log from ref. If both objects and prefixes are empty, return all commits.
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param ref: (required)
@@ -1016,6 +1057,7 @@ class RefsApi:
         """ # noqa: E501
 
         _param = self._log_commits_serialize(
+            user=user,
             repository=repository,
             ref=ref,
             after=after,
@@ -1047,6 +1089,7 @@ class RefsApi:
 
     def _log_commits_serialize(
         self,
+        user,
         repository,
         ref,
         after,
@@ -1080,6 +1123,8 @@ class RefsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if ref is not None:
@@ -1151,7 +1196,7 @@ class RefsApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/refs/{ref}/commits',
+            resource_path='/repositories/{user}/{repository}/refs/{ref}/commits',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -1170,6 +1215,7 @@ class RefsApi:
     @validate_call
     def merge_into_branch(
         self,
+        user: StrictStr,
         repository: StrictStr,
         source_ref: Annotated[StrictStr, Field(description="source ref")],
         destination_branch: Annotated[StrictStr, Field(description="destination branch name")],
@@ -1190,6 +1236,8 @@ class RefsApi:
         """merge references
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param source_ref: source ref (required)
@@ -1221,6 +1269,7 @@ class RefsApi:
         """ # noqa: E501
 
         _param = self._merge_into_branch_serialize(
+            user=user,
             repository=repository,
             source_ref=source_ref,
             destination_branch=destination_branch,
@@ -1255,6 +1304,7 @@ class RefsApi:
     @validate_call
     def merge_into_branch_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         source_ref: Annotated[StrictStr, Field(description="source ref")],
         destination_branch: Annotated[StrictStr, Field(description="destination branch name")],
@@ -1275,6 +1325,8 @@ class RefsApi:
         """merge references
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param source_ref: source ref (required)
@@ -1306,6 +1358,7 @@ class RefsApi:
         """ # noqa: E501
 
         _param = self._merge_into_branch_serialize(
+            user=user,
             repository=repository,
             source_ref=source_ref,
             destination_branch=destination_branch,
@@ -1340,6 +1393,7 @@ class RefsApi:
     @validate_call
     def merge_into_branch_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         source_ref: Annotated[StrictStr, Field(description="source ref")],
         destination_branch: Annotated[StrictStr, Field(description="destination branch name")],
@@ -1360,6 +1414,8 @@ class RefsApi:
         """merge references
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param source_ref: source ref (required)
@@ -1391,6 +1447,7 @@ class RefsApi:
         """ # noqa: E501
 
         _param = self._merge_into_branch_serialize(
+            user=user,
             repository=repository,
             source_ref=source_ref,
             destination_branch=destination_branch,
@@ -1420,6 +1477,7 @@ class RefsApi:
 
     def _merge_into_branch_serialize(
         self,
+        user,
         repository,
         source_ref,
         destination_branch,
@@ -1445,6 +1503,8 @@ class RefsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if source_ref is not None:
@@ -1492,7 +1552,7 @@ class RefsApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/refs/{sourceRef}/merge/{destinationBranch}',
+            resource_path='/repositories/{user}/{repository}/refs/{sourceRef}/merge/{destinationBranch}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,

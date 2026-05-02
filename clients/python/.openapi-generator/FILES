@@ -69,6 +69,7 @@ docs/ObjectErrorList.md
 docs/ObjectStageCreation.md
 docs/ObjectStats.md
 docs/ObjectStatsList.md
+docs/ObjectUploadMode.md
 docs/ObjectsApi.md
 docs/Pagination.md
 docs/PathList.md
@@ -209,6 +210,7 @@ surogate_hub_sdk/models/object_error_list.py
 surogate_hub_sdk/models/object_stage_creation.py
 surogate_hub_sdk/models/object_stats.py
 surogate_hub_sdk/models/object_stats_list.py
+surogate_hub_sdk/models/object_upload_mode.py
 surogate_hub_sdk/models/pagination.py
 surogate_hub_sdk/models/path_list.py
 surogate_hub_sdk/models/policy.py
@@ -329,6 +331,7 @@ test/test_object_error_list.py
 test/test_object_stage_creation.py
 test/test_object_stats.py
 test/test_object_stats_list.py
+test/test_object_upload_mode.py
 test/test_objects_api.py
 test/test_pagination.py
 test/test_path_list.py

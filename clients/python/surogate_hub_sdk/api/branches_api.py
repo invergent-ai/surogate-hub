@@ -49,6 +49,7 @@ class BranchesApi:
     @validate_call
     def cherry_pick(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         cherry_pick_creation: CherryPickCreation,
@@ -68,6 +69,8 @@ class BranchesApi:
         """Replay the changes from the given commit on the branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -97,6 +100,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._cherry_pick_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             cherry_pick_creation=cherry_pick_creation,
@@ -129,6 +133,7 @@ class BranchesApi:
     @validate_call
     def cherry_pick_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         cherry_pick_creation: CherryPickCreation,
@@ -148,6 +153,8 @@ class BranchesApi:
         """Replay the changes from the given commit on the branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -177,6 +184,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._cherry_pick_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             cherry_pick_creation=cherry_pick_creation,
@@ -209,6 +217,7 @@ class BranchesApi:
     @validate_call
     def cherry_pick_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         cherry_pick_creation: CherryPickCreation,
@@ -228,6 +237,8 @@ class BranchesApi:
         """Replay the changes from the given commit on the branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -257,6 +268,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._cherry_pick_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             cherry_pick_creation=cherry_pick_creation,
@@ -284,6 +296,7 @@ class BranchesApi:
 
     def _cherry_pick_serialize(
         self,
+        user,
         repository,
         branch,
         cherry_pick_creation,
@@ -308,6 +321,8 @@ class BranchesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -353,7 +368,7 @@ class BranchesApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/branches/{branch}/cherry-pick',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/cherry-pick',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -372,6 +387,7 @@ class BranchesApi:
     @validate_call
     def create_branch(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch_creation: BranchCreation,
         _request_timeout: Union[
@@ -390,6 +406,8 @@ class BranchesApi:
         """create branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch_creation: (required)
@@ -417,6 +435,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._create_branch_serialize(
+            user=user,
             repository=repository,
             branch_creation=branch_creation,
             _request_auth=_request_auth,
@@ -448,6 +467,7 @@ class BranchesApi:
     @validate_call
     def create_branch_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch_creation: BranchCreation,
         _request_timeout: Union[
@@ -466,6 +486,8 @@ class BranchesApi:
         """create branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch_creation: (required)
@@ -493,6 +515,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._create_branch_serialize(
+            user=user,
             repository=repository,
             branch_creation=branch_creation,
             _request_auth=_request_auth,
@@ -524,6 +547,7 @@ class BranchesApi:
     @validate_call
     def create_branch_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch_creation: BranchCreation,
         _request_timeout: Union[
@@ -542,6 +566,8 @@ class BranchesApi:
         """create branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch_creation: (required)
@@ -569,6 +595,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._create_branch_serialize(
+            user=user,
             repository=repository,
             branch_creation=branch_creation,
             _request_auth=_request_auth,
@@ -595,6 +622,7 @@ class BranchesApi:
 
     def _create_branch_serialize(
         self,
+        user,
         repository,
         branch_creation,
         _request_auth,
@@ -618,6 +646,8 @@ class BranchesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -662,7 +692,7 @@ class BranchesApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/branches',
+            resource_path='/repositories/{user}/{repository}/branches',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -681,6 +711,7 @@ class BranchesApi:
     @validate_call
     def delete_branch(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         force: Optional[StrictBool] = None,
@@ -700,6 +731,8 @@ class BranchesApi:
         """delete branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -729,6 +762,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._delete_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             force=force,
@@ -759,6 +793,7 @@ class BranchesApi:
     @validate_call
     def delete_branch_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         force: Optional[StrictBool] = None,
@@ -778,6 +813,8 @@ class BranchesApi:
         """delete branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -807,6 +844,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._delete_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             force=force,
@@ -837,6 +875,7 @@ class BranchesApi:
     @validate_call
     def delete_branch_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         force: Optional[StrictBool] = None,
@@ -856,6 +895,8 @@ class BranchesApi:
         """delete branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -885,6 +926,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._delete_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             force=force,
@@ -910,6 +952,7 @@ class BranchesApi:
 
     def _delete_branch_serialize(
         self,
+        user,
         repository,
         branch,
         force,
@@ -934,6 +977,8 @@ class BranchesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -968,7 +1013,7 @@ class BranchesApi:
 
         return self.api_client.param_serialize(
             method='DELETE',
-            resource_path='/repositories/{repository}/branches/{branch}',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -987,6 +1032,7 @@ class BranchesApi:
     @validate_call
     def diff_branch(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -1009,6 +1055,8 @@ class BranchesApi:
         """diff branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -1044,6 +1092,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._diff_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             after=after,
@@ -1076,6 +1125,7 @@ class BranchesApi:
     @validate_call
     def diff_branch_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -1098,6 +1148,8 @@ class BranchesApi:
         """diff branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -1133,6 +1185,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._diff_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             after=after,
@@ -1165,6 +1218,7 @@ class BranchesApi:
     @validate_call
     def diff_branch_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -1187,6 +1241,8 @@ class BranchesApi:
         """diff branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -1222,6 +1278,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._diff_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             after=after,
@@ -1249,6 +1306,7 @@ class BranchesApi:
 
     def _diff_branch_serialize(
         self,
+        user,
         repository,
         branch,
         after,
@@ -1276,6 +1334,8 @@ class BranchesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -1322,7 +1382,7 @@ class BranchesApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/branches/{branch}/diff',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/diff',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -1341,6 +1401,7 @@ class BranchesApi:
     @validate_call
     def get_branch(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         _request_timeout: Union[
@@ -1359,6 +1420,8 @@ class BranchesApi:
         """get branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -1386,6 +1449,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._get_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             _request_auth=_request_auth,
@@ -1414,6 +1478,7 @@ class BranchesApi:
     @validate_call
     def get_branch_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         _request_timeout: Union[
@@ -1432,6 +1497,8 @@ class BranchesApi:
         """get branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -1459,6 +1526,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._get_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             _request_auth=_request_auth,
@@ -1487,6 +1555,7 @@ class BranchesApi:
     @validate_call
     def get_branch_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         _request_timeout: Union[
@@ -1505,6 +1574,8 @@ class BranchesApi:
         """get branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -1532,6 +1603,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._get_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             _request_auth=_request_auth,
@@ -1555,6 +1627,7 @@ class BranchesApi:
 
     def _get_branch_serialize(
         self,
+        user,
         repository,
         branch,
         _request_auth,
@@ -1578,6 +1651,8 @@ class BranchesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -1608,7 +1683,7 @@ class BranchesApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/branches/{branch}',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -1627,6 +1702,7 @@ class BranchesApi:
     @validate_call
     def list_branches(
         self,
+        user: StrictStr,
         repository: StrictStr,
         prefix: Annotated[Optional[StrictStr], Field(description="return items prefixed with this value")] = None,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -1648,6 +1724,8 @@ class BranchesApi:
         """list branches
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param prefix: return items prefixed with this value
@@ -1681,6 +1759,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._list_branches_serialize(
+            user=user,
             repository=repository,
             prefix=prefix,
             after=after,
@@ -1712,6 +1791,7 @@ class BranchesApi:
     @validate_call
     def list_branches_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         prefix: Annotated[Optional[StrictStr], Field(description="return items prefixed with this value")] = None,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -1733,6 +1813,8 @@ class BranchesApi:
         """list branches
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param prefix: return items prefixed with this value
@@ -1766,6 +1848,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._list_branches_serialize(
+            user=user,
             repository=repository,
             prefix=prefix,
             after=after,
@@ -1797,6 +1880,7 @@ class BranchesApi:
     @validate_call
     def list_branches_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         prefix: Annotated[Optional[StrictStr], Field(description="return items prefixed with this value")] = None,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -1818,6 +1902,8 @@ class BranchesApi:
         """list branches
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param prefix: return items prefixed with this value
@@ -1851,6 +1937,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._list_branches_serialize(
+            user=user,
             repository=repository,
             prefix=prefix,
             after=after,
@@ -1877,6 +1964,7 @@ class BranchesApi:
 
     def _list_branches_serialize(
         self,
+        user,
         repository,
         prefix,
         after,
@@ -1903,6 +1991,8 @@ class BranchesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -1947,7 +2037,7 @@ class BranchesApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/branches',
+            resource_path='/repositories/{user}/{repository}/branches',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -1966,6 +2056,7 @@ class BranchesApi:
     @validate_call
     def reset_branch(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         reset_creation: ResetCreation,
@@ -1985,6 +2076,8 @@ class BranchesApi:
         """reset branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -2014,6 +2107,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._reset_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             reset_creation=reset_creation,
@@ -2045,6 +2139,7 @@ class BranchesApi:
     @validate_call
     def reset_branch_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         reset_creation: ResetCreation,
@@ -2064,6 +2159,8 @@ class BranchesApi:
         """reset branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -2093,6 +2190,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._reset_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             reset_creation=reset_creation,
@@ -2124,6 +2222,7 @@ class BranchesApi:
     @validate_call
     def reset_branch_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         reset_creation: ResetCreation,
@@ -2143,6 +2242,8 @@ class BranchesApi:
         """reset branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -2172,6 +2273,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._reset_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             reset_creation=reset_creation,
@@ -2198,6 +2300,7 @@ class BranchesApi:
 
     def _reset_branch_serialize(
         self,
+        user,
         repository,
         branch,
         reset_creation,
@@ -2222,6 +2325,8 @@ class BranchesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -2267,7 +2372,7 @@ class BranchesApi:
 
         return self.api_client.param_serialize(
             method='PUT',
-            resource_path='/repositories/{repository}/branches/{branch}',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -2286,6 +2391,7 @@ class BranchesApi:
     @validate_call
     def revert_branch(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         revert_creation: RevertCreation,
@@ -2305,6 +2411,8 @@ class BranchesApi:
         """revert
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -2334,6 +2442,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._revert_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             revert_creation=revert_creation,
@@ -2366,6 +2475,7 @@ class BranchesApi:
     @validate_call
     def revert_branch_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         revert_creation: RevertCreation,
@@ -2385,6 +2495,8 @@ class BranchesApi:
         """revert
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -2414,6 +2526,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._revert_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             revert_creation=revert_creation,
@@ -2446,6 +2559,7 @@ class BranchesApi:
     @validate_call
     def revert_branch_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         revert_creation: RevertCreation,
@@ -2465,6 +2579,8 @@ class BranchesApi:
         """revert
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -2494,6 +2610,7 @@ class BranchesApi:
         """ # noqa: E501
 
         _param = self._revert_branch_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             revert_creation=revert_creation,
@@ -2521,6 +2638,7 @@ class BranchesApi:
 
     def _revert_branch_serialize(
         self,
+        user,
         repository,
         branch,
         revert_creation,
@@ -2545,6 +2663,8 @@ class BranchesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -2590,7 +2710,7 @@ class BranchesApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/branches/{branch}/revert',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/revert',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,

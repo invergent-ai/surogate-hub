@@ -44,6 +44,7 @@ class ActionsApi:
     @validate_call
     def get_run(
         self,
+        user: StrictStr,
         repository: StrictStr,
         run_id: StrictStr,
         _request_timeout: Union[
@@ -62,6 +63,8 @@ class ActionsApi:
         """get a run
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param run_id: (required)
@@ -89,6 +92,7 @@ class ActionsApi:
         """ # noqa: E501
 
         _param = self._get_run_serialize(
+            user=user,
             repository=repository,
             run_id=run_id,
             _request_auth=_request_auth,
@@ -117,6 +121,7 @@ class ActionsApi:
     @validate_call
     def get_run_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         run_id: StrictStr,
         _request_timeout: Union[
@@ -135,6 +140,8 @@ class ActionsApi:
         """get a run
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param run_id: (required)
@@ -162,6 +169,7 @@ class ActionsApi:
         """ # noqa: E501
 
         _param = self._get_run_serialize(
+            user=user,
             repository=repository,
             run_id=run_id,
             _request_auth=_request_auth,
@@ -190,6 +198,7 @@ class ActionsApi:
     @validate_call
     def get_run_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         run_id: StrictStr,
         _request_timeout: Union[
@@ -208,6 +217,8 @@ class ActionsApi:
         """get a run
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param run_id: (required)
@@ -235,6 +246,7 @@ class ActionsApi:
         """ # noqa: E501
 
         _param = self._get_run_serialize(
+            user=user,
             repository=repository,
             run_id=run_id,
             _request_auth=_request_auth,
@@ -258,6 +270,7 @@ class ActionsApi:
 
     def _get_run_serialize(
         self,
+        user,
         repository,
         run_id,
         _request_auth,
@@ -281,6 +294,8 @@ class ActionsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if run_id is not None:
@@ -311,7 +326,7 @@ class ActionsApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/actions/runs/{run_id}',
+            resource_path='/repositories/{user}/{repository}/actions/runs/{run_id}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -330,6 +345,7 @@ class ActionsApi:
     @validate_call
     def get_run_hook_output(
         self,
+        user: StrictStr,
         repository: StrictStr,
         run_id: StrictStr,
         hook_run_id: StrictStr,
@@ -349,6 +365,8 @@ class ActionsApi:
         """get run hook output
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param run_id: (required)
@@ -378,6 +396,7 @@ class ActionsApi:
         """ # noqa: E501
 
         _param = self._get_run_hook_output_serialize(
+            user=user,
             repository=repository,
             run_id=run_id,
             hook_run_id=hook_run_id,
@@ -407,6 +426,7 @@ class ActionsApi:
     @validate_call
     def get_run_hook_output_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         run_id: StrictStr,
         hook_run_id: StrictStr,
@@ -426,6 +446,8 @@ class ActionsApi:
         """get run hook output
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param run_id: (required)
@@ -455,6 +477,7 @@ class ActionsApi:
         """ # noqa: E501
 
         _param = self._get_run_hook_output_serialize(
+            user=user,
             repository=repository,
             run_id=run_id,
             hook_run_id=hook_run_id,
@@ -484,6 +507,7 @@ class ActionsApi:
     @validate_call
     def get_run_hook_output_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         run_id: StrictStr,
         hook_run_id: StrictStr,
@@ -503,6 +527,8 @@ class ActionsApi:
         """get run hook output
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param run_id: (required)
@@ -532,6 +558,7 @@ class ActionsApi:
         """ # noqa: E501
 
         _param = self._get_run_hook_output_serialize(
+            user=user,
             repository=repository,
             run_id=run_id,
             hook_run_id=hook_run_id,
@@ -556,6 +583,7 @@ class ActionsApi:
 
     def _get_run_hook_output_serialize(
         self,
+        user,
         repository,
         run_id,
         hook_run_id,
@@ -580,6 +608,8 @@ class ActionsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if run_id is not None:
@@ -613,7 +643,7 @@ class ActionsApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/actions/runs/{run_id}/hooks/{hook_run_id}/output',
+            resource_path='/repositories/{user}/{repository}/actions/runs/{run_id}/hooks/{hook_run_id}/output',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -632,6 +662,7 @@ class ActionsApi:
     @validate_call
     def list_repository_runs(
         self,
+        user: StrictStr,
         repository: StrictStr,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
         amount: Annotated[Optional[Annotated[int, Field(le=1000, strict=True, ge=-1)]], Field(description="how many items to return")] = None,
@@ -653,6 +684,8 @@ class ActionsApi:
         """list runs
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param after: return items after this value
@@ -686,6 +719,7 @@ class ActionsApi:
         """ # noqa: E501
 
         _param = self._list_repository_runs_serialize(
+            user=user,
             repository=repository,
             after=after,
             amount=amount,
@@ -717,6 +751,7 @@ class ActionsApi:
     @validate_call
     def list_repository_runs_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
         amount: Annotated[Optional[Annotated[int, Field(le=1000, strict=True, ge=-1)]], Field(description="how many items to return")] = None,
@@ -738,6 +773,8 @@ class ActionsApi:
         """list runs
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param after: return items after this value
@@ -771,6 +808,7 @@ class ActionsApi:
         """ # noqa: E501
 
         _param = self._list_repository_runs_serialize(
+            user=user,
             repository=repository,
             after=after,
             amount=amount,
@@ -802,6 +840,7 @@ class ActionsApi:
     @validate_call
     def list_repository_runs_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
         amount: Annotated[Optional[Annotated[int, Field(le=1000, strict=True, ge=-1)]], Field(description="how many items to return")] = None,
@@ -823,6 +862,8 @@ class ActionsApi:
         """list runs
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param after: return items after this value
@@ -856,6 +897,7 @@ class ActionsApi:
         """ # noqa: E501
 
         _param = self._list_repository_runs_serialize(
+            user=user,
             repository=repository,
             after=after,
             amount=amount,
@@ -882,6 +924,7 @@ class ActionsApi:
 
     def _list_repository_runs_serialize(
         self,
+        user,
         repository,
         after,
         amount,
@@ -908,6 +951,8 @@ class ActionsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -952,7 +997,7 @@ class ActionsApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/actions/runs',
+            resource_path='/repositories/{user}/{repository}/actions/runs',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -971,6 +1016,7 @@ class ActionsApi:
     @validate_call
     def list_run_hooks(
         self,
+        user: StrictStr,
         repository: StrictStr,
         run_id: StrictStr,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -991,6 +1037,8 @@ class ActionsApi:
         """list run hooks
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param run_id: (required)
@@ -1022,6 +1070,7 @@ class ActionsApi:
         """ # noqa: E501
 
         _param = self._list_run_hooks_serialize(
+            user=user,
             repository=repository,
             run_id=run_id,
             after=after,
@@ -1052,6 +1101,7 @@ class ActionsApi:
     @validate_call
     def list_run_hooks_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         run_id: StrictStr,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -1072,6 +1122,8 @@ class ActionsApi:
         """list run hooks
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param run_id: (required)
@@ -1103,6 +1155,7 @@ class ActionsApi:
         """ # noqa: E501
 
         _param = self._list_run_hooks_serialize(
+            user=user,
             repository=repository,
             run_id=run_id,
             after=after,
@@ -1133,6 +1186,7 @@ class ActionsApi:
     @validate_call
     def list_run_hooks_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         run_id: StrictStr,
         after: Annotated[Optional[StrictStr], Field(description="return items after this value")] = None,
@@ -1153,6 +1207,8 @@ class ActionsApi:
         """list run hooks
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param run_id: (required)
@@ -1184,6 +1240,7 @@ class ActionsApi:
         """ # noqa: E501
 
         _param = self._list_run_hooks_serialize(
+            user=user,
             repository=repository,
             run_id=run_id,
             after=after,
@@ -1209,6 +1266,7 @@ class ActionsApi:
 
     def _list_run_hooks_serialize(
         self,
+        user,
         repository,
         run_id,
         after,
@@ -1234,6 +1292,8 @@ class ActionsApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if run_id is not None:
@@ -1272,7 +1332,7 @@ class ActionsApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/actions/runs/{run_id}/hooks',
+            resource_path='/repositories/{user}/{repository}/actions/runs/{run_id}/hooks',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,

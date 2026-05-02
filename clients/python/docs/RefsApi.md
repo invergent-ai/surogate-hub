@@ -4,14 +4,14 @@ All URIs are relative to */api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**diff_refs**](RefsApi.md#diff_refs) | **GET** /repositories/{repository}/refs/{leftRef}/diff/{rightRef} | diff references
-[**find_merge_base**](RefsApi.md#find_merge_base) | **GET** /repositories/{repository}/refs/{sourceRef}/merge/{destinationBranch} | find the merge base for 2 references
-[**log_commits**](RefsApi.md#log_commits) | **GET** /repositories/{repository}/refs/{ref}/commits | get commit log from ref. If both objects and prefixes are empty, return all commits.
-[**merge_into_branch**](RefsApi.md#merge_into_branch) | **POST** /repositories/{repository}/refs/{sourceRef}/merge/{destinationBranch} | merge references
+[**diff_refs**](RefsApi.md#diff_refs) | **GET** /repositories/{user}/{repository}/refs/{leftRef}/diff/{rightRef} | diff references
+[**find_merge_base**](RefsApi.md#find_merge_base) | **GET** /repositories/{user}/{repository}/refs/{sourceRef}/merge/{destinationBranch} | find the merge base for 2 references
+[**log_commits**](RefsApi.md#log_commits) | **GET** /repositories/{user}/{repository}/refs/{ref}/commits | get commit log from ref. If both objects and prefixes are empty, return all commits.
+[**merge_into_branch**](RefsApi.md#merge_into_branch) | **POST** /repositories/{user}/{repository}/refs/{sourceRef}/merge/{destinationBranch} | merge references
 
 
 # **diff_refs**
-> DiffList diff_refs(repository, left_ref, right_ref, after=after, amount=amount, prefix=prefix, delimiter=delimiter, type=type)
+> DiffList diff_refs(user, repository, left_ref, right_ref, after=after, amount=amount, prefix=prefix, delimiter=delimiter, type=type)
 
 diff references
 
@@ -73,6 +73,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.RefsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     left_ref = 'left_ref_example' # str | a reference (could be either a branch or a commit ID)
     right_ref = 'right_ref_example' # str | a reference (could be either a branch or a commit ID) to compare against
@@ -84,7 +85,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # diff references
-        api_response = api_instance.diff_refs(repository, left_ref, right_ref, after=after, amount=amount, prefix=prefix, delimiter=delimiter, type=type)
+        api_response = api_instance.diff_refs(user, repository, left_ref, right_ref, after=after, amount=amount, prefix=prefix, delimiter=delimiter, type=type)
         print("The response of RefsApi->diff_refs:\n")
         pprint(api_response)
     except Exception as e:
@@ -98,6 +99,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **left_ref** | **str**| a reference (could be either a branch or a commit ID) | 
  **right_ref** | **str**| a reference (could be either a branch or a commit ID) to compare against | 
@@ -133,7 +135,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **find_merge_base**
-> FindMergeBaseResult find_merge_base(repository, source_ref, destination_branch)
+> FindMergeBaseResult find_merge_base(user, repository, source_ref, destination_branch)
 
 find the merge base for 2 references
 
@@ -195,13 +197,14 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.RefsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     source_ref = 'source_ref_example' # str | source ref
     destination_branch = 'destination_branch_example' # str | destination branch name
 
     try:
         # find the merge base for 2 references
-        api_response = api_instance.find_merge_base(repository, source_ref, destination_branch)
+        api_response = api_instance.find_merge_base(user, repository, source_ref, destination_branch)
         print("The response of RefsApi->find_merge_base:\n")
         pprint(api_response)
     except Exception as e:
@@ -215,6 +218,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **source_ref** | **str**| source ref | 
  **destination_branch** | **str**| destination branch name | 
@@ -246,7 +250,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **log_commits**
-> CommitList log_commits(repository, ref, after=after, amount=amount, objects=objects, prefixes=prefixes, limit=limit, first_parent=first_parent, since=since, stop_at=stop_at)
+> CommitList log_commits(user, repository, ref, after=after, amount=amount, objects=objects, prefixes=prefixes, limit=limit, first_parent=first_parent, since=since, stop_at=stop_at)
 
 get commit log from ref. If both objects and prefixes are empty, return all commits.
 
@@ -308,6 +312,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.RefsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     ref = 'ref_example' # str | 
     after = 'after_example' # str | return items after this value (optional)
@@ -321,7 +326,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # get commit log from ref. If both objects and prefixes are empty, return all commits.
-        api_response = api_instance.log_commits(repository, ref, after=after, amount=amount, objects=objects, prefixes=prefixes, limit=limit, first_parent=first_parent, since=since, stop_at=stop_at)
+        api_response = api_instance.log_commits(user, repository, ref, after=after, amount=amount, objects=objects, prefixes=prefixes, limit=limit, first_parent=first_parent, since=since, stop_at=stop_at)
         print("The response of RefsApi->log_commits:\n")
         pprint(api_response)
     except Exception as e:
@@ -335,6 +340,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **ref** | **str**|  | 
  **after** | **str**| return items after this value | [optional] 
@@ -372,7 +378,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **merge_into_branch**
-> MergeResult merge_into_branch(repository, source_ref, destination_branch, merge=merge)
+> MergeResult merge_into_branch(user, repository, source_ref, destination_branch, merge=merge)
 
 merge references
 
@@ -435,6 +441,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.RefsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     source_ref = 'source_ref_example' # str | source ref
     destination_branch = 'destination_branch_example' # str | destination branch name
@@ -442,7 +449,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # merge references
-        api_response = api_instance.merge_into_branch(repository, source_ref, destination_branch, merge=merge)
+        api_response = api_instance.merge_into_branch(user, repository, source_ref, destination_branch, merge=merge)
         print("The response of RefsApi->merge_into_branch:\n")
         pprint(api_response)
     except Exception as e:
@@ -456,6 +463,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **source_ref** | **str**| source ref | 
  **destination_branch** | **str**| destination branch name | 

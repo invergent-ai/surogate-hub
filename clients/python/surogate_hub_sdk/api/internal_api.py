@@ -16,7 +16,7 @@ from pydantic import validate_call, Field, StrictFloat, StrictStr, StrictInt
 from typing import Any, Dict, List, Optional, Tuple, Union
 from typing_extensions import Annotated
 
-from pydantic import Field, StrictBool, StrictBytes, StrictStr, field_validator
+from pydantic import Field, StrictBool, StrictBytes, StrictInt, StrictStr, field_validator
 from typing import List, Optional, Tuple, Union
 from typing_extensions import Annotated
 from surogate_hub_sdk.models.auth_capabilities import AuthCapabilities
@@ -31,6 +31,7 @@ from surogate_hub_sdk.models.installation_usage_report import InstallationUsageR
 from surogate_hub_sdk.models.internal_delete_branch_protection_rule_request import InternalDeleteBranchProtectionRuleRequest
 from surogate_hub_sdk.models.object_stage_creation import ObjectStageCreation
 from surogate_hub_sdk.models.object_stats import ObjectStats
+from surogate_hub_sdk.models.object_upload_mode import ObjectUploadMode
 from surogate_hub_sdk.models.prepare_gc_uncommitted_request import PrepareGCUncommittedRequest
 from surogate_hub_sdk.models.prepare_gc_uncommitted_response import PrepareGCUncommittedResponse
 from surogate_hub_sdk.models.refs_dump import RefsDump
@@ -65,6 +66,7 @@ class InternalApi:
     @validate_call
     def create_branch_protection_rule_preflight(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -82,6 +84,8 @@ class InternalApi:
         """create_branch_protection_rule_preflight
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -107,6 +111,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._create_branch_protection_rule_preflight_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -135,6 +140,7 @@ class InternalApi:
     @validate_call
     def create_branch_protection_rule_preflight_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -152,6 +158,8 @@ class InternalApi:
         """create_branch_protection_rule_preflight
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -177,6 +185,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._create_branch_protection_rule_preflight_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -205,6 +214,7 @@ class InternalApi:
     @validate_call
     def create_branch_protection_rule_preflight_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -222,6 +232,8 @@ class InternalApi:
         """create_branch_protection_rule_preflight
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -247,6 +259,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._create_branch_protection_rule_preflight_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -270,6 +283,7 @@ class InternalApi:
 
     def _create_branch_protection_rule_preflight_serialize(
         self,
+        user,
         repository,
         _request_auth,
         _content_type,
@@ -292,6 +306,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -320,7 +336,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/branch_protection/set_allowed',
+            resource_path='/repositories/{user}/{repository}/branch_protection/set_allowed',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -339,6 +355,7 @@ class InternalApi:
     @validate_call
     def create_commit_record(
         self,
+        user: StrictStr,
         repository: StrictStr,
         commit_record_creation: CommitRecordCreation,
         _request_timeout: Union[
@@ -357,6 +374,8 @@ class InternalApi:
         """create commit record
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param commit_record_creation: (required)
@@ -384,6 +403,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._create_commit_record_serialize(
+            user=user,
             repository=repository,
             commit_record_creation=commit_record_creation,
             _request_auth=_request_auth,
@@ -414,6 +434,7 @@ class InternalApi:
     @validate_call
     def create_commit_record_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         commit_record_creation: CommitRecordCreation,
         _request_timeout: Union[
@@ -432,6 +453,8 @@ class InternalApi:
         """create commit record
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param commit_record_creation: (required)
@@ -459,6 +482,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._create_commit_record_serialize(
+            user=user,
             repository=repository,
             commit_record_creation=commit_record_creation,
             _request_auth=_request_auth,
@@ -489,6 +513,7 @@ class InternalApi:
     @validate_call
     def create_commit_record_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         commit_record_creation: CommitRecordCreation,
         _request_timeout: Union[
@@ -507,6 +532,8 @@ class InternalApi:
         """create commit record
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param commit_record_creation: (required)
@@ -534,6 +561,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._create_commit_record_serialize(
+            user=user,
             repository=repository,
             commit_record_creation=commit_record_creation,
             _request_auth=_request_auth,
@@ -559,6 +587,7 @@ class InternalApi:
 
     def _create_commit_record_serialize(
         self,
+        user,
         repository,
         commit_record_creation,
         _request_auth,
@@ -582,6 +611,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -625,7 +656,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/commits',
+            resource_path='/repositories/{user}/{repository}/commits',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -644,6 +675,7 @@ class InternalApi:
     @validate_call
     def create_symlink_file(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         location: Annotated[Optional[StrictStr], Field(description="path to the table data")] = None,
@@ -663,6 +695,8 @@ class InternalApi:
         """creates symlink files corresponding to the given directory
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -692,6 +726,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._create_symlink_file_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             location=location,
@@ -721,6 +756,7 @@ class InternalApi:
     @validate_call
     def create_symlink_file_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         location: Annotated[Optional[StrictStr], Field(description="path to the table data")] = None,
@@ -740,6 +776,8 @@ class InternalApi:
         """creates symlink files corresponding to the given directory
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -769,6 +807,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._create_symlink_file_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             location=location,
@@ -798,6 +837,7 @@ class InternalApi:
     @validate_call
     def create_symlink_file_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         location: Annotated[Optional[StrictStr], Field(description="path to the table data")] = None,
@@ -817,6 +857,8 @@ class InternalApi:
         """creates symlink files corresponding to the given directory
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -846,6 +888,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._create_symlink_file_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             location=location,
@@ -870,6 +913,7 @@ class InternalApi:
 
     def _create_symlink_file_serialize(
         self,
+        user,
         repository,
         branch,
         location,
@@ -894,6 +938,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -928,7 +974,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/refs/{branch}/symlink',
+            resource_path='/repositories/{user}/{repository}/refs/{branch}/symlink',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -947,6 +993,7 @@ class InternalApi:
     @validate_call
     def delete_repository_metadata(
         self,
+        user: StrictStr,
         repository: StrictStr,
         repository_metadata_keys: RepositoryMetadataKeys,
         _request_timeout: Union[
@@ -966,6 +1013,8 @@ class InternalApi:
 
         Delete specified keys from the repository's metadata. 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param repository_metadata_keys: (required)
@@ -993,6 +1042,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._delete_repository_metadata_serialize(
+            user=user,
             repository=repository,
             repository_metadata_keys=repository_metadata_keys,
             _request_auth=_request_auth,
@@ -1020,6 +1070,7 @@ class InternalApi:
     @validate_call
     def delete_repository_metadata_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         repository_metadata_keys: RepositoryMetadataKeys,
         _request_timeout: Union[
@@ -1039,6 +1090,8 @@ class InternalApi:
 
         Delete specified keys from the repository's metadata. 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param repository_metadata_keys: (required)
@@ -1066,6 +1119,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._delete_repository_metadata_serialize(
+            user=user,
             repository=repository,
             repository_metadata_keys=repository_metadata_keys,
             _request_auth=_request_auth,
@@ -1093,6 +1147,7 @@ class InternalApi:
     @validate_call
     def delete_repository_metadata_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         repository_metadata_keys: RepositoryMetadataKeys,
         _request_timeout: Union[
@@ -1112,6 +1167,8 @@ class InternalApi:
 
         Delete specified keys from the repository's metadata. 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param repository_metadata_keys: (required)
@@ -1139,6 +1196,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._delete_repository_metadata_serialize(
+            user=user,
             repository=repository,
             repository_metadata_keys=repository_metadata_keys,
             _request_auth=_request_auth,
@@ -1161,6 +1219,7 @@ class InternalApi:
 
     def _delete_repository_metadata_serialize(
         self,
+        user,
         repository,
         repository_metadata_keys,
         _request_auth,
@@ -1184,6 +1243,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -1227,7 +1288,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='DELETE',
-            resource_path='/repositories/{repository}/metadata',
+            resource_path='/repositories/{user}/{repository}/metadata',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -1246,6 +1307,7 @@ class InternalApi:
     @validate_call
     def dump_refs(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -1263,6 +1325,8 @@ class InternalApi:
         """Dump repository refs (tags, commits, branches) to object store Deprecated: a new API will introduce long running operations 
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -1288,6 +1352,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._dump_refs_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -1316,6 +1381,7 @@ class InternalApi:
     @validate_call
     def dump_refs_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -1333,6 +1399,8 @@ class InternalApi:
         """Dump repository refs (tags, commits, branches) to object store Deprecated: a new API will introduce long running operations 
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -1358,6 +1426,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._dump_refs_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -1386,6 +1455,7 @@ class InternalApi:
     @validate_call
     def dump_refs_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -1403,6 +1473,8 @@ class InternalApi:
         """Dump repository refs (tags, commits, branches) to object store Deprecated: a new API will introduce long running operations 
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -1428,6 +1500,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._dump_refs_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -1451,6 +1524,7 @@ class InternalApi:
 
     def _dump_refs_serialize(
         self,
+        user,
         repository,
         _request_auth,
         _content_type,
@@ -1473,6 +1547,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -1501,7 +1577,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='PUT',
-            resource_path='/repositories/{repository}/refs/dump',
+            resource_path='/repositories/{user}/{repository}/refs/dump',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -2274,6 +2350,7 @@ class InternalApi:
     @validate_call
     def get_metadata_object(
         self,
+        user: StrictStr,
         repository: StrictStr,
         object_id: StrictStr,
         type: StrictStr,
@@ -2294,6 +2371,8 @@ class InternalApi:
         """return a Surogate Hub metadata object by ID
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param object_id: (required)
@@ -2325,6 +2404,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._get_metadata_object_serialize(
+            user=user,
             repository=repository,
             object_id=object_id,
             type=type,
@@ -2356,6 +2436,7 @@ class InternalApi:
     @validate_call
     def get_metadata_object_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         object_id: StrictStr,
         type: StrictStr,
@@ -2376,6 +2457,8 @@ class InternalApi:
         """return a Surogate Hub metadata object by ID
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param object_id: (required)
@@ -2407,6 +2490,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._get_metadata_object_serialize(
+            user=user,
             repository=repository,
             object_id=object_id,
             type=type,
@@ -2438,6 +2522,7 @@ class InternalApi:
     @validate_call
     def get_metadata_object_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         object_id: StrictStr,
         type: StrictStr,
@@ -2458,6 +2543,8 @@ class InternalApi:
         """return a Surogate Hub metadata object by ID
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param object_id: (required)
@@ -2489,6 +2576,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._get_metadata_object_serialize(
+            user=user,
             repository=repository,
             object_id=object_id,
             type=type,
@@ -2515,6 +2603,7 @@ class InternalApi:
 
     def _get_metadata_object_serialize(
         self,
+        user,
         repository,
         object_id,
         type,
@@ -2540,6 +2629,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if object_id is not None:
@@ -2577,7 +2668,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/metadata/object/{type}/{object_id}',
+            resource_path='/repositories/{user}/{repository}/metadata/object/{type}/{object_id}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -3357,6 +3448,7 @@ class InternalApi:
     @validate_call
     def internal_create_branch_protection_rule(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch_protection_rule: BranchProtectionRule,
         _request_timeout: Union[
@@ -3375,6 +3467,8 @@ class InternalApi:
         """(Deprecated) internal_create_branch_protection_rule
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch_protection_rule: (required)
@@ -3400,9 +3494,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("POST /repositories/{repository}/branch_protection is deprecated.", DeprecationWarning)
+        warnings.warn("POST /repositories/{user}/{repository}/branch_protection is deprecated.", DeprecationWarning)
 
         _param = self._internal_create_branch_protection_rule_serialize(
+            user=user,
             repository=repository,
             branch_protection_rule=branch_protection_rule,
             _request_auth=_request_auth,
@@ -3431,6 +3526,7 @@ class InternalApi:
     @validate_call
     def internal_create_branch_protection_rule_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch_protection_rule: BranchProtectionRule,
         _request_timeout: Union[
@@ -3449,6 +3545,8 @@ class InternalApi:
         """(Deprecated) internal_create_branch_protection_rule
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch_protection_rule: (required)
@@ -3474,9 +3572,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("POST /repositories/{repository}/branch_protection is deprecated.", DeprecationWarning)
+        warnings.warn("POST /repositories/{user}/{repository}/branch_protection is deprecated.", DeprecationWarning)
 
         _param = self._internal_create_branch_protection_rule_serialize(
+            user=user,
             repository=repository,
             branch_protection_rule=branch_protection_rule,
             _request_auth=_request_auth,
@@ -3505,6 +3604,7 @@ class InternalApi:
     @validate_call
     def internal_create_branch_protection_rule_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch_protection_rule: BranchProtectionRule,
         _request_timeout: Union[
@@ -3523,6 +3623,8 @@ class InternalApi:
         """(Deprecated) internal_create_branch_protection_rule
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch_protection_rule: (required)
@@ -3548,9 +3650,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("POST /repositories/{repository}/branch_protection is deprecated.", DeprecationWarning)
+        warnings.warn("POST /repositories/{user}/{repository}/branch_protection is deprecated.", DeprecationWarning)
 
         _param = self._internal_create_branch_protection_rule_serialize(
+            user=user,
             repository=repository,
             branch_protection_rule=branch_protection_rule,
             _request_auth=_request_auth,
@@ -3574,6 +3677,7 @@ class InternalApi:
 
     def _internal_create_branch_protection_rule_serialize(
         self,
+        user,
         repository,
         branch_protection_rule,
         _request_auth,
@@ -3597,6 +3701,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -3640,7 +3746,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/branch_protection',
+            resource_path='/repositories/{user}/{repository}/branch_protection',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -3659,6 +3765,7 @@ class InternalApi:
     @validate_call
     def internal_delete_branch_protection_rule(
         self,
+        user: StrictStr,
         repository: StrictStr,
         internal_delete_branch_protection_rule_request: InternalDeleteBranchProtectionRuleRequest,
         _request_timeout: Union[
@@ -3677,6 +3784,8 @@ class InternalApi:
         """(Deprecated) internal_delete_branch_protection_rule
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param internal_delete_branch_protection_rule_request: (required)
@@ -3702,9 +3811,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("DELETE /repositories/{repository}/branch_protection is deprecated.", DeprecationWarning)
+        warnings.warn("DELETE /repositories/{user}/{repository}/branch_protection is deprecated.", DeprecationWarning)
 
         _param = self._internal_delete_branch_protection_rule_serialize(
+            user=user,
             repository=repository,
             internal_delete_branch_protection_rule_request=internal_delete_branch_protection_rule_request,
             _request_auth=_request_auth,
@@ -3733,6 +3843,7 @@ class InternalApi:
     @validate_call
     def internal_delete_branch_protection_rule_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         internal_delete_branch_protection_rule_request: InternalDeleteBranchProtectionRuleRequest,
         _request_timeout: Union[
@@ -3751,6 +3862,8 @@ class InternalApi:
         """(Deprecated) internal_delete_branch_protection_rule
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param internal_delete_branch_protection_rule_request: (required)
@@ -3776,9 +3889,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("DELETE /repositories/{repository}/branch_protection is deprecated.", DeprecationWarning)
+        warnings.warn("DELETE /repositories/{user}/{repository}/branch_protection is deprecated.", DeprecationWarning)
 
         _param = self._internal_delete_branch_protection_rule_serialize(
+            user=user,
             repository=repository,
             internal_delete_branch_protection_rule_request=internal_delete_branch_protection_rule_request,
             _request_auth=_request_auth,
@@ -3807,6 +3921,7 @@ class InternalApi:
     @validate_call
     def internal_delete_branch_protection_rule_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         internal_delete_branch_protection_rule_request: InternalDeleteBranchProtectionRuleRequest,
         _request_timeout: Union[
@@ -3825,6 +3940,8 @@ class InternalApi:
         """(Deprecated) internal_delete_branch_protection_rule
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param internal_delete_branch_protection_rule_request: (required)
@@ -3850,9 +3967,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("DELETE /repositories/{repository}/branch_protection is deprecated.", DeprecationWarning)
+        warnings.warn("DELETE /repositories/{user}/{repository}/branch_protection is deprecated.", DeprecationWarning)
 
         _param = self._internal_delete_branch_protection_rule_serialize(
+            user=user,
             repository=repository,
             internal_delete_branch_protection_rule_request=internal_delete_branch_protection_rule_request,
             _request_auth=_request_auth,
@@ -3876,6 +3994,7 @@ class InternalApi:
 
     def _internal_delete_branch_protection_rule_serialize(
         self,
+        user,
         repository,
         internal_delete_branch_protection_rule_request,
         _request_auth,
@@ -3899,6 +4018,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -3942,7 +4063,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='DELETE',
-            resource_path='/repositories/{repository}/branch_protection',
+            resource_path='/repositories/{user}/{repository}/branch_protection',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -3961,6 +4082,7 @@ class InternalApi:
     @validate_call
     def internal_delete_garbage_collection_rules(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -3978,6 +4100,8 @@ class InternalApi:
         """(Deprecated) internal_delete_garbage_collection_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -4001,9 +4125,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("DELETE /repositories/{repository}/gc/rules is deprecated.", DeprecationWarning)
+        warnings.warn("DELETE /repositories/{user}/{repository}/gc/rules is deprecated.", DeprecationWarning)
 
         _param = self._internal_delete_garbage_collection_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -4031,6 +4156,7 @@ class InternalApi:
     @validate_call
     def internal_delete_garbage_collection_rules_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -4048,6 +4174,8 @@ class InternalApi:
         """(Deprecated) internal_delete_garbage_collection_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -4071,9 +4199,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("DELETE /repositories/{repository}/gc/rules is deprecated.", DeprecationWarning)
+        warnings.warn("DELETE /repositories/{user}/{repository}/gc/rules is deprecated.", DeprecationWarning)
 
         _param = self._internal_delete_garbage_collection_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -4101,6 +4230,7 @@ class InternalApi:
     @validate_call
     def internal_delete_garbage_collection_rules_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -4118,6 +4248,8 @@ class InternalApi:
         """(Deprecated) internal_delete_garbage_collection_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -4141,9 +4273,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("DELETE /repositories/{repository}/gc/rules is deprecated.", DeprecationWarning)
+        warnings.warn("DELETE /repositories/{user}/{repository}/gc/rules is deprecated.", DeprecationWarning)
 
         _param = self._internal_delete_garbage_collection_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -4166,6 +4299,7 @@ class InternalApi:
 
     def _internal_delete_garbage_collection_rules_serialize(
         self,
+        user,
         repository,
         _request_auth,
         _content_type,
@@ -4188,6 +4322,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -4216,7 +4352,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='DELETE',
-            resource_path='/repositories/{repository}/gc/rules',
+            resource_path='/repositories/{user}/{repository}/gc/rules',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -4235,6 +4371,7 @@ class InternalApi:
     @validate_call
     def internal_get_branch_protection_rules(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -4252,6 +4389,8 @@ class InternalApi:
         """(Deprecated) get branch protection rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -4275,9 +4414,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("GET /repositories/{repository}/branch_protection is deprecated.", DeprecationWarning)
+        warnings.warn("GET /repositories/{user}/{repository}/branch_protection is deprecated.", DeprecationWarning)
 
         _param = self._internal_get_branch_protection_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -4305,6 +4445,7 @@ class InternalApi:
     @validate_call
     def internal_get_branch_protection_rules_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -4322,6 +4463,8 @@ class InternalApi:
         """(Deprecated) get branch protection rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -4345,9 +4488,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("GET /repositories/{repository}/branch_protection is deprecated.", DeprecationWarning)
+        warnings.warn("GET /repositories/{user}/{repository}/branch_protection is deprecated.", DeprecationWarning)
 
         _param = self._internal_get_branch_protection_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -4375,6 +4519,7 @@ class InternalApi:
     @validate_call
     def internal_get_branch_protection_rules_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -4392,6 +4537,8 @@ class InternalApi:
         """(Deprecated) get branch protection rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -4415,9 +4562,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("GET /repositories/{repository}/branch_protection is deprecated.", DeprecationWarning)
+        warnings.warn("GET /repositories/{user}/{repository}/branch_protection is deprecated.", DeprecationWarning)
 
         _param = self._internal_get_branch_protection_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -4440,6 +4588,7 @@ class InternalApi:
 
     def _internal_get_branch_protection_rules_serialize(
         self,
+        user,
         repository,
         _request_auth,
         _content_type,
@@ -4462,6 +4611,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -4490,7 +4641,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/branch_protection',
+            resource_path='/repositories/{user}/{repository}/branch_protection',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -4509,6 +4660,7 @@ class InternalApi:
     @validate_call
     def internal_get_garbage_collection_rules(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -4526,6 +4678,8 @@ class InternalApi:
         """(Deprecated) internal_get_garbage_collection_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -4549,9 +4703,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("GET /repositories/{repository}/gc/rules is deprecated.", DeprecationWarning)
+        warnings.warn("GET /repositories/{user}/{repository}/gc/rules is deprecated.", DeprecationWarning)
 
         _param = self._internal_get_garbage_collection_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -4579,6 +4734,7 @@ class InternalApi:
     @validate_call
     def internal_get_garbage_collection_rules_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -4596,6 +4752,8 @@ class InternalApi:
         """(Deprecated) internal_get_garbage_collection_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -4619,9 +4777,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("GET /repositories/{repository}/gc/rules is deprecated.", DeprecationWarning)
+        warnings.warn("GET /repositories/{user}/{repository}/gc/rules is deprecated.", DeprecationWarning)
 
         _param = self._internal_get_garbage_collection_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -4649,6 +4808,7 @@ class InternalApi:
     @validate_call
     def internal_get_garbage_collection_rules_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -4666,6 +4826,8 @@ class InternalApi:
         """(Deprecated) internal_get_garbage_collection_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -4689,9 +4851,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("GET /repositories/{repository}/gc/rules is deprecated.", DeprecationWarning)
+        warnings.warn("GET /repositories/{user}/{repository}/gc/rules is deprecated.", DeprecationWarning)
 
         _param = self._internal_get_garbage_collection_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -4714,6 +4877,7 @@ class InternalApi:
 
     def _internal_get_garbage_collection_rules_serialize(
         self,
+        user,
         repository,
         _request_auth,
         _content_type,
@@ -4736,6 +4900,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -4764,7 +4930,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/gc/rules',
+            resource_path='/repositories/{user}/{repository}/gc/rules',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -4783,6 +4949,7 @@ class InternalApi:
     @validate_call
     def internal_set_garbage_collection_rules(
         self,
+        user: StrictStr,
         repository: StrictStr,
         garbage_collection_rules: GarbageCollectionRules,
         _request_timeout: Union[
@@ -4801,6 +4968,8 @@ class InternalApi:
         """(Deprecated) internal_set_garbage_collection_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param garbage_collection_rules: (required)
@@ -4826,9 +4995,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("POST /repositories/{repository}/gc/rules is deprecated.", DeprecationWarning)
+        warnings.warn("POST /repositories/{user}/{repository}/gc/rules is deprecated.", DeprecationWarning)
 
         _param = self._internal_set_garbage_collection_rules_serialize(
+            user=user,
             repository=repository,
             garbage_collection_rules=garbage_collection_rules,
             _request_auth=_request_auth,
@@ -4857,6 +5027,7 @@ class InternalApi:
     @validate_call
     def internal_set_garbage_collection_rules_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         garbage_collection_rules: GarbageCollectionRules,
         _request_timeout: Union[
@@ -4875,6 +5046,8 @@ class InternalApi:
         """(Deprecated) internal_set_garbage_collection_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param garbage_collection_rules: (required)
@@ -4900,9 +5073,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("POST /repositories/{repository}/gc/rules is deprecated.", DeprecationWarning)
+        warnings.warn("POST /repositories/{user}/{repository}/gc/rules is deprecated.", DeprecationWarning)
 
         _param = self._internal_set_garbage_collection_rules_serialize(
+            user=user,
             repository=repository,
             garbage_collection_rules=garbage_collection_rules,
             _request_auth=_request_auth,
@@ -4931,6 +5105,7 @@ class InternalApi:
     @validate_call
     def internal_set_garbage_collection_rules_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         garbage_collection_rules: GarbageCollectionRules,
         _request_timeout: Union[
@@ -4949,6 +5124,8 @@ class InternalApi:
         """(Deprecated) internal_set_garbage_collection_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param garbage_collection_rules: (required)
@@ -4974,9 +5151,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("POST /repositories/{repository}/gc/rules is deprecated.", DeprecationWarning)
+        warnings.warn("POST /repositories/{user}/{repository}/gc/rules is deprecated.", DeprecationWarning)
 
         _param = self._internal_set_garbage_collection_rules_serialize(
+            user=user,
             repository=repository,
             garbage_collection_rules=garbage_collection_rules,
             _request_auth=_request_auth,
@@ -5000,6 +5178,7 @@ class InternalApi:
 
     def _internal_set_garbage_collection_rules_serialize(
         self,
+        user,
         repository,
         garbage_collection_rules,
         _request_auth,
@@ -5023,6 +5202,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -5066,7 +5247,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/gc/rules',
+            resource_path='/repositories/{user}/{repository}/gc/rules',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -5369,6 +5550,7 @@ class InternalApi:
     @validate_call
     def prepare_garbage_collection_commits(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -5386,6 +5568,8 @@ class InternalApi:
         """save lists of active commits for garbage collection
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -5411,6 +5595,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._prepare_garbage_collection_commits_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -5439,6 +5624,7 @@ class InternalApi:
     @validate_call
     def prepare_garbage_collection_commits_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -5456,6 +5642,8 @@ class InternalApi:
         """save lists of active commits for garbage collection
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -5481,6 +5669,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._prepare_garbage_collection_commits_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -5509,6 +5698,7 @@ class InternalApi:
     @validate_call
     def prepare_garbage_collection_commits_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -5526,6 +5716,8 @@ class InternalApi:
         """save lists of active commits for garbage collection
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -5551,6 +5743,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._prepare_garbage_collection_commits_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -5574,6 +5767,7 @@ class InternalApi:
 
     def _prepare_garbage_collection_commits_serialize(
         self,
+        user,
         repository,
         _request_auth,
         _content_type,
@@ -5596,6 +5790,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -5624,7 +5820,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/gc/prepare_commits',
+            resource_path='/repositories/{user}/{repository}/gc/prepare_commits',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -5643,6 +5839,7 @@ class InternalApi:
     @validate_call
     def prepare_garbage_collection_uncommitted(
         self,
+        user: StrictStr,
         repository: StrictStr,
         prepare_gc_uncommitted_request: Optional[PrepareGCUncommittedRequest] = None,
         _request_timeout: Union[
@@ -5661,6 +5858,8 @@ class InternalApi:
         """save repository uncommitted metadata for garbage collection
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param prepare_gc_uncommitted_request:
@@ -5688,6 +5887,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._prepare_garbage_collection_uncommitted_serialize(
+            user=user,
             repository=repository,
             prepare_gc_uncommitted_request=prepare_gc_uncommitted_request,
             _request_auth=_request_auth,
@@ -5718,6 +5918,7 @@ class InternalApi:
     @validate_call
     def prepare_garbage_collection_uncommitted_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         prepare_gc_uncommitted_request: Optional[PrepareGCUncommittedRequest] = None,
         _request_timeout: Union[
@@ -5736,6 +5937,8 @@ class InternalApi:
         """save repository uncommitted metadata for garbage collection
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param prepare_gc_uncommitted_request:
@@ -5763,6 +5966,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._prepare_garbage_collection_uncommitted_serialize(
+            user=user,
             repository=repository,
             prepare_gc_uncommitted_request=prepare_gc_uncommitted_request,
             _request_auth=_request_auth,
@@ -5793,6 +5997,7 @@ class InternalApi:
     @validate_call
     def prepare_garbage_collection_uncommitted_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         prepare_gc_uncommitted_request: Optional[PrepareGCUncommittedRequest] = None,
         _request_timeout: Union[
@@ -5811,6 +6016,8 @@ class InternalApi:
         """save repository uncommitted metadata for garbage collection
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param prepare_gc_uncommitted_request:
@@ -5838,6 +6045,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._prepare_garbage_collection_uncommitted_serialize(
+            user=user,
             repository=repository,
             prepare_gc_uncommitted_request=prepare_gc_uncommitted_request,
             _request_auth=_request_auth,
@@ -5863,6 +6071,7 @@ class InternalApi:
 
     def _prepare_garbage_collection_uncommitted_serialize(
         self,
+        user,
         repository,
         prepare_gc_uncommitted_request,
         _request_auth,
@@ -5886,6 +6095,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -5929,7 +6140,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/gc/prepare_uncommited',
+            resource_path='/repositories/{user}/{repository}/gc/prepare_uncommited',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -5948,6 +6159,7 @@ class InternalApi:
     @validate_call
     def restore_refs(
         self,
+        user: StrictStr,
         repository: StrictStr,
         refs_restore: RefsRestore,
         _request_timeout: Union[
@@ -5966,6 +6178,8 @@ class InternalApi:
         """Restore repository refs (tags, commits, branches) from object store. Deprecated: a new API will introduce long running operations 
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param refs_restore: (required)
@@ -5993,6 +6207,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._restore_refs_serialize(
+            user=user,
             repository=repository,
             refs_restore=refs_restore,
             _request_auth=_request_auth,
@@ -6022,6 +6237,7 @@ class InternalApi:
     @validate_call
     def restore_refs_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         refs_restore: RefsRestore,
         _request_timeout: Union[
@@ -6040,6 +6256,8 @@ class InternalApi:
         """Restore repository refs (tags, commits, branches) from object store. Deprecated: a new API will introduce long running operations 
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param refs_restore: (required)
@@ -6067,6 +6285,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._restore_refs_serialize(
+            user=user,
             repository=repository,
             refs_restore=refs_restore,
             _request_auth=_request_auth,
@@ -6096,6 +6315,7 @@ class InternalApi:
     @validate_call
     def restore_refs_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         refs_restore: RefsRestore,
         _request_timeout: Union[
@@ -6114,6 +6334,8 @@ class InternalApi:
         """Restore repository refs (tags, commits, branches) from object store. Deprecated: a new API will introduce long running operations 
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param refs_restore: (required)
@@ -6141,6 +6363,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._restore_refs_serialize(
+            user=user,
             repository=repository,
             refs_restore=refs_restore,
             _request_auth=_request_auth,
@@ -6165,6 +6388,7 @@ class InternalApi:
 
     def _restore_refs_serialize(
         self,
+        user,
         repository,
         refs_restore,
         _request_auth,
@@ -6188,6 +6412,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -6231,7 +6457,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='PUT',
-            resource_path='/repositories/{repository}/refs/restore',
+            resource_path='/repositories/{user}/{repository}/refs/restore',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -6250,6 +6476,7 @@ class InternalApi:
     @validate_call
     def set_garbage_collection_rules_preflight(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -6267,6 +6494,8 @@ class InternalApi:
         """set_garbage_collection_rules_preflight
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -6292,6 +6521,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._set_garbage_collection_rules_preflight_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -6319,6 +6549,7 @@ class InternalApi:
     @validate_call
     def set_garbage_collection_rules_preflight_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -6336,6 +6567,8 @@ class InternalApi:
         """set_garbage_collection_rules_preflight
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -6361,6 +6594,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._set_garbage_collection_rules_preflight_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -6388,6 +6622,7 @@ class InternalApi:
     @validate_call
     def set_garbage_collection_rules_preflight_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -6405,6 +6640,8 @@ class InternalApi:
         """set_garbage_collection_rules_preflight
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -6430,6 +6667,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._set_garbage_collection_rules_preflight_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -6452,6 +6690,7 @@ class InternalApi:
 
     def _set_garbage_collection_rules_preflight_serialize(
         self,
+        user,
         repository,
         _request_auth,
         _content_type,
@@ -6474,6 +6713,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -6502,7 +6743,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/gc/rules/set_allowed',
+            resource_path='/repositories/{user}/{repository}/gc/rules/set_allowed',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -6521,6 +6762,7 @@ class InternalApi:
     @validate_call
     def set_repository_metadata(
         self,
+        user: StrictStr,
         repository: StrictStr,
         repository_metadata_set: RepositoryMetadataSet,
         _request_timeout: Union[
@@ -6540,6 +6782,8 @@ class InternalApi:
 
         Set repository metadata. This will only add or update the provided keys, and will not remove any existing keys. 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param repository_metadata_set: (required)
@@ -6567,6 +6811,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._set_repository_metadata_serialize(
+            user=user,
             repository=repository,
             repository_metadata_set=repository_metadata_set,
             _request_auth=_request_auth,
@@ -6595,6 +6840,7 @@ class InternalApi:
     @validate_call
     def set_repository_metadata_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         repository_metadata_set: RepositoryMetadataSet,
         _request_timeout: Union[
@@ -6614,6 +6860,8 @@ class InternalApi:
 
         Set repository metadata. This will only add or update the provided keys, and will not remove any existing keys. 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param repository_metadata_set: (required)
@@ -6641,6 +6889,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._set_repository_metadata_serialize(
+            user=user,
             repository=repository,
             repository_metadata_set=repository_metadata_set,
             _request_auth=_request_auth,
@@ -6669,6 +6918,7 @@ class InternalApi:
     @validate_call
     def set_repository_metadata_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         repository_metadata_set: RepositoryMetadataSet,
         _request_timeout: Union[
@@ -6688,6 +6938,8 @@ class InternalApi:
 
         Set repository metadata. This will only add or update the provided keys, and will not remove any existing keys. 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param repository_metadata_set: (required)
@@ -6715,6 +6967,7 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._set_repository_metadata_serialize(
+            user=user,
             repository=repository,
             repository_metadata_set=repository_metadata_set,
             _request_auth=_request_auth,
@@ -6738,6 +6991,7 @@ class InternalApi:
 
     def _set_repository_metadata_serialize(
         self,
+        user,
         repository,
         repository_metadata_set,
         _request_auth,
@@ -6761,6 +7015,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -6804,7 +7060,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/metadata',
+            resource_path='/repositories/{user}/{repository}/metadata',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -7381,6 +7637,7 @@ class InternalApi:
     @validate_call
     def stage_object(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -7401,6 +7658,8 @@ class InternalApi:
         """(Deprecated) stage an object's metadata for the given branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -7430,9 +7689,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("PUT /repositories/{repository}/branches/{branch}/objects is deprecated.", DeprecationWarning)
+        warnings.warn("PUT /repositories/{user}/{repository}/branches/{branch}/objects is deprecated.", DeprecationWarning)
 
         _param = self._stage_object_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -7465,6 +7725,7 @@ class InternalApi:
     @validate_call
     def stage_object_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -7485,6 +7746,8 @@ class InternalApi:
         """(Deprecated) stage an object's metadata for the given branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -7514,9 +7777,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("PUT /repositories/{repository}/branches/{branch}/objects is deprecated.", DeprecationWarning)
+        warnings.warn("PUT /repositories/{user}/{repository}/branches/{branch}/objects is deprecated.", DeprecationWarning)
 
         _param = self._stage_object_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -7549,6 +7813,7 @@ class InternalApi:
     @validate_call
     def stage_object_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path: Annotated[StrictStr, Field(description="relative to the branch")],
@@ -7569,6 +7834,8 @@ class InternalApi:
         """(Deprecated) stage an object's metadata for the given branch
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
@@ -7598,9 +7865,10 @@ class InternalApi:
         :type _host_index: int, optional
         :return: Returns the result object.
         """ # noqa: E501
-        warnings.warn("PUT /repositories/{repository}/branches/{branch}/objects is deprecated.", DeprecationWarning)
+        warnings.warn("PUT /repositories/{user}/{repository}/branches/{branch}/objects is deprecated.", DeprecationWarning)
 
         _param = self._stage_object_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
@@ -7628,6 +7896,7 @@ class InternalApi:
 
     def _stage_object_serialize(
         self,
+        user,
         repository,
         branch,
         path,
@@ -7653,6 +7922,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -7702,7 +7973,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='PUT',
-            resource_path='/repositories/{repository}/branches/{branch}/objects',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/objects',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -7721,9 +7992,11 @@ class InternalApi:
     @validate_call
     def upload_object_preflight(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path: Annotated[StrictStr, Field(description="relative to the branch")],
+        size_bytes: Annotated[Optional[StrictInt], Field(description="Size of the object content the client plans to upload.")] = None,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -7736,16 +8009,20 @@ class InternalApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> None:
+    ) -> ObjectUploadMode:
         """upload_object_preflight
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
         :type branch: str
         :param path: relative to the branch (required)
         :type path: str
+        :param size_bytes: Size of the object content the client plans to upload.
+        :type size_bytes: int
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -7769,9 +8046,11 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._upload_object_preflight_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
+            size_bytes=size_bytes,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -7779,7 +8058,7 @@ class InternalApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '204': None,
+            '200': "ObjectUploadMode",
             '401': "Error",
             '403': "Error",
             '404': "Error",
@@ -7799,9 +8078,11 @@ class InternalApi:
     @validate_call
     def upload_object_preflight_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path: Annotated[StrictStr, Field(description="relative to the branch")],
+        size_bytes: Annotated[Optional[StrictInt], Field(description="Size of the object content the client plans to upload.")] = None,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -7814,16 +8095,20 @@ class InternalApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> ApiResponse[None]:
+    ) -> ApiResponse[ObjectUploadMode]:
         """upload_object_preflight
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
         :type branch: str
         :param path: relative to the branch (required)
         :type path: str
+        :param size_bytes: Size of the object content the client plans to upload.
+        :type size_bytes: int
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -7847,9 +8132,11 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._upload_object_preflight_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
+            size_bytes=size_bytes,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -7857,7 +8144,7 @@ class InternalApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '204': None,
+            '200': "ObjectUploadMode",
             '401': "Error",
             '403': "Error",
             '404': "Error",
@@ -7877,9 +8164,11 @@ class InternalApi:
     @validate_call
     def upload_object_preflight_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch: StrictStr,
         path: Annotated[StrictStr, Field(description="relative to the branch")],
+        size_bytes: Annotated[Optional[StrictInt], Field(description="Size of the object content the client plans to upload.")] = None,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -7896,12 +8185,16 @@ class InternalApi:
         """upload_object_preflight
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch: (required)
         :type branch: str
         :param path: relative to the branch (required)
         :type path: str
+        :param size_bytes: Size of the object content the client plans to upload.
+        :type size_bytes: int
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -7925,9 +8218,11 @@ class InternalApi:
         """ # noqa: E501
 
         _param = self._upload_object_preflight_serialize(
+            user=user,
             repository=repository,
             branch=branch,
             path=path,
+            size_bytes=size_bytes,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -7935,7 +8230,7 @@ class InternalApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '204': None,
+            '200': "ObjectUploadMode",
             '401': "Error",
             '403': "Error",
             '404': "Error",
@@ -7950,9 +8245,11 @@ class InternalApi:
 
     def _upload_object_preflight_serialize(
         self,
+        user,
         repository,
         branch,
         path,
+        size_bytes,
         _request_auth,
         _content_type,
         _headers,
@@ -7974,6 +8271,8 @@ class InternalApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         if branch is not None:
@@ -7982,6 +8281,10 @@ class InternalApi:
         if path is not None:
             
             _query_params.append(('path', path))
+            
+        if size_bytes is not None:
+            
+            _query_params.append(('size_bytes', size_bytes))
             
         # process the header parameters
         # process the form parameters
@@ -8008,7 +8311,7 @@ class InternalApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/branches/{branch}/objects/stage_allowed',
+            resource_path='/repositories/{user}/{repository}/branches/{branch}/objects/stage_allowed',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,

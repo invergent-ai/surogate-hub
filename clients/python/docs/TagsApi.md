@@ -4,14 +4,14 @@ All URIs are relative to */api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**create_tag**](TagsApi.md#create_tag) | **POST** /repositories/{repository}/tags | create tag
-[**delete_tag**](TagsApi.md#delete_tag) | **DELETE** /repositories/{repository}/tags/{tag} | delete tag
-[**get_tag**](TagsApi.md#get_tag) | **GET** /repositories/{repository}/tags/{tag} | get tag
-[**list_tags**](TagsApi.md#list_tags) | **GET** /repositories/{repository}/tags | list tags
+[**create_tag**](TagsApi.md#create_tag) | **POST** /repositories/{user}/{repository}/tags | create tag
+[**delete_tag**](TagsApi.md#delete_tag) | **DELETE** /repositories/{user}/{repository}/tags/{tag} | delete tag
+[**get_tag**](TagsApi.md#get_tag) | **GET** /repositories/{user}/{repository}/tags/{tag} | get tag
+[**list_tags**](TagsApi.md#list_tags) | **GET** /repositories/{user}/{repository}/tags | list tags
 
 
 # **create_tag**
-> Ref create_tag(repository, tag_creation)
+> Ref create_tag(user, repository, tag_creation)
 
 create tag
 
@@ -74,12 +74,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.TagsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     tag_creation = surogate_hub_sdk.TagCreation() # TagCreation | 
 
     try:
         # create tag
-        api_response = api_instance.create_tag(repository, tag_creation)
+        api_response = api_instance.create_tag(user, repository, tag_creation)
         print("The response of TagsApi->create_tag:\n")
         pprint(api_response)
     except Exception as e:
@@ -93,6 +94,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **tag_creation** | [**TagCreation**](TagCreation.md)|  | 
 
@@ -125,7 +127,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **delete_tag**
-> delete_tag(repository, tag, force=force)
+> delete_tag(user, repository, tag, force=force)
 
 delete tag
 
@@ -186,13 +188,14 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.TagsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     tag = 'tag_example' # str | 
     force = True # bool |  (optional)
 
     try:
         # delete tag
-        api_instance.delete_tag(repository, tag, force=force)
+        api_instance.delete_tag(user, repository, tag, force=force)
     except Exception as e:
         print("Exception when calling TagsApi->delete_tag: %s\n" % e)
 ```
@@ -204,6 +207,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **tag** | **str**|  | 
  **force** | **bool**|  | [optional] 
@@ -235,7 +239,7 @@ void (empty response body)
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_tag**
-> Ref get_tag(repository, tag)
+> Ref get_tag(user, repository, tag)
 
 get tag
 
@@ -297,12 +301,13 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.TagsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     tag = 'tag_example' # str | 
 
     try:
         # get tag
-        api_response = api_instance.get_tag(repository, tag)
+        api_response = api_instance.get_tag(user, repository, tag)
         print("The response of TagsApi->get_tag:\n")
         pprint(api_response)
     except Exception as e:
@@ -316,6 +321,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **tag** | **str**|  | 
 
@@ -345,7 +351,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **list_tags**
-> RefList list_tags(repository, prefix=prefix, after=after, amount=amount)
+> RefList list_tags(user, repository, prefix=prefix, after=after, amount=amount)
 
 list tags
 
@@ -407,6 +413,7 @@ configuration = surogate_hub_sdk.Configuration(
 with surogate_hub_sdk.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = surogate_hub_sdk.TagsApi(api_client)
+    user = 'user_example' # str | 
     repository = 'repository_example' # str | 
     prefix = 'prefix_example' # str | return items prefixed with this value (optional)
     after = 'after_example' # str | return items after this value (optional)
@@ -414,7 +421,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
     try:
         # list tags
-        api_response = api_instance.list_tags(repository, prefix=prefix, after=after, amount=amount)
+        api_response = api_instance.list_tags(user, repository, prefix=prefix, after=after, amount=amount)
         print("The response of TagsApi->list_tags:\n")
         pprint(api_response)
     except Exception as e:
@@ -428,6 +435,7 @@ with surogate_hub_sdk.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **user** | **str**|  | 
  **repository** | **str**|  | 
  **prefix** | **str**| return items prefixed with this value | [optional] 
  **after** | **str**| return items after this value | [optional] 

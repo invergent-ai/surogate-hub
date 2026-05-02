@@ -354,6 +354,7 @@ class RepositoriesApi:
     @validate_call
     def delete_gc_rules(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -371,6 +372,8 @@ class RepositoriesApi:
         """delete_gc_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -396,6 +399,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._delete_gc_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -424,6 +428,7 @@ class RepositoriesApi:
     @validate_call
     def delete_gc_rules_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -441,6 +446,8 @@ class RepositoriesApi:
         """delete_gc_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -466,6 +473,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._delete_gc_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -494,6 +502,7 @@ class RepositoriesApi:
     @validate_call
     def delete_gc_rules_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -511,6 +520,8 @@ class RepositoriesApi:
         """delete_gc_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -536,6 +547,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._delete_gc_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -559,6 +571,7 @@ class RepositoriesApi:
 
     def _delete_gc_rules_serialize(
         self,
+        user,
         repository,
         _request_auth,
         _content_type,
@@ -581,6 +594,8 @@ class RepositoriesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -609,7 +624,7 @@ class RepositoriesApi:
 
         return self.api_client.param_serialize(
             method='DELETE',
-            resource_path='/repositories/{repository}/settings/gc_rules',
+            resource_path='/repositories/{user}/{repository}/settings/gc_rules',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -628,6 +643,7 @@ class RepositoriesApi:
     @validate_call
     def delete_repository(
         self,
+        user: StrictStr,
         repository: StrictStr,
         force: Annotated[Optional[StrictBool], Field(description="Bypass read-only protection and delete the repository")] = None,
         _request_timeout: Union[
@@ -646,6 +662,8 @@ class RepositoriesApi:
         """delete repository
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param force: Bypass read-only protection and delete the repository
@@ -673,6 +691,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._delete_repository_serialize(
+            user=user,
             repository=repository,
             force=force,
             _request_auth=_request_auth,
@@ -701,6 +720,7 @@ class RepositoriesApi:
     @validate_call
     def delete_repository_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         force: Annotated[Optional[StrictBool], Field(description="Bypass read-only protection and delete the repository")] = None,
         _request_timeout: Union[
@@ -719,6 +739,8 @@ class RepositoriesApi:
         """delete repository
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param force: Bypass read-only protection and delete the repository
@@ -746,6 +768,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._delete_repository_serialize(
+            user=user,
             repository=repository,
             force=force,
             _request_auth=_request_auth,
@@ -774,6 +797,7 @@ class RepositoriesApi:
     @validate_call
     def delete_repository_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         force: Annotated[Optional[StrictBool], Field(description="Bypass read-only protection and delete the repository")] = None,
         _request_timeout: Union[
@@ -792,6 +816,8 @@ class RepositoriesApi:
         """delete repository
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param force: Bypass read-only protection and delete the repository
@@ -819,6 +845,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._delete_repository_serialize(
+            user=user,
             repository=repository,
             force=force,
             _request_auth=_request_auth,
@@ -842,6 +869,7 @@ class RepositoriesApi:
 
     def _delete_repository_serialize(
         self,
+        user,
         repository,
         force,
         _request_auth,
@@ -865,6 +893,8 @@ class RepositoriesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -897,7 +927,7 @@ class RepositoriesApi:
 
         return self.api_client.param_serialize(
             method='DELETE',
-            resource_path='/repositories/{repository}',
+            resource_path='/repositories/{user}/{repository}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -916,6 +946,7 @@ class RepositoriesApi:
     @validate_call
     def dump_status(
         self,
+        user: StrictStr,
         repository: StrictStr,
         task_id: StrictStr,
         _request_timeout: Union[
@@ -934,6 +965,8 @@ class RepositoriesApi:
         """Status of a repository dump task
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param task_id: (required)
@@ -961,6 +994,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._dump_status_serialize(
+            user=user,
             repository=repository,
             task_id=task_id,
             _request_auth=_request_auth,
@@ -990,6 +1024,7 @@ class RepositoriesApi:
     @validate_call
     def dump_status_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         task_id: StrictStr,
         _request_timeout: Union[
@@ -1008,6 +1043,8 @@ class RepositoriesApi:
         """Status of a repository dump task
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param task_id: (required)
@@ -1035,6 +1072,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._dump_status_serialize(
+            user=user,
             repository=repository,
             task_id=task_id,
             _request_auth=_request_auth,
@@ -1064,6 +1102,7 @@ class RepositoriesApi:
     @validate_call
     def dump_status_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         task_id: StrictStr,
         _request_timeout: Union[
@@ -1082,6 +1121,8 @@ class RepositoriesApi:
         """Status of a repository dump task
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param task_id: (required)
@@ -1109,6 +1150,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._dump_status_serialize(
+            user=user,
             repository=repository,
             task_id=task_id,
             _request_auth=_request_auth,
@@ -1133,6 +1175,7 @@ class RepositoriesApi:
 
     def _dump_status_serialize(
         self,
+        user,
         repository,
         task_id,
         _request_auth,
@@ -1156,6 +1199,8 @@ class RepositoriesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -1188,7 +1233,7 @@ class RepositoriesApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/dump',
+            resource_path='/repositories/{user}/{repository}/dump',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -1207,6 +1252,7 @@ class RepositoriesApi:
     @validate_call
     def dump_submit(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -1224,6 +1270,8 @@ class RepositoriesApi:
         """Backup the repository metadata (tags, commits, branches) and save the backup to the object store.
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -1249,6 +1297,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._dump_submit_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -1276,6 +1325,7 @@ class RepositoriesApi:
     @validate_call
     def dump_submit_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -1293,6 +1343,8 @@ class RepositoriesApi:
         """Backup the repository metadata (tags, commits, branches) and save the backup to the object store.
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -1318,6 +1370,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._dump_submit_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -1345,6 +1398,7 @@ class RepositoriesApi:
     @validate_call
     def dump_submit_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -1362,6 +1416,8 @@ class RepositoriesApi:
         """Backup the repository metadata (tags, commits, branches) and save the backup to the object store.
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -1387,6 +1443,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._dump_submit_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -1409,6 +1466,7 @@ class RepositoriesApi:
 
     def _dump_submit_serialize(
         self,
+        user,
         repository,
         _request_auth,
         _content_type,
@@ -1431,6 +1489,8 @@ class RepositoriesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -1459,7 +1519,7 @@ class RepositoriesApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/dump',
+            resource_path='/repositories/{user}/{repository}/dump',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -1478,6 +1538,7 @@ class RepositoriesApi:
     @validate_call
     def get_branch_protection_rules(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -1495,6 +1556,8 @@ class RepositoriesApi:
         """get branch protection rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -1520,6 +1583,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._get_branch_protection_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -1547,6 +1611,7 @@ class RepositoriesApi:
     @validate_call
     def get_branch_protection_rules_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -1564,6 +1629,8 @@ class RepositoriesApi:
         """get branch protection rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -1589,6 +1656,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._get_branch_protection_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -1616,6 +1684,7 @@ class RepositoriesApi:
     @validate_call
     def get_branch_protection_rules_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -1633,6 +1702,8 @@ class RepositoriesApi:
         """get branch protection rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -1658,6 +1729,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._get_branch_protection_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -1680,6 +1752,7 @@ class RepositoriesApi:
 
     def _get_branch_protection_rules_serialize(
         self,
+        user,
         repository,
         _request_auth,
         _content_type,
@@ -1702,6 +1775,8 @@ class RepositoriesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -1730,7 +1805,7 @@ class RepositoriesApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/settings/branch_protection',
+            resource_path='/repositories/{user}/{repository}/settings/branch_protection',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -1749,6 +1824,7 @@ class RepositoriesApi:
     @validate_call
     def get_gc_rules(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -1766,6 +1842,8 @@ class RepositoriesApi:
         """get repository GC rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -1791,6 +1869,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._get_gc_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -1818,6 +1897,7 @@ class RepositoriesApi:
     @validate_call
     def get_gc_rules_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -1835,6 +1915,8 @@ class RepositoriesApi:
         """get repository GC rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -1860,6 +1942,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._get_gc_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -1887,6 +1970,7 @@ class RepositoriesApi:
     @validate_call
     def get_gc_rules_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -1904,6 +1988,8 @@ class RepositoriesApi:
         """get repository GC rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -1929,6 +2015,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._get_gc_rules_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -1951,6 +2038,7 @@ class RepositoriesApi:
 
     def _get_gc_rules_serialize(
         self,
+        user,
         repository,
         _request_auth,
         _content_type,
@@ -1973,6 +2061,8 @@ class RepositoriesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -2001,7 +2091,7 @@ class RepositoriesApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/settings/gc_rules',
+            resource_path='/repositories/{user}/{repository}/settings/gc_rules',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -2020,6 +2110,7 @@ class RepositoriesApi:
     @validate_call
     def get_repository(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -2037,6 +2128,8 @@ class RepositoriesApi:
         """get repository
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -2062,6 +2155,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._get_repository_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -2089,6 +2183,7 @@ class RepositoriesApi:
     @validate_call
     def get_repository_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -2106,6 +2201,8 @@ class RepositoriesApi:
         """get repository
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -2131,6 +2228,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._get_repository_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -2158,6 +2256,7 @@ class RepositoriesApi:
     @validate_call
     def get_repository_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -2175,6 +2274,8 @@ class RepositoriesApi:
         """get repository
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -2200,6 +2301,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._get_repository_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -2222,6 +2324,7 @@ class RepositoriesApi:
 
     def _get_repository_serialize(
         self,
+        user,
         repository,
         _request_auth,
         _content_type,
@@ -2244,6 +2347,8 @@ class RepositoriesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -2272,7 +2377,7 @@ class RepositoriesApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}',
+            resource_path='/repositories/{user}/{repository}',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -2291,6 +2396,7 @@ class RepositoriesApi:
     @validate_call
     def get_repository_metadata(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -2308,6 +2414,8 @@ class RepositoriesApi:
         """get repository metadata
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -2333,6 +2441,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._get_repository_metadata_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -2360,6 +2469,7 @@ class RepositoriesApi:
     @validate_call
     def get_repository_metadata_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -2377,6 +2487,8 @@ class RepositoriesApi:
         """get repository metadata
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -2402,6 +2514,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._get_repository_metadata_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -2429,6 +2542,7 @@ class RepositoriesApi:
     @validate_call
     def get_repository_metadata_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         _request_timeout: Union[
             None,
@@ -2446,6 +2560,8 @@ class RepositoriesApi:
         """get repository metadata
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param _request_timeout: timeout setting for this request. If one
@@ -2471,6 +2587,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._get_repository_metadata_serialize(
+            user=user,
             repository=repository,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -2493,6 +2610,7 @@ class RepositoriesApi:
 
     def _get_repository_metadata_serialize(
         self,
+        user,
         repository,
         _request_auth,
         _content_type,
@@ -2515,6 +2633,8 @@ class RepositoriesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -2543,7 +2663,7 @@ class RepositoriesApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/metadata',
+            resource_path='/repositories/{user}/{repository}/metadata',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -2883,6 +3003,7 @@ class RepositoriesApi:
     @validate_call
     def restore_status(
         self,
+        user: StrictStr,
         repository: StrictStr,
         task_id: StrictStr,
         _request_timeout: Union[
@@ -2901,6 +3022,8 @@ class RepositoriesApi:
         """Status of a restore request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param task_id: (required)
@@ -2928,6 +3051,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._restore_status_serialize(
+            user=user,
             repository=repository,
             task_id=task_id,
             _request_auth=_request_auth,
@@ -2957,6 +3081,7 @@ class RepositoriesApi:
     @validate_call
     def restore_status_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         task_id: StrictStr,
         _request_timeout: Union[
@@ -2975,6 +3100,8 @@ class RepositoriesApi:
         """Status of a restore request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param task_id: (required)
@@ -3002,6 +3129,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._restore_status_serialize(
+            user=user,
             repository=repository,
             task_id=task_id,
             _request_auth=_request_auth,
@@ -3031,6 +3159,7 @@ class RepositoriesApi:
     @validate_call
     def restore_status_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         task_id: StrictStr,
         _request_timeout: Union[
@@ -3049,6 +3178,8 @@ class RepositoriesApi:
         """Status of a restore request
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param task_id: (required)
@@ -3076,6 +3207,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._restore_status_serialize(
+            user=user,
             repository=repository,
             task_id=task_id,
             _request_auth=_request_auth,
@@ -3100,6 +3232,7 @@ class RepositoriesApi:
 
     def _restore_status_serialize(
         self,
+        user,
         repository,
         task_id,
         _request_auth,
@@ -3123,6 +3256,8 @@ class RepositoriesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -3155,7 +3290,7 @@ class RepositoriesApi:
 
         return self.api_client.param_serialize(
             method='GET',
-            resource_path='/repositories/{repository}/restore',
+            resource_path='/repositories/{user}/{repository}/restore',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -3174,6 +3309,7 @@ class RepositoriesApi:
     @validate_call
     def restore_submit(
         self,
+        user: StrictStr,
         repository: StrictStr,
         refs_restore: RefsRestore,
         _request_timeout: Union[
@@ -3192,6 +3328,8 @@ class RepositoriesApi:
         """Restore repository from a dump in the object store
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param refs_restore: (required)
@@ -3219,6 +3357,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._restore_submit_serialize(
+            user=user,
             repository=repository,
             refs_restore=refs_restore,
             _request_auth=_request_auth,
@@ -3248,6 +3387,7 @@ class RepositoriesApi:
     @validate_call
     def restore_submit_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         refs_restore: RefsRestore,
         _request_timeout: Union[
@@ -3266,6 +3406,8 @@ class RepositoriesApi:
         """Restore repository from a dump in the object store
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param refs_restore: (required)
@@ -3293,6 +3435,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._restore_submit_serialize(
+            user=user,
             repository=repository,
             refs_restore=refs_restore,
             _request_auth=_request_auth,
@@ -3322,6 +3465,7 @@ class RepositoriesApi:
     @validate_call
     def restore_submit_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         refs_restore: RefsRestore,
         _request_timeout: Union[
@@ -3340,6 +3484,8 @@ class RepositoriesApi:
         """Restore repository from a dump in the object store
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param refs_restore: (required)
@@ -3367,6 +3513,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._restore_submit_serialize(
+            user=user,
             repository=repository,
             refs_restore=refs_restore,
             _request_auth=_request_auth,
@@ -3391,6 +3538,7 @@ class RepositoriesApi:
 
     def _restore_submit_serialize(
         self,
+        user,
         repository,
         refs_restore,
         _request_auth,
@@ -3414,6 +3562,8 @@ class RepositoriesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -3457,7 +3607,7 @@ class RepositoriesApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/repositories/{repository}/restore',
+            resource_path='/repositories/{user}/{repository}/restore',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -3476,6 +3626,7 @@ class RepositoriesApi:
     @validate_call
     def set_branch_protection_rules(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch_protection_rule: List[BranchProtectionRule],
         if_match: Annotated[Optional[StrictStr], Field(description="if provided, the branch protection rules will be updated only if the current ETag match the provided value")] = None,
@@ -3495,6 +3646,8 @@ class RepositoriesApi:
         """set_branch_protection_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch_protection_rule: (required)
@@ -3524,6 +3677,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._set_branch_protection_rules_serialize(
+            user=user,
             repository=repository,
             branch_protection_rule=branch_protection_rule,
             if_match=if_match,
@@ -3556,6 +3710,7 @@ class RepositoriesApi:
     @validate_call
     def set_branch_protection_rules_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch_protection_rule: List[BranchProtectionRule],
         if_match: Annotated[Optional[StrictStr], Field(description="if provided, the branch protection rules will be updated only if the current ETag match the provided value")] = None,
@@ -3575,6 +3730,8 @@ class RepositoriesApi:
         """set_branch_protection_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch_protection_rule: (required)
@@ -3604,6 +3761,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._set_branch_protection_rules_serialize(
+            user=user,
             repository=repository,
             branch_protection_rule=branch_protection_rule,
             if_match=if_match,
@@ -3636,6 +3794,7 @@ class RepositoriesApi:
     @validate_call
     def set_branch_protection_rules_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         branch_protection_rule: List[BranchProtectionRule],
         if_match: Annotated[Optional[StrictStr], Field(description="if provided, the branch protection rules will be updated only if the current ETag match the provided value")] = None,
@@ -3655,6 +3814,8 @@ class RepositoriesApi:
         """set_branch_protection_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param branch_protection_rule: (required)
@@ -3684,6 +3845,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._set_branch_protection_rules_serialize(
+            user=user,
             repository=repository,
             branch_protection_rule=branch_protection_rule,
             if_match=if_match,
@@ -3711,6 +3873,7 @@ class RepositoriesApi:
 
     def _set_branch_protection_rules_serialize(
         self,
+        user,
         repository,
         branch_protection_rule,
         if_match,
@@ -3736,6 +3899,8 @@ class RepositoriesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -3781,7 +3946,7 @@ class RepositoriesApi:
 
         return self.api_client.param_serialize(
             method='PUT',
-            resource_path='/repositories/{repository}/settings/branch_protection',
+            resource_path='/repositories/{user}/{repository}/settings/branch_protection',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -3800,6 +3965,7 @@ class RepositoriesApi:
     @validate_call
     def set_gc_rules(
         self,
+        user: StrictStr,
         repository: StrictStr,
         garbage_collection_rules: GarbageCollectionRules,
         _request_timeout: Union[
@@ -3818,6 +3984,8 @@ class RepositoriesApi:
         """set_gc_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param garbage_collection_rules: (required)
@@ -3845,6 +4013,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._set_gc_rules_serialize(
+            user=user,
             repository=repository,
             garbage_collection_rules=garbage_collection_rules,
             _request_auth=_request_auth,
@@ -3874,6 +4043,7 @@ class RepositoriesApi:
     @validate_call
     def set_gc_rules_with_http_info(
         self,
+        user: StrictStr,
         repository: StrictStr,
         garbage_collection_rules: GarbageCollectionRules,
         _request_timeout: Union[
@@ -3892,6 +4062,8 @@ class RepositoriesApi:
         """set_gc_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param garbage_collection_rules: (required)
@@ -3919,6 +4091,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._set_gc_rules_serialize(
+            user=user,
             repository=repository,
             garbage_collection_rules=garbage_collection_rules,
             _request_auth=_request_auth,
@@ -3948,6 +4121,7 @@ class RepositoriesApi:
     @validate_call
     def set_gc_rules_without_preload_content(
         self,
+        user: StrictStr,
         repository: StrictStr,
         garbage_collection_rules: GarbageCollectionRules,
         _request_timeout: Union[
@@ -3966,6 +4140,8 @@ class RepositoriesApi:
         """set_gc_rules
 
 
+        :param user: (required)
+        :type user: str
         :param repository: (required)
         :type repository: str
         :param garbage_collection_rules: (required)
@@ -3993,6 +4169,7 @@ class RepositoriesApi:
         """ # noqa: E501
 
         _param = self._set_gc_rules_serialize(
+            user=user,
             repository=repository,
             garbage_collection_rules=garbage_collection_rules,
             _request_auth=_request_auth,
@@ -4017,6 +4194,7 @@ class RepositoriesApi:
 
     def _set_gc_rules_serialize(
         self,
+        user,
         repository,
         garbage_collection_rules,
         _request_auth,
@@ -4040,6 +4218,8 @@ class RepositoriesApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if user is not None:
+            _path_params['user'] = user
         if repository is not None:
             _path_params['repository'] = repository
         # process the query parameters
@@ -4083,7 +4263,7 @@ class RepositoriesApi:
 
         return self.api_client.param_serialize(
             method='PUT',
-            resource_path='/repositories/{repository}/settings/gc_rules',
+            resource_path='/repositories/{user}/{repository}/settings/gc_rules',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
