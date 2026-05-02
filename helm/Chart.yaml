@@ -1,0 +1,13 @@
+apiVersion: v2
+name: surogate-hub
+description: A Helm chart for running Surogate Hub on Kubernetes
+type: application
+version: 1.0.0
+appVersion: 2.0.0
+
+home: https://surogate.ai
+sources:
+  - https://github.com/invergent-ai/surogate-hub
+maintainers:
+  - name: invergent
+    email: maintainers@invergent.ai

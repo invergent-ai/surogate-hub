@@ -1,0 +1,44 @@
+{{- if .Values.useDevPostgres }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-shub
+  template:
+    metadata:
+      labels:
+        app: postgres-shub
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:11
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: postgres
+            - name: POSTGRES_USER
+              value: shub
+            - name: POSTGRES_PASSWORD
+              value: shub
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-server
+  labels:
+    app: postgres-shub
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+  selector:
+    app: postgres-shub
+
+{{- end}}
