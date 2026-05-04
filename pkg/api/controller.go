@@ -3613,16 +3613,51 @@ func (c *Controller) CopyObject(w http.ResponseWriter, r *http.Request, body api
 		srcRef = branch
 	}
 
-	// copy entry
-	entry, err := c.Catalog.CopyEntry(ctx, repository, srcRef, srcPath, repository, branch, destPath, false, nil, graveler.WithForce(swag.BoolValue(body.Force)))
+	srcEntry, err := c.Catalog.GetEntry(ctx, repository, srcRef, srcPath, catalog.GetEntryParams{})
 	if c.handleAPIError(ctx, w, r, err) {
 		return
 	}
 
-	qk, err := c.BlockAdapter.ResolveNamespace(repo.StorageID, repo.StorageNamespace, entry.PhysicalAddress, block.IdentifierTypeRelative)
-	if err != nil {
-		writeError(w, r, http.StatusInternalServerError, err)
-		return
+	var entry *catalog.DBEntry
+	physicalAddress := ""
+	xetFileHash, isXETAddress := parseXETPhysicalAddress(srcEntry.PhysicalAddress)
+	if isXETAddress {
+		if xetFileHash == "" {
+			writeError(w, r, http.StatusBadRequest, "xet physical address is missing file hash")
+			return
+		}
+		dstEntry := *srcEntry
+		dstEntry.Path = destPath
+		dstEntry.CreationDate = time.Now()
+		err = c.Catalog.CreateEntry(ctx, repository, branch, dstEntry, graveler.WithForce(swag.BoolValue(body.Force)))
+		if c.handleAPIError(ctx, w, r, err) {
+			return
+		}
+		err = xetstore.NewRegistry(c.Catalog.KVStore).PutFileRef(ctx, xetstore.FileRef{
+			FileHash: xetFileHash,
+			Repo:     repo.Name,
+			Ref:      branch,
+			Path:     destPath,
+		})
+		if err != nil {
+			writeError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+		entry = &dstEntry
+		physicalAddress = entry.PhysicalAddress
+	} else {
+		// copy entry
+		entry, err = c.Catalog.CopyEntry(ctx, repository, srcRef, srcPath, repository, branch, destPath, false, nil, graveler.WithForce(swag.BoolValue(body.Force)))
+		if c.handleAPIError(ctx, w, r, err) {
+			return
+		}
+
+		qk, err := c.BlockAdapter.ResolveNamespace(repo.StorageID, repo.StorageNamespace, entry.PhysicalAddress, block.IdentifierTypeRelative)
+		if err != nil {
+			writeError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+		physicalAddress = qk.Format()
 	}
 
 	var metadata map[string]string
@@ -3637,7 +3672,7 @@ func (c *Controller) CopyObject(w http.ResponseWriter, r *http.Request, body api
 		Mtime:           entry.CreationDate.Unix(),
 		Path:            entry.Path,
 		PathType:        entryTypeObject,
-		PhysicalAddress: qk.Format(),
+		PhysicalAddress: physicalAddress,
 		SizeBytes:       swag.Int64(entry.Size),
 		ContentType:     swag.String(entry.ContentType),
 		Metadata:        &apigen.ObjectUserMetadata{AdditionalProperties: metadata},
@@ -5076,6 +5111,10 @@ func (c *Controller) GetUnderlyingProperties(w http.ResponseWriter, r *http.Requ
 
 	entry, err := c.Catalog.GetEntry(ctx, repository, ref, params.Path, catalog.GetEntryParams{})
 	if c.handleAPIError(ctx, w, r, err) {
+		return
+	}
+	if _, isXETAddress := parseXETPhysicalAddress(entry.PhysicalAddress); isXETAddress {
+		writeError(w, r, http.StatusBadRequest, "xet object has no underlying storage properties")
 		return
 	}
 

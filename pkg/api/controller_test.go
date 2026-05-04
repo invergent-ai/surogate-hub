@@ -126,6 +126,92 @@ func TestController_LinkXETPhysicalAddressWritesFileRef(t *testing.T) {
 	require.Equal(t, []byte{}, fileRef.Value)
 }
 
+func TestController_CopyObjectXETPhysicalAddressWritesDestinationFileRef(t *testing.T) {
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	const fileHash = "file-a"
+	const srcPath = "models/checkpoint.bin"
+	const destPath = "copies/checkpoint.bin"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+	registry := xetstore.NewRegistry(deps.catalog.KVStore)
+	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: fileHash,
+		Shard:    []byte("raw-shard"),
+	})
+	require.NoError(t, err)
+
+	physicalAddress := "xet://" + fileHash
+	linkResp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.LinkPhysicalAddressParams{
+		Path: srcPath,
+	}, apigen.LinkPhysicalAddressJSONRequestBody{
+		Checksum:  "checksum-a",
+		SizeBytes: 9,
+		Staging: apigen.StagingLocation{
+			PhysicalAddress: &physicalAddress,
+		},
+	})
+	verifyResponseOK(t, linkResp, err)
+
+	copyResp, err := clt.CopyObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.CopyObjectParams{
+		DestPath: destPath,
+	}, apigen.CopyObjectJSONRequestBody{
+		SrcPath: srcPath,
+	})
+	verifyResponseOK(t, copyResp, err)
+	require.NotNil(t, copyResp.JSON201)
+	require.Equal(t, physicalAddress, copyResp.JSON201.PhysicalAddress)
+	require.Equal(t, destPath, copyResp.JSON201.Path)
+
+	entry, err := deps.catalog.GetEntry(ctx, repo, branch, destPath, catalog.GetEntryParams{})
+	require.NoError(t, err)
+	require.Equal(t, physicalAddress, entry.PhysicalAddress)
+
+	refs, err := registry.ListFileRefs(ctx, fileHash, 32)
+	require.NoError(t, err)
+	require.Contains(t, refs, xetstore.FileRef{
+		FileHash: fileHash,
+		Repo:     repo,
+		Ref:      branch,
+		Path:     destPath,
+	})
+}
+
+func TestController_GetUnderlyingPropertiesXETPhysicalAddressReturnsBadRequest(t *testing.T) {
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	const fileHash = "file-a"
+	const path = "models/checkpoint.bin"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+	_, err = xetstore.NewRegistry(deps.catalog.KVStore).RegisterShard(ctx, xetstore.RegisterShardParams{
+		FileHash: fileHash,
+		Shard:    []byte("raw-shard"),
+	})
+	require.NoError(t, err)
+
+	physicalAddress := "xet://" + fileHash
+	linkResp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.LinkPhysicalAddressParams{
+		Path: path,
+	}, apigen.LinkPhysicalAddressJSONRequestBody{
+		Checksum:  "checksum-a",
+		SizeBytes: 9,
+		Staging: apigen.StagingLocation{
+			PhysicalAddress: &physicalAddress,
+		},
+	})
+	verifyResponseOK(t, linkResp, err)
+
+	resp, err := clt.GetUnderlyingPropertiesWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.GetUnderlyingPropertiesParams{Path: path})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode())
+	require.Contains(t, string(resp.Body), "xet object has no underlying storage properties")
+}
+
 func TestController_UploadObjectPreflightReturnsRegularForSmallObject(t *testing.T) {
 	clt, deps := setupClientWithAdmin(t)
 	ctx := context.Background()
