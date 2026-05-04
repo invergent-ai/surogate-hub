@@ -4871,18 +4871,22 @@ func (c *Controller) ListObjects(w http.ResponseWriter, r *http.Request, owner, 
 
 	objList := make([]apigen.ObjectStats, 0, len(res))
 	for _, entry := range res {
-		qk, err := c.BlockAdapter.ResolveNamespace(repo.StorageID, repo.StorageNamespace, entry.PhysicalAddress, entry.AddressType.ToIdentifierType())
-		if err != nil {
-			writeError(w, r, http.StatusInternalServerError, err)
-			return
-		}
-
 		if entry.CommonLevel {
 			objList = append(objList, apigen.ObjectStats{
 				Path:     entry.Path,
 				PathType: entryTypeCommonPrefix,
 			})
 		} else {
+			physicalAddress := entry.PhysicalAddress
+			_, isXETAddress := parseXETPhysicalAddress(entry.PhysicalAddress)
+			if !isXETAddress {
+				qk, err := c.BlockAdapter.ResolveNamespace(repo.StorageID, repo.StorageNamespace, entry.PhysicalAddress, entry.AddressType.ToIdentifierType())
+				if err != nil {
+					writeError(w, r, http.StatusInternalServerError, err)
+					return
+				}
+				physicalAddress = qk.Format()
+			}
 			var mtime int64
 			if !entry.CreationDate.IsZero() {
 				mtime = entry.CreationDate.Unix()
@@ -4891,7 +4895,7 @@ func (c *Controller) ListObjects(w http.ResponseWriter, r *http.Request, owner, 
 				Checksum:        entry.Checksum,
 				Mtime:           mtime,
 				Path:            entry.Path,
-				PhysicalAddress: qk.Format(),
+				PhysicalAddress: physicalAddress,
 				PathType:        entryTypeObject,
 				SizeBytes:       swag.Int64(entry.Size),
 				ContentType:     swag.String(entry.ContentType),
@@ -4914,6 +4918,10 @@ func (c *Controller) ListObjects(w http.ResponseWriter, r *http.Request, owner, 
 					return
 				}
 				if authResponse.Allowed {
+					if isXETAddress {
+						writeError(w, r, http.StatusBadRequest, "xet physical address cannot be presigned")
+						return
+					}
 					var expiry time.Time
 					objStat.PhysicalAddress, expiry, err = c.BlockAdapter.GetPreSignedURL(ctx, block.ObjectPointer{
 						StorageID:        repo.StorageID,
