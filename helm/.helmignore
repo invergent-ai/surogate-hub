@@ -21,3 +21,6 @@
 .idea/
 *.tmproj
 .vscode/
+# ArtifactHub repo metadata is published separately as an OCI artifact,
+# not bundled inside the chart package.
+artifacthub-repo.yml
