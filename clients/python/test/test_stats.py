@@ -113,7 +113,7 @@ class DatasetStatsTest(unittest.TestCase):
         stats._api_client = MagicMock()
         stats._objects = self._mock_objects_api(manifest_bytes)
         stats._refs = self._mock_refs_api()
-        stats.repository = "repo"
+        stats.repository = "owner/repo"
         stats.ref = "main"
         stats.stats_ref = "_stats_main"
         stats._manifest = None
@@ -145,7 +145,11 @@ class DatasetStatsTest(unittest.TestCase):
             else json.dumps(self.manifest).encode()
         )
 
-        def _get_object(repository, ref, path):
+        def _get_object(user, repository, ref, path):
+            if (user, repository) != ("owner", "repo"):
+                raise AssertionError(
+                    f"expected owner/repo, got user={user!r} repository={repository!r}"
+                )
             if ref != "_stats_main":
                 raise AssertionError(
                     f"stats reads should hit stats_ref, got ref={ref!r}"
@@ -166,7 +170,11 @@ class DatasetStatsTest(unittest.TestCase):
                 checksum="x", size_bytes=1, mtime=0,
             )
 
-        def _stat_object(repository, ref, path, presign):
+        def _stat_object(user, repository, ref, path, presign):
+            if (user, repository) != ("owner", "repo"):
+                raise AssertionError(
+                    f"expected owner/repo, got user={user!r} repository={repository!r}"
+                )
             if ref != "_stats_main":
                 raise AssertionError(
                     f"stats reads should hit stats_ref, got ref={ref!r}"
@@ -179,7 +187,11 @@ class DatasetStatsTest(unittest.TestCase):
     def _mock_refs_api(self):
         api = MagicMock()
 
-        def _log(repository, ref, amount, limit):
+        def _log(user, repository, ref, amount, limit):
+            if (user, repository) != ("owner", "repo"):
+                raise AssertionError(
+                    f"expected owner/repo, got user={user!r} repository={repository!r}"
+                )
             if ref != "main":
                 raise AssertionError(
                     f"freshness should resolve data ref, got ref={ref!r}"
@@ -268,7 +280,7 @@ class DatasetStatsTest(unittest.TestCase):
 
         stats = self._make_stats()
 
-        def _raise(repository, ref, path):
+        def _raise(user, repository, ref, path):
             raise NotFoundException(status=404, reason="Not Found")
 
         stats._objects.get_object.side_effect = _raise

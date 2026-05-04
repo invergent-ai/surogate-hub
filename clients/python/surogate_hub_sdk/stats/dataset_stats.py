@@ -16,6 +16,7 @@ from surogate_hub_sdk.api.objects_api import ObjectsApi
 from surogate_hub_sdk.api.refs_api import RefsApi
 from surogate_hub_sdk.api_client import ApiClient
 from surogate_hub_sdk.exceptions import NotFoundException
+from surogate_hub_sdk.repository import split_repository_id
 from surogate_hub_sdk.stats.manifest import (
     MANIFEST_FILENAME,
     DataFormat,
@@ -82,6 +83,7 @@ class DatasetStats:
         self._objects = ObjectsApi(self._api_client)
         self._refs = RefsApi(self._api_client)
         self.repository = repository
+        self._user, self._repository_name = split_repository_id(repository)
         self.ref = ref
         self.stats_ref = stats_ref or f"{STATS_REF_PREFIX}{ref}"
         self._manifest: Optional[StatsManifest] = None
@@ -127,7 +129,8 @@ class DatasetStats:
                 f"expected 'json'. Use read()/sql() for parquet stats."
             )
         raw = self._objects.get_object(
-            repository=self.repository,
+            user=self._repo_user(),
+            repository=self._repo_name(),
             ref=self.stats_ref,
             path=entry.data_path(),
         )
@@ -208,7 +211,8 @@ class DatasetStats:
     def _load_manifest(self) -> StatsManifest:
         try:
             raw = self._objects.get_object(
-                repository=self.repository,
+                user=self._repo_user(),
+                repository=self._repo_name(),
                 ref=self.stats_ref,
                 path=MANIFEST_FILENAME,
             )
@@ -225,7 +229,11 @@ class DatasetStats:
     def _current_commit(self, *, reload: bool = False) -> str:
         if self._current_commit_cache is None or reload:
             result = self._refs.log_commits(
-                repository=self.repository, ref=self.ref, amount=1, limit=True,
+                user=self._repo_user(),
+                repository=self._repo_name(),
+                ref=self.ref,
+                amount=1,
+                limit=True,
             )
             if not result.results:
                 raise DatasetStatsError(
@@ -241,6 +249,16 @@ class DatasetStats:
 
             self._parquet_query_cache = ParquetQuery(self._api_client)
         return self._parquet_query_cache
+
+    def _repo_user(self) -> str:
+        if not hasattr(self, "_user"):
+            self._user, self._repository_name = split_repository_id(self.repository)
+        return self._user
+
+    def _repo_name(self) -> str:
+        if not hasattr(self, "_repository_name"):
+            self._user, self._repository_name = split_repository_id(self.repository)
+        return self._repository_name
 
 
 def _sql_string_literal(value: str) -> str:

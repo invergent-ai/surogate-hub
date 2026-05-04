@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict, Optional, Tuple
 
 from surogate_hub_sdk.models.staging_location import StagingLocation
 from surogate_hub_sdk.models.staging_metadata import StagingMetadata
+from surogate_hub_sdk.repository import split_repository_id
 
 
 TokenInfo = Tuple[str, int]
@@ -73,11 +74,13 @@ class XETClient:
             user_metadata=metadata,
             content_type=content_type,
         )
+        user, repo_name = split_repository_id(repository)
         object_stats = self.hub_client.staging_api.link_physical_address(
-            repository,
-            branch,
-            path,
-            staging_metadata,
+            user=user,
+            repository=repo_name,
+            branch=branch,
+            path=path,
+            staging_metadata=staging_metadata,
             if_none_match=if_none_match,
         )
         return XETUploadResult(
@@ -95,7 +98,10 @@ class XETClient:
         destination_path: str,
         progress_updater: Optional[Callable[[int], None]] = None,
     ) -> str:
-        stats = self.hub_client.objects_api.stat_object(repository, ref, path)
+        user, repo_name = split_repository_id(repository)
+        stats = self.hub_client.objects_api.stat_object(
+            user=user, repository=repo_name, ref=ref, path=path,
+        )
         physical_address = stats.physical_address
         if not physical_address.startswith("xet://"):
             raise ValueError("object is not XET-backed")

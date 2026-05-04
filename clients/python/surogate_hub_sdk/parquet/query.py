@@ -22,11 +22,13 @@ import fnmatch
 import logging
 import re
 from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Sequence
+from urllib.parse import quote
 
 from surogate_hub_sdk.api.objects_api import ObjectsApi
 from surogate_hub_sdk.api_client import ApiClient
 from surogate_hub_sdk.exceptions import ApiException
 from surogate_hub_sdk.fs import PROTOCOL, PROTOCOL_SCHEME
+from surogate_hub_sdk.repository import split_repository_id
 
 if TYPE_CHECKING:
     import pyarrow
@@ -203,8 +205,9 @@ class ParquetQuery:
     ) -> List[str]:
         if listing:
             return list(self._list_presigned(repository, ref, path))
+        user, repo_name = split_repository_id(repository)
         stat = self._objects.stat_object(
-            repository=repository, ref=ref, path=path, presign=True,
+            user=user, repository=repo_name, ref=ref, path=path, presign=True,
         )
         return [stat.physical_address]
 
@@ -213,7 +216,7 @@ class ParquetQuery:
     ) -> List[str]:
         if listing:
             return list(self._list_shub(repository, ref, path))
-        return [f"{PROTOCOL_SCHEME}{repository}/{ref}/{path}"]
+        return [f"{PROTOCOL_SCHEME}{quote(repository, safe='')}/{ref}/{path}"]
 
     def _list_presigned(
         self, repository: str, ref: str, pattern: str,
@@ -225,7 +228,7 @@ class ParquetQuery:
         self, repository: str, ref: str, pattern: str,
     ) -> Iterable[str]:
         for obj in self._iter_matching_objects(repository, ref, pattern, presign=False):
-            yield f"{PROTOCOL_SCHEME}{repository}/{ref}/{obj.path}"
+            yield f"{PROTOCOL_SCHEME}{quote(repository, safe='')}/{ref}/{obj.path}"
 
     def _iter_matching_objects(
         self, repository: str, ref: str, pattern: str, *, presign: bool,
@@ -238,9 +241,11 @@ class ParquetQuery:
             glob = pattern
 
         after: Optional[str] = None
+        user, repo_name = split_repository_id(repository)
         while True:
             page = self._objects.list_objects(
-                repository=repository,
+                user=user,
+                repository=repo_name,
                 ref=ref,
                 prefix=prefix,
                 after=after,

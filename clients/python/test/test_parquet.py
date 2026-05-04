@@ -52,8 +52,12 @@ class InMemoryObjectStore:
             size_bytes=len(self._objects[path]), mtime=0,
         )
 
-    def list_objects(self, *, repository, ref, prefix, delimiter=None,
+    def list_objects(self, *, user, repository, ref, prefix, delimiter=None,
                      after=None, amount=None, presign=None):
+        if (user, repository) != ("owner", "repo"):
+            raise AssertionError(
+                f"expected owner/repo, got user={user!r} repository={repository!r}"
+            )
         results = []
         seen = set()
         for p in sorted(x for x in self._objects if x.startswith(prefix or "")):
@@ -75,12 +79,20 @@ class InMemoryObjectStore:
             results=results,
         )
 
-    def stat_object(self, *, repository, ref, path, presign=None):
+    def stat_object(self, *, user, repository, ref, path, presign=None):
+        if (user, repository) != ("owner", "repo"):
+            raise AssertionError(
+                f"expected owner/repo, got user={user!r} repository={repository!r}"
+            )
         if path not in self._objects:
             raise NotFoundException(status=404, reason="Not Found")
         return self._stats(path)
 
-    def get_object(self, *, repository, ref, path, range=None, **_):
+    def get_object(self, *, user, repository, ref, path, range=None, **_):
+        if (user, repository) != ("owner", "repo"):
+            raise AssertionError(
+                f"expected owner/repo, got user={user!r} repository={repository!r}"
+            )
         if path not in self._objects:
             raise NotFoundException(status=404, reason="Not Found")
         data = self._objects[path]
@@ -128,7 +140,14 @@ class ParquetQueryTest(unittest.TestCase):
                 mtime=0,
             )
 
-        api.stat_object.side_effect = lambda repository, ref, path, presign: _stats(path)
+        def _stat_object(user, repository, ref, path, presign):
+            if (user, repository) != ("owner", "repo"):
+                raise AssertionError(
+                    f"expected owner/repo, got user={user!r} repository={repository!r}"
+                )
+            return _stats(path)
+
+        api.stat_object.side_effect = _stat_object
         api.list_objects.return_value = ObjectStatsList(
             pagination=Pagination(
                 has_more=False, next_offset="", results=len(self.files), max_per_page=1000,
@@ -140,7 +159,7 @@ class ParquetQueryTest(unittest.TestCase):
     def test_read_exact_file_with_projection_and_limit(self):
         pq = self._build_query()
         table = pq.read(
-            "repo", "main", "events/events_0.parquet",
+            "owner/repo", "main", "events/events_0.parquet",
             columns=["country"], limit=3,
         )
         self.assertEqual(table.column_names, ["country"])
@@ -148,13 +167,13 @@ class ParquetQueryTest(unittest.TestCase):
 
     def test_read_glob_aggregates_across_files(self):
         pq = self._build_query()
-        table = pq.read("repo", "main", "events/*.parquet")
+        table = pq.read("owner/repo", "main", "events/*.parquet")
         self.assertEqual(table.num_rows, 20)
 
     def test_sql_with_named_table(self):
         pq = self._build_query()
         table = pq.sql(
-            "repo", "main",
+            "owner/repo", "main",
             "SELECT country, COUNT(*) c FROM {e} GROUP BY country ORDER BY country",
             tables={"e": "events/*.parquet"},
         )
@@ -166,7 +185,7 @@ class ParquetQueryTest(unittest.TestCase):
 
         pq = self._build_query()
         with self.assertRaises(ParquetQueryError):
-            pq.sql("repo", "main", "SELECT 1", tables={"not an ident": "x"})
+            pq.sql("owner/repo", "main", "SELECT 1", tables={"not an ident": "x"})
 
 
 @unittest.skipIf(pa is None, "pyarrow not installed")
@@ -228,7 +247,7 @@ class ParquetQueryPresignFallbackTest(unittest.TestCase):
         pq._duckdb_threads = None
         pq._presign_supported = None
 
-        table = pq.read("repo", "main", "data/train.parquet")
+        table = pq.read("owner/repo", "main", "data/train.parquet")
         self.assertEqual(table.num_rows, 3)
         self.assertEqual(table.column("text").to_pylist(), ["a", "b", "c"])
         # Decision cached — next call skips the presign attempt.
@@ -245,7 +264,7 @@ class ParquetQueryPresignFallbackTest(unittest.TestCase):
         pq._duckdb_threads = None
         pq._presign_supported = None
 
-        table = pq.read("repo", "main", "data/train.parquet")
+        table = pq.read("owner/repo", "main", "data/train.parquet")
         self.assertEqual(table.num_rows, 3)
         self.assertEqual(table.column("text").to_pylist(), ["a", "b", "c"])
         self.assertIs(pq._presign_supported, False)
@@ -269,7 +288,7 @@ class ParquetQueryPresignFallbackTest(unittest.TestCase):
         pq._duckdb_threads = None
         pq._presign_supported = None
 
-        table = pq.read("repo", "main", "data/*.parquet")
+        table = pq.read("owner/repo", "main", "data/*.parquet")
         self.assertEqual(table.num_rows, 3)
         self.assertIs(pq._presign_supported, False)
 
@@ -288,7 +307,7 @@ class ParquetQueryPresignFallbackTest(unittest.TestCase):
         pq._presign_supported = None
 
         with self.assertRaises(ApiException):
-            pq.read("repo", "main", "data/train.parquet")
+            pq.read("owner/repo", "main", "data/train.parquet")
         self.assertIsNone(pq._presign_supported)
 
 

@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+from urllib.parse import unquote
 
 import fsspec
 from fsspec.spec import AbstractBufferedFile, AbstractFileSystem
@@ -28,6 +29,7 @@ from surogate_hub_sdk.api.repositories_api import RepositoriesApi
 from surogate_hub_sdk.api_client import ApiClient
 from surogate_hub_sdk.configuration import Configuration
 from surogate_hub_sdk.exceptions import NotFoundException
+from surogate_hub_sdk.repository import split_repository_id
 
 
 log = logging.getLogger(__name__)
@@ -80,12 +82,20 @@ class SurogateHubFileSystem(AbstractFileSystem):
         stripped = self._strip_protocol(path).strip("/")
         if not stripped:
             return None, None, ""
-        parts = stripped.split("/", 2)
+        parts = stripped.split("/")
         if len(parts) == 1:
-            return parts[0], None, ""
+            return unquote(parts[0]), None, ""
         if len(parts) == 2:
-            return parts[0], parts[1], ""
-        return parts[0], parts[1], parts[2]
+            if "%2f" in parts[0].lower():
+                return unquote(parts[0]), parts[1], ""
+            return "/".join(parts), None, ""
+        if "%2f" in parts[0].lower():
+            return unquote(parts[0]), parts[1], "/".join(parts[2:])
+        if len(parts) == 3:
+            return parts[0] + "/" + parts[1], parts[2], ""
+        if len(parts) >= 4:
+            return parts[0] + "/" + parts[1], parts[2], "/".join(parts[3:])
+        return unquote(parts[0]), parts[1], parts[2]
 
     def ls(
         self, path: str, detail: bool = True, **kwargs: Any,
@@ -99,8 +109,10 @@ class SurogateHubFileSystem(AbstractFileSystem):
         items: List[Dict[str, Any]] = []
         after: Optional[str] = None
         while True:
+            user, repo_name = split_repository_id(repo)
             page = self._objects.list_objects(
-                repository=repo,
+                user=user,
+                repository=repo_name,
                 ref=ref,
                 prefix=prefix,
                 delimiter="/",
@@ -145,8 +157,9 @@ class SurogateHubFileSystem(AbstractFileSystem):
         if not key:
             return {"name": name, "type": "directory", "size": 0}
         try:
+            user, repo_name = split_repository_id(repo)
             stat = self._objects.stat_object(
-                repository=repo, ref=ref, path=key, presign=False,
+                user=user, repository=repo_name, ref=ref, path=key, presign=False,
             )
         except NotFoundException:
             listing = self.ls(path, detail=True)
@@ -216,8 +229,10 @@ class SurogateHubFile(AbstractBufferedFile):
         # calls us with [start, end) in Python half-open style.
         if end <= start:
             return b""
+        user, repo_name = split_repository_id(self._repo)
         raw = self.fs._objects.get_object(
-            repository=self._repo,
+            user=user,
+            repository=repo_name,
             ref=self._ref,
             path=self._key,
             range=f"bytes={start}-{end - 1}",

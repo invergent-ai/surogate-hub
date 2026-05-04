@@ -99,8 +99,13 @@ class FakeObjectsApi:
         self.size_bytes = size_bytes
         self.calls = []
 
-    def stat_object(self, repository, ref, path):
-        self.calls.append({"repository": repository, "ref": ref, "path": path})
+    def stat_object(self, user, repository, ref, path):
+        self.calls.append({
+            "user": user,
+            "repository": repository,
+            "ref": ref,
+            "path": path,
+        })
         return SimpleNamespace(
             physical_address=self.physical_address,
             size_bytes=self.size_bytes,
@@ -146,7 +151,7 @@ class TestXETClient(unittest.TestCase):
         )
 
         result = client.upload_file(
-            "repo",
+            "owner/repo",
             "main",
             "models/model.bin",
             "/tmp/model.bin",
@@ -159,6 +164,7 @@ class TestXETClient(unittest.TestCase):
         self.assertEqual(hf_xet.upload_calls[0]["endpoint"], "http://sghub.example/xet")
         self.assertEqual(hf_xet.upload_calls[0]["file_paths"], ["/tmp/model.bin"])
         link = sghub.staging_api.calls[0]
+        self.assertEqual(link["user"], "owner")
         self.assertEqual(link["repository"], "repo")
         self.assertEqual(link["branch"], "main")
         self.assertEqual(link["path"], "models/model.bin")
@@ -181,10 +187,11 @@ class TestXETClient(unittest.TestCase):
             token_refresher=lambda: ("token", 4102444800),
         )
 
-        result = client.download_file("repo", "main", "models/model.bin", "/tmp/out.bin")
+        result = client.download_file("owner/repo", "main", "models/model.bin", "/tmp/out.bin")
 
         self.assertEqual(result, "/tmp/out.bin")
         self.assertEqual(sghub.objects_api.calls[0], {
+            "user": "owner",
             "repository": "repo",
             "ref": "main",
             "path": "models/model.bin",
