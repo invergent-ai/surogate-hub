@@ -68,9 +68,20 @@ class FakeStagingApi:
     def __init__(self):
         self.calls = []
 
-    def link_physical_address(self, repository, branch, path, staging_metadata, if_none_match=None, **kwargs):
+    def link_physical_address(self, *args, **kwargs):
+        if "user" in kwargs:
+            user = kwargs.pop("user")
+            repository = kwargs.pop("repository")
+            branch = kwargs.pop("branch")
+            path = kwargs.pop("path")
+            staging_metadata = kwargs.pop("staging_metadata")
+        else:
+            user = None
+            repository, branch, path, staging_metadata = args
+        if_none_match = kwargs.pop("if_none_match", None)
         self.calls.append(
             {
+                "user": user,
                 "repository": repository,
                 "branch": branch,
                 "path": path,

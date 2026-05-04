@@ -38,6 +38,7 @@ class XetObjectsApi(ObjectsApi):
 
     def upload_object(
         self,
+        user,
         repository,
         branch,
         path,
@@ -54,9 +55,10 @@ class XetObjectsApi(ObjectsApi):
         xet_content = self._xet_upload_content(content)
         if xet_content is None or storage_class is not None or _request_auth is not None:
             return super().upload_object(
-                repository,
-                branch,
-                path,
+                user=user,
+                repository=repository,
+                branch=branch,
+                path=path,
                 if_none_match=if_none_match,
                 storage_class=storage_class,
                 force=force,
@@ -71,19 +73,21 @@ class XetObjectsApi(ObjectsApi):
         local_path, cleanup_path = xet_content
         try:
             upload_mode = self._server_upload_mode(
-                repository,
-                branch,
-                path,
-                self._content_size(content, local_path),
+                user=user,
+                repository=repository,
+                branch=branch,
+                path=path,
+                size_bytes=self._content_size(content, local_path),
                 _request_timeout=_request_timeout,
                 _headers=_headers,
                 _host_index=_host_index,
             )
             if upload_mode != "xet":
                 return super().upload_object(
-                    repository,
-                    branch,
-                    path,
+                    user=user,
+                    repository=repository,
+                    branch=branch,
+                    path=path,
                     if_none_match=if_none_match,
                     storage_class=storage_class,
                     force=force,
@@ -115,10 +119,11 @@ class XetObjectsApi(ObjectsApi):
                 force=bool(force),
             )
             return self._staging_api.link_physical_address(
-                repository,
-                branch,
-                path,
-                staging_metadata,
+                user=user,
+                repository=repository,
+                branch=branch,
+                path=path,
+                staging_metadata=staging_metadata,
                 if_none_match=if_none_match,
                 _request_timeout=_request_timeout,
                 _headers=_headers,
@@ -133,6 +138,7 @@ class XetObjectsApi(ObjectsApi):
 
     def get_object(
         self,
+        user,
         repository,
         ref,
         path,
@@ -147,9 +153,10 @@ class XetObjectsApi(ObjectsApi):
     ):
         if range is not None or if_none_match is not None or presign or _request_auth is not None:
             return super().get_object(
-                repository,
-                ref,
-                path,
+                user=user,
+                repository=repository,
+                ref=ref,
+                path=path,
                 range=range,
                 if_none_match=if_none_match,
                 presign=presign,
@@ -160,13 +167,19 @@ class XetObjectsApi(ObjectsApi):
                 _host_index=_host_index,
             )
 
-        stats = self.stat_object(repository, ref, path)
+        stats = self.stat_object(
+            user=user,
+            repository=repository,
+            ref=ref,
+            path=path,
+        )
         physical_address = stats.physical_address
         if not physical_address.startswith("xet://"):
             return super().get_object(
-                repository,
-                ref,
-                path,
+                user=user,
+                repository=repository,
+                ref=ref,
+                path=path,
                 range=range,
                 if_none_match=if_none_match,
                 presign=presign,
@@ -233,6 +246,7 @@ class XetObjectsApi(ObjectsApi):
 
     def _server_upload_mode(
         self,
+        user,
         repository,
         branch,
         path,
@@ -242,9 +256,10 @@ class XetObjectsApi(ObjectsApi):
         _host_index=0,
     ) -> str:
         upload_mode = self._internal_api.upload_object_preflight(
-            repository,
-            branch,
-            path,
+            user=user,
+            repository=repository,
+            branch=branch,
+            path=path,
             size_bytes=size_bytes,
             _request_timeout=_request_timeout,
             _headers=_headers,

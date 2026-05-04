@@ -1,3 +1,4 @@
+import inspect
 import os
 import tempfile
 import unittest
@@ -15,9 +16,10 @@ class FakeInternalApi:
         self.upload_mode = upload_mode
         self.calls = []
 
-    def upload_object_preflight(self, repository, branch, path, size_bytes=None, **kwargs):
+    def upload_object_preflight(self, user, repository, branch, path, size_bytes=None, **kwargs):
         self.calls.append(
             {
+                "user": user,
                 "repository": repository,
                 "branch": branch,
                 "path": path,
@@ -62,6 +64,14 @@ class TestXetObjectsApi(unittest.TestCase):
 
         self.assertIsInstance(client.objects_api, XetObjectsApi)
 
+    def test_xet_objects_api_preserves_generated_object_method_signatures(self):
+        from surogate_hub_sdk.xet_objects_api import ObjectsApi, XetObjectsApi
+
+        for method_name in ("upload_object", "get_object", "stat_object"):
+            generated_params = list(inspect.signature(getattr(ObjectsApi, method_name)).parameters)
+            xet_params = list(inspect.signature(getattr(XetObjectsApi, method_name)).parameters)
+            self.assertEqual(xet_params, generated_params)
+
     def test_upload_object_uses_regular_upload_when_preflight_returns_regular(self):
         from surogate_hub_sdk.xet_objects_api import ObjectsApi
 
@@ -69,11 +79,39 @@ class TestXetObjectsApi(unittest.TestCase):
         api = self.api(hf_xet, upload_mode="regular")
 
         with patch.object(ObjectsApi, "upload_object", return_value="regular-result") as regular_upload:
-            result = api.upload_object("repo", "main", "small.txt", content=b"small")
+            result = api.upload_object(
+                user="alice",
+                repository="repo",
+                branch="main",
+                path="small.txt",
+                content=b"small",
+            )
 
         self.assertEqual(result, "regular-result")
         regular_upload.assert_called_once()
+        self.assertEqual(regular_upload.call_args.kwargs["user"], "alice")
+        self.assertEqual(regular_upload.call_args.kwargs["repository"], "repo")
         self.assertEqual(hf_xet.upload_calls, [])
+        self.assertEqual(api._internal_api.calls[0]["user"], "alice")
+        self.assertEqual(api._internal_api.calls[0]["repository"], "repo")
+        self.assertEqual(api._internal_api.calls[0]["size_bytes"], 5)
+
+    def test_upload_object_accepts_generated_api_positional_shape(self):
+        from surogate_hub_sdk.xet_objects_api import ObjectsApi
+
+        hf_xet = FakeHfXet()
+        api = self.api(hf_xet, upload_mode="regular")
+
+        with patch.object(ObjectsApi, "upload_object", return_value="regular-result") as regular_upload:
+            result = api.upload_object("alice", "repo", "main", "small.txt", content=b"small")
+
+        self.assertEqual(result, "regular-result")
+        regular_upload.assert_called_once()
+        self.assertEqual(regular_upload.call_args.kwargs["user"], "alice")
+        self.assertEqual(regular_upload.call_args.kwargs["repository"], "repo")
+        self.assertEqual(hf_xet.upload_calls, [])
+        self.assertEqual(api._internal_api.calls[0]["user"], "alice")
+        self.assertEqual(api._internal_api.calls[0]["repository"], "repo")
         self.assertEqual(api._internal_api.calls[0]["size_bytes"], 5)
 
     def test_upload_object_uses_xet_for_path_content_when_preflight_returns_xet(self):
@@ -84,11 +122,12 @@ class TestXetObjectsApi(unittest.TestCase):
             local_path = f.name
         self.addCleanup(lambda: os.path.exists(local_path) and os.unlink(local_path))
 
-        result = api.upload_object("repo", "main", "models/model.bin", content=local_path)
+        result = api.upload_object("alice", "repo", "main", "models/model.bin", content=local_path)
 
         self.assertEqual(hf_xet.upload_calls[0]["file_paths"], [local_path])
         self.assertEqual(hf_xet.upload_calls[0]["endpoint"], "http://sghub.example/xet")
         link = api._staging_api.calls[0]
+        self.assertEqual(link["user"], "alice")
         self.assertEqual(link["repository"], "repo")
         self.assertEqual(link["branch"], "main")
         self.assertEqual(link["path"], "models/model.bin")
@@ -105,9 +144,11 @@ class TestXetObjectsApi(unittest.TestCase):
         hf_xet = InspectingHfXet()
         api = self.api(hf_xet, upload_mode="xet")
 
-        api.upload_object("repo", "main", "models/model.bin", content=b"model bytes")
+        api.upload_object("alice", "repo", "main", "models/model.bin", content=b"model bytes")
 
         self.assertEqual(hf_xet.uploaded_bytes, b"model bytes")
+        self.assertEqual(api._internal_api.calls[0]["user"], "alice")
+        self.assertEqual(api._internal_api.calls[0]["repository"], "repo")
         self.assertEqual(api._internal_api.calls[0]["size_bytes"], len(b"model bytes"))
 
     def test_upload_object_skips_preflight_for_unsupported_xet_options(self):
@@ -117,10 +158,12 @@ class TestXetObjectsApi(unittest.TestCase):
         api = self.api(hf_xet, upload_mode="xet")
 
         with patch.object(ObjectsApi, "upload_object", return_value="regular-result") as regular_upload:
-            result = api.upload_object("repo", "main", "archive.bin", storage_class="STANDARD", content=b"data")
+            result = api.upload_object("alice", "repo", "main", "archive.bin", storage_class="STANDARD", content=b"data")
 
         self.assertEqual(result, "regular-result")
         regular_upload.assert_called_once()
+        self.assertEqual(regular_upload.call_args.kwargs["user"], "alice")
+        self.assertEqual(regular_upload.call_args.kwargs["repository"], "repo")
         self.assertEqual(api._internal_api.calls, [])
         self.assertEqual(hf_xet.upload_calls, [])
 
@@ -133,7 +176,7 @@ class TestXetObjectsApi(unittest.TestCase):
 
         hf_xet = DownloadingHfXet()
         api = self.api(hf_xet)
-        api.stat_object = lambda repository, ref, path: ObjectStats(
+        api.stat_object = lambda user, repository, ref, path: ObjectStats(
             path=path,
             path_type="object",
             physical_address="xet://file-hash",
@@ -142,7 +185,7 @@ class TestXetObjectsApi(unittest.TestCase):
             mtime=0,
         )
 
-        data = api.get_object("repo", "main", "models/model.bin")
+        data = api.get_object("alice", "repo", "main", "models/model.bin")
 
         self.assertEqual(data, b"downloaded model")
         call = hf_xet.download_calls[0]
@@ -155,7 +198,7 @@ class TestXetObjectsApi(unittest.TestCase):
 
         hf_xet = FakeHfXet()
         api = self.api(hf_xet)
-        api.stat_object = lambda repository, ref, path: ObjectStats(
+        api.stat_object = lambda user, repository, ref, path: ObjectStats(
             path=path,
             path_type="object",
             physical_address="mem://objects/small.txt",
@@ -165,10 +208,40 @@ class TestXetObjectsApi(unittest.TestCase):
         )
 
         with patch.object(ObjectsApi, "get_object", return_value=b"small") as regular_download:
-            data = api.get_object("repo", "main", "small.txt")
+            data = api.get_object(
+                user="alice",
+                repository="repo",
+                ref="main",
+                path="small.txt",
+            )
 
         self.assertEqual(data, b"small")
         regular_download.assert_called_once()
+        self.assertEqual(regular_download.call_args.kwargs["user"], "alice")
+        self.assertEqual(regular_download.call_args.kwargs["repository"], "repo")
+        self.assertEqual(hf_xet.download_calls, [])
+
+    def test_get_object_accepts_generated_api_positional_shape(self):
+        from surogate_hub_sdk.xet_objects_api import ObjectsApi
+
+        hf_xet = FakeHfXet()
+        api = self.api(hf_xet)
+        api.stat_object = lambda user, repository, ref, path: ObjectStats(
+            path=path,
+            path_type="object",
+            physical_address="mem://objects/small.txt",
+            checksum="checksum",
+            size_bytes=5,
+            mtime=0,
+        )
+
+        with patch.object(ObjectsApi, "get_object", return_value=b"small") as regular_download:
+            data = api.get_object("alice", "repo", "main", "small.txt")
+
+        self.assertEqual(data, b"small")
+        regular_download.assert_called_once()
+        self.assertEqual(regular_download.call_args.kwargs["user"], "alice")
+        self.assertEqual(regular_download.call_args.kwargs["repository"], "repo")
         self.assertEqual(hf_xet.download_calls, [])
 
     def test_get_object_skips_xet_for_range_reads(self):
@@ -177,13 +250,15 @@ class TestXetObjectsApi(unittest.TestCase):
         hf_xet = FakeHfXet()
         api = self.api(hf_xet)
         stat_calls = []
-        api.stat_object = lambda repository, ref, path: stat_calls.append((repository, ref, path))
+        api.stat_object = lambda user, repository, ref, path: stat_calls.append((user, repository, ref, path))
 
         with patch.object(ObjectsApi, "get_object", return_value=b"range") as regular_download:
-            data = api.get_object("repo", "main", "models/model.bin", range="bytes=0-1")
+            data = api.get_object("alice", "repo", "main", "models/model.bin", range="bytes=0-1")
 
         self.assertEqual(data, b"range")
         regular_download.assert_called_once()
+        self.assertEqual(regular_download.call_args.kwargs["user"], "alice")
+        self.assertEqual(regular_download.call_args.kwargs["repository"], "repo")
         self.assertEqual(stat_calls, [])
         self.assertEqual(hf_xet.download_calls, [])
 
