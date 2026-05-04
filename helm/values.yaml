@@ -125,6 +125,17 @@ extraEnvVars:
 #      secretKeyRef:
 #        name: secret_name
 #        key: secret_key
+
+# Extra volumes mounted on the shub and init-job pods - allows yaml definitions
+extraVolumes:
+#  - name: shared
+#    persistentVolumeClaim:
+#      claimName: hub-pvc
+
+# Extra volume mounts for the shub container and init-job - allows yaml definitions
+extraVolumeMounts:
+#  - name: shared
+#    mountPath: /shared
 # Override K8S defaults for readinessProbe
 # readinessProbe:
 #   failureThreshold: 10
