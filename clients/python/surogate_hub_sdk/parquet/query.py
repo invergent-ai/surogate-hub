@@ -11,9 +11,9 @@ Two transport modes, auto-selected per instance:
   goes back through the hub API, but it Just Works on any blockstore.
 
 The mode is detected on the first attempted ``stat_object(presign=True)`` /
-``list_objects(presign=True)`` call: a 400 ``local adapter presigned URL:
-operation not supported`` response flips the query to fsspec mode for the
-lifetime of the instance.
+``list_objects(presign=True)`` call: a 400 response that indicates presigning
+is unavailable for the object flips the query to fsspec mode for the lifetime
+of the instance.
 """
 
 from __future__ import annotations
@@ -49,7 +49,10 @@ def _is_presign_unsupported(exc: ApiException) -> bool:
     body = getattr(exc, "body", "") or ""
     if isinstance(body, bytes):
         body = body.decode("utf-8", errors="replace")
-    return "presigned URL" in body and "not supported" in body
+    return (
+        ("presigned URL" in body and "not supported" in body)
+        or "cannot be presigned" in body
+    )
 
 
 class ParquetQueryError(Exception):

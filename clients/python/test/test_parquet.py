@@ -22,6 +22,18 @@ from surogate_hub_sdk.models.object_stats_list import ObjectStatsList
 from surogate_hub_sdk.models.pagination import Pagination
 
 
+class PresignUnsupportedDetectionTest(unittest.TestCase):
+    def test_xet_presign_rejection_is_fallback_condition(self):
+        from surogate_hub_sdk.parquet.query import _is_presign_unsupported
+
+        exc = ApiException(
+            status=400, reason="Bad Request",
+            body='{"message":"xet physical address cannot be presigned"}',
+        )
+
+        self.assertTrue(_is_presign_unsupported(exc))
+
+
 class InMemoryObjectStore:
     """Tiny in-memory SDK fake used by the presign-fallback tests below.
 
@@ -199,6 +211,12 @@ class ParquetQueryPresignFallbackTest(unittest.TestCase):
             body='{"message":"local adapter presigned URL: operation not supported"}',
         )
 
+    def _xet_presign_unsupported(self):
+        return ApiException(
+            status=400, reason="Bad Request",
+            body='{"message":"xet physical address cannot be presigned"}',
+        )
+
     def test_exact_path_falls_back_to_shub(self):
         from surogate_hub_sdk.parquet import ParquetQuery
 
@@ -214,6 +232,22 @@ class ParquetQueryPresignFallbackTest(unittest.TestCase):
         self.assertEqual(table.num_rows, 3)
         self.assertEqual(table.column("text").to_pylist(), ["a", "b", "c"])
         # Decision cached — next call skips the presign attempt.
+        self.assertIs(pq._presign_supported, False)
+
+    def test_xet_presign_rejection_falls_back_to_shub(self):
+        from surogate_hub_sdk.parquet import ParquetQuery
+
+        pq = ParquetQuery.__new__(ParquetQuery)
+        pq._objects = MagicMock()
+        pq._objects.stat_object.side_effect = self._xet_presign_unsupported()
+        pq._api_client = MagicMock()
+        pq._list_page_size = 1000
+        pq._duckdb_threads = None
+        pq._presign_supported = None
+
+        table = pq.read("repo", "main", "data/train.parquet")
+        self.assertEqual(table.num_rows, 3)
+        self.assertEqual(table.column("text").to_pylist(), ["a", "b", "c"])
         self.assertIs(pq._presign_supported, False)
 
     def test_glob_falls_back_to_shub_listing(self):
