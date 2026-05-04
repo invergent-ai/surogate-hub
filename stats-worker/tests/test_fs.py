@@ -31,33 +31,33 @@ def test_ls_dirs_and_files():
         "README.md": b"# hi",
     })
     fs = _make_fs(store)
-    top = {i["name"]: i["type"] for i in fs.ls("shub://repo/main/", detail=True)}
-    assert top == {"/repo/main/data": "directory", "/repo/main/README.md": "file"}
-    inner = {i["name"]: i["type"] for i in fs.ls("shub://repo/main/data", detail=True)}
+    top = {i["name"]: i["type"] for i in fs.ls("sghub://owner/repo/main/", detail=True)}
+    assert top == {"/owner/repo/main/data": "directory", "/owner/repo/main/README.md": "file"}
+    inner = {i["name"]: i["type"] for i in fs.ls("sghub://owner/repo/main/data", detail=True)}
     assert inner == {
-        "/repo/main/data/train.jsonl": "file",
-        "/repo/main/data/test.jsonl": "file",
-        "/repo/main/data/nested": "directory",
+        "/owner/repo/main/data/train.jsonl": "file",
+        "/owner/repo/main/data/test.jsonl": "file",
+        "/owner/repo/main/data/nested": "directory",
     }
 
 
 def test_info_file_and_dir_and_missing():
     store = InMemoryObjectStore({"data/train.jsonl": b"hello"})
     fs = _make_fs(store)
-    f = fs.info("shub://repo/main/data/train.jsonl")
+    f = fs.info("sghub://owner/repo/main/data/train.jsonl")
     assert f["type"] == "file" and f["size"] == 5
 
-    d = fs.info("shub://repo/main/data")
+    d = fs.info("sghub://owner/repo/main/data")
     assert d["type"] == "directory"
 
     with pytest.raises(FileNotFoundError):
-        fs.info("shub://repo/main/does/not/exist")
+        fs.info("sghub://owner/repo/main/does/not/exist")
 
 
 def test_open_reads_bytes_with_range():
     store = InMemoryObjectStore({"blob.bin": bytes(range(256))})
     fs = _make_fs(store)
-    with fs._open("shub://repo/main/blob.bin") as fh:
+    with fs._open("sghub://owner/repo/main/blob.bin") as fh:
         assert fh.size == 256
         fh.seek(10)
         chunk = fh.read(20)
@@ -68,9 +68,9 @@ def test_open_rejects_write_and_dir():
     store = InMemoryObjectStore({"a.txt": b"x"})
     fs = _make_fs(store)
     with pytest.raises(NotImplementedError):
-        fs._open("shub://repo/main/a.txt", mode="wb")
+        fs._open("sghub://owner/repo/main/a.txt", mode="wb")
     with pytest.raises(IsADirectoryError):
-        fs._open("shub://repo/main/")
+        fs._open("sghub://owner/repo/main/")
 
 
 def test_pyarrow_parquet_reads_via_our_fs():
@@ -83,15 +83,15 @@ def test_pyarrow_parquet_reads_via_our_fs():
     store = InMemoryObjectStore({"train.parquet": buf.getvalue()})
     fs = _make_fs(store)
 
-    with fs._open("shub://repo/main/train.parquet") as fh:
+    with fs._open("sghub://owner/repo/main/train.parquet") as fh:
         loaded = pq.read_table(fh)
     assert loaded.num_rows == 3
     assert loaded.column("text").to_pylist() == ["alpha", "beta", "gamma"]
 
 
 def test_fsspec_url_dispatch_returns_our_class():
-    """datasets.load_dataset('shub://...') will resolve the FS via
+    """datasets.load_dataset('sghub://...') will resolve the FS via
     fsspec's protocol lookup. Verify the lookup returns our class."""
     import fsspec
 
-    assert fsspec.get_filesystem_class("shub") is SurogateHubFileSystem
+    assert fsspec.get_filesystem_class("sghub") is SurogateHubFileSystem

@@ -67,14 +67,14 @@ def test_discover_layout_root_files_and_split_dirs(monkeypatch):
     })
     _install_fs(monkeypatch, store)
     import fsspec
-    fs = fsspec.filesystem("shub")
-    layout = _discover_source_layout(fs, "shub://repo/main")
+    fs = fsspec.filesystem("sghub")
+    layout = _discover_source_layout(fs, "sghub://owner/repo/main")
     assert set(layout) == {"train", "test", "validation"}
-    assert layout["train"] == ["shub://repo/main/train.jsonl"]
-    assert layout["test"] == ["shub://repo/main/test-00000.parquet"]
+    assert layout["train"] == ["sghub://owner/repo/main/train.jsonl"]
+    assert layout["test"] == ["sghub://owner/repo/main/test-00000.parquet"]
     assert layout["validation"] == [
-        "shub://repo/main/validation/shard-0.jsonl",
-        "shub://repo/main/validation/shard-1.jsonl",
+        "sghub://owner/repo/main/validation/shard-0.jsonl",
+        "sghub://owner/repo/main/validation/shard-1.jsonl",
     ]
 
 
@@ -84,7 +84,7 @@ def test_convert_source_jsonl(monkeypatch):
     store = InMemoryObjectStore({"train.jsonl": jsonl})
     _install_fs(monkeypatch, store)
 
-    result = DatasetConverter(_config()).convert("repo", "main")
+    result = DatasetConverter(_config()).convert("owner/repo", "main")
     assert result.error is None
     assert len(result.splits) == 1
     split = result.splits[0]
@@ -104,7 +104,7 @@ def test_convert_source_parquet_passthrough(monkeypatch):
     store = InMemoryObjectStore({"train.parquet": buf.getvalue()})
     _install_fs(monkeypatch, store)
 
-    result = DatasetConverter(_config()).convert("repo", "main")
+    result = DatasetConverter(_config()).convert("owner/repo", "main")
     assert result.error is None
     assert result.splits[0].row_count == 3
 
@@ -114,7 +114,7 @@ def test_convert_source_csv(monkeypatch):
     store = InMemoryObjectStore({"train.csv": csv_bytes})
     _install_fs(monkeypatch, store)
 
-    result = DatasetConverter(_config()).convert("repo", "main")
+    result = DatasetConverter(_config()).convert("owner/repo", "main")
     assert result.error is None
     assert result.splits[0].row_count == 3
     assert set(result.splits[0].schema.names) == {"a", "b"}
@@ -133,7 +133,7 @@ def test_convert_save_to_disk_layout(monkeypatch):
     })
     _install_fs(monkeypatch, store)
 
-    result = DatasetConverter(_config()).convert("repo", "main")
+    result = DatasetConverter(_config()).convert("owner/repo", "main")
     assert result.error is None
     assert {s.split_name for s in result.splits} == {"train"}
     assert result.splits[0].row_count == 3
@@ -143,6 +143,6 @@ def test_convert_returns_error_on_unknown_layout(monkeypatch):
     store = InMemoryObjectStore({"README.md": b"just docs", "random.txt": b"nope"})
     _install_fs(monkeypatch, store)
 
-    result = DatasetConverter(_config()).convert("repo", "main")
+    result = DatasetConverter(_config()).convert("owner/repo", "main")
     assert result.error is not None
     assert result.splits == []

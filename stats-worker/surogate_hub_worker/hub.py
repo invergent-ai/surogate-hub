@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from typing import Callable, Dict, Iterable, List, Optional
+from urllib.parse import quote
 
 from surogate_hub_worker.fs import PROTOCOL_SCHEME
 
@@ -26,6 +27,7 @@ from surogate_hub_sdk.api.repositories_api import RepositoriesApi
 from surogate_hub_sdk.exceptions import NotFoundException
 from surogate_hub_sdk.models.commit import Commit
 from surogate_hub_sdk.models.object_stats import ObjectStats
+from surogate_hub_sdk.repository import split_repository_id
 
 from surogate_hub_worker.config import Config
 
@@ -55,12 +57,14 @@ class HubClient:
 
     def get_repo_metadata(self, repository: str) -> Dict[str, str]:
         try:
-            return dict(self.repos.get_repository_metadata(repository) or {})
+            user, repo_name = split_repository_id(repository)
+            return dict(self.repos.get_repository_metadata(user, repo_name) or {})
         except NotFoundException:
             return {}
 
     def get_commit(self, repository: str, commit_id: str) -> Commit:
-        return self.commits.get_commit(repository, commit_id)
+        user, repo_name = split_repository_id(repository)
+        return self.commits.get_commit(user, repo_name, commit_id)
 
     def list_all_objects(
         self, repository: str, ref: str, prefix: str = "",
@@ -80,8 +84,12 @@ class HubClient:
         """Batch-delete a set of paths. Missing paths are silently tolerated."""
         if not paths:
             return
+        user, repo_name = split_repository_id(repository)
         self.objects.delete_objects(
-            repository=repository, branch=branch, path_list=PathList(paths=paths),
+            user=user,
+            repository=repo_name,
+            branch=branch,
+            path_list=PathList(paths=paths),
         )
 
     def shub_urls_for(self, repository: str, ref: str) -> List[str]:
@@ -91,8 +99,9 @@ class HubClient:
         local-blockstore limitation that presigned URLs can't be generated
         against non-S3 backends.
         """
+        encoded_repo = quote(repository, safe="")
         return [
-            f"{PROTOCOL_SCHEME}{repository}/{ref}/{o.path}"
+            f"{PROTOCOL_SCHEME}{encoded_repo}/{ref}/{o.path}"
             for o in self.list_parquet_objects(repository, ref)
         ]
 
@@ -104,9 +113,11 @@ class HubClient:
         match: Callable[[ObjectStats], bool],
     ) -> Iterable[ObjectStats]:
         after: Optional[str] = None
+        user, repo_name = split_repository_id(repository)
         while True:
             page = self.objects.list_objects(
-                repository=repository,
+                user=user,
+                repository=repo_name,
                 ref=ref,
                 prefix=prefix,
                 after=after,
@@ -122,21 +133,25 @@ class HubClient:
 
     def ensure_branch(self, repository: str, branch: str, source: str) -> bool:
         """Create ``branch`` from ``source`` if missing. Returns True if created."""
+        user, repo_name = split_repository_id(repository)
         try:
-            self.branches.get_branch(repository, branch)
+            self.branches.get_branch(user, repo_name, branch)
             return False
         except NotFoundException:
             pass
         self.branches.create_branch(
-            repository,
+            user,
+            repo_name,
             BranchCreation(name=branch, source=source, hidden=True),
         )
         log.info("created branch %s from %s", branch, source)
         return True
 
     def upload(self, repository: str, branch: str, path: str, data: bytes) -> None:
+        user, repo_name = split_repository_id(repository)
         self.objects.upload_object(
-            repository=repository,
+            user=user,
+            repository=repo_name,
             branch=branch,
             path=path,
             content=("content", data),
@@ -150,8 +165,10 @@ class HubClient:
         message: str,
         metadata: Dict[str, str],
     ) -> Commit:
+        user, repo_name = split_repository_id(repository)
         return self.commits.commit(
-            repository=repository,
+            user=user,
+            repository=repo_name,
             branch=branch,
             commit_creation=CommitCreation(
                 message=message, metadata=metadata, allow_empty=True,
@@ -160,6 +177,7 @@ class HubClient:
 
     def read_object(self, repository: str, ref: str, path: str) -> Optional[bytes]:
         try:
-            return bytes(self.objects.get_object(repository, ref, path))
+            user, repo_name = split_repository_id(repository)
+            return bytes(self.objects.get_object(user, repo_name, ref, path))
         except NotFoundException:
             return None

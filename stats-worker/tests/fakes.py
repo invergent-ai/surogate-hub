@@ -38,7 +38,7 @@ class InMemoryObjectStore:
         self._objects = {k: _Obj(v) for k, v in objects.items()}
 
     def list_objects(
-        self, *, repository, ref, prefix, delimiter=None, after=None,
+        self, *, user=None, repository, ref, prefix, delimiter=None, after=None,
         amount=None, presign=None,
     ) -> ObjectStatsList:
         results: List[ObjectStats] = []
@@ -67,12 +67,12 @@ class InMemoryObjectStore:
             results=results,
         )
 
-    def stat_object(self, *, repository, ref, path, presign=None):
+    def stat_object(self, *, user=None, repository, ref, path, presign=None):
         if path not in self._objects:
             raise NotFoundException(status=404, reason="Not Found")
         return _object_stats(path, self._objects[path].content)
 
-    def get_object(self, *, repository, ref, path, range=None, **_):
+    def get_object(self, *, user=None, repository, ref, path, range=None, **_):
         if path not in self._objects:
             raise NotFoundException(status=404, reason="Not Found")
         data = self._objects[path].content
