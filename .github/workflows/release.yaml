@@ -253,11 +253,13 @@ jobs:
         env:
           REPO_ID: ${{ vars.ARTIFACTHUB_REPO_ID }}
         run: |
-          sed "s|__REPOSITORY_ID__|${REPO_ID}|" helm/artifacthub-repo.yml > /tmp/artifacthub-repo.yml
+          mkdir -p ah-meta
+          sed "s|__REPOSITORY_ID__|${REPO_ID}|" helm/artifacthub-repo.yml > ah-meta/artifacthub-repo.yml
+          cd ah-meta
           oras push \
             ghcr.io/invergent-ai/charts/surogate-hub:artifacthub.io \
             --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
-            /tmp/artifacthub-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
+            artifacthub-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
 
       - name: Upload chart artifact
         uses: actions/upload-artifact@v4
