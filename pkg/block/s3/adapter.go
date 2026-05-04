@@ -998,7 +998,166 @@ func (a *Adapter) registerCaptureServerMiddleware() func(*s3.Options) {
 	})
 }
 
-func (l *Adapter) Destroy(storageNamespace string) {
+// destroyTimeout caps the background cleanup of a single storage namespace.
+const destroyTimeout = 30 * time.Minute
+
+// destroyBatchSize is the S3 DeleteObjects per-call ceiling.
+const destroyBatchSize = 1000
+
+// Destroy purges every object under the given storage namespace's prefix.
+// Called after a repository is deleted so the underlying object store does not
+// retain orphaned blobs. Runs asynchronously: the caller has already returned
+// to the API client, so errors are logged and swallowed. Refuses to operate on
+// a bare-bucket namespace (no prefix) to avoid wiping unrelated data.
+func (a *Adapter) Destroy(storageNamespace string) {
+	u, err := url.ParseRequestURI(storageNamespace)
+	if err != nil || u.Host == "" {
+		return
+	}
+	bucket := u.Host
+	prefix := strings.TrimPrefix(u.Path, "/")
+	if prefix == "" {
+		// A bare-bucket namespace would mean wiping the whole bucket.
+		return
+	}
+	if !strings.HasSuffix(prefix, "/") {
+		prefix += "/"
+	}
+	go a.destroyPrefix(bucket, prefix, storageNamespace)
+}
+
+func (a *Adapter) destroyPrefix(bucket, prefix, storageNamespace string) {
+	ctx, cancel := context.WithTimeout(context.Background(), destroyTimeout)
+	defer cancel()
+	log := a.log(ctx).WithFields(logging.Fields{
+		"operation":         "Destroy",
+		"storage_namespace": storageNamespace,
+		"bucket":            bucket,
+		"prefix":            prefix,
+	})
+	client := a.clients.Get(ctx, bucket)
+
+	stats, err := a.deletePrefixObjectVersions(ctx, client, bucket, prefix, log)
+	if err != nil {
+		log.WithError(err).WithField("deleted", stats.deleted).Warn("Destroy: list versions failed; aborting cleanup")
+		return
+	}
+	currentStats, err := a.deletePrefixCurrentObjects(ctx, client, bucket, prefix, log)
+	stats.add(currentStats)
+	if err != nil {
+		log.WithError(err).WithField("deleted", stats.deleted).Warn("Destroy: list page failed; aborting cleanup")
+		return
+	}
+	if stats.failed > 0 {
+		log.WithFields(logging.Fields{
+			"deleted": stats.deleted,
+			"failed":  stats.failed,
+		}).Warn("Destroy: storage namespace cleanup completed with delete errors")
+		return
+	}
+	log.WithField("deleted", stats.deleted).Info("Destroy: storage namespace purged")
+}
+
+type destroyStats struct {
+	deleted int
+	failed  int
+}
+
+func (s *destroyStats) add(other destroyStats) {
+	s.deleted += other.deleted
+	s.failed += other.failed
+}
+
+func (a *Adapter) deletePrefixObjectVersions(ctx context.Context, client *s3.Client, bucket, prefix string, log logging.Logger) (destroyStats, error) {
+	paginator := s3.NewListObjectVersionsPaginator(client, &s3.ListObjectVersionsInput{
+		Bucket:  aws.String(bucket),
+		Prefix:  aws.String(prefix),
+		MaxKeys: aws.Int32(destroyBatchSize),
+	})
+	var stats destroyStats
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return stats, err
+		}
+		if len(page.Versions) == 0 && len(page.DeleteMarkers) == 0 {
+			continue
+		}
+		ids := make([]types.ObjectIdentifier, 0, len(page.Versions)+len(page.DeleteMarkers))
+		for _, obj := range page.Versions {
+			ids = append(ids, types.ObjectIdentifier{
+				Key:       obj.Key,
+				VersionId: obj.VersionId,
+			})
+		}
+		for _, marker := range page.DeleteMarkers {
+			ids = append(ids, types.ObjectIdentifier{
+				Key:       marker.Key,
+				VersionId: marker.VersionId,
+			})
+		}
+		batchStats, err := a.deleteObjectIdentifierBatches(ctx, client, bucket, ids, log)
+		stats.add(batchStats)
+		if err != nil {
+			return stats, err
+		}
+	}
+	return stats, nil
+}
+
+func (a *Adapter) deletePrefixCurrentObjects(ctx context.Context, client *s3.Client, bucket, prefix string, log logging.Logger) (destroyStats, error) {
+	paginator := s3.NewListObjectsV2Paginator(client, &s3.ListObjectsV2Input{
+		Bucket:  aws.String(bucket),
+		Prefix:  aws.String(prefix),
+		MaxKeys: aws.Int32(destroyBatchSize),
+	})
+	var stats destroyStats
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return stats, err
+		}
+		if len(page.Contents) == 0 {
+			continue
+		}
+		ids := make([]types.ObjectIdentifier, 0, len(page.Contents))
+		for _, obj := range page.Contents {
+			ids = append(ids, types.ObjectIdentifier{Key: obj.Key})
+		}
+		batchStats, err := a.deleteObjectIdentifierBatches(ctx, client, bucket, ids, log)
+		stats.add(batchStats)
+		if err != nil {
+			return stats, err
+		}
+	}
+	return stats, nil
+}
+
+func (a *Adapter) deleteObjectIdentifierBatches(ctx context.Context, client *s3.Client, bucket string, ids []types.ObjectIdentifier, log logging.Logger) (destroyStats, error) {
+	var stats destroyStats
+	for len(ids) > 0 {
+		batch := ids[:min(len(ids), destroyBatchSize)]
+		out, err := client.DeleteObjects(ctx, &s3.DeleteObjectsInput{
+			Bucket: aws.String(bucket),
+			Delete: &types.Delete{
+				Objects: batch,
+				Quiet:   aws.Bool(true),
+			},
+		})
+		if err != nil {
+			return stats, err
+		}
+		for _, e := range out.Errors {
+			log.WithFields(logging.Fields{
+				"key":  aws.ToString(e.Key),
+				"code": aws.ToString(e.Code),
+			}).Warn(aws.ToString(e.Message))
+		}
+		stats.deleted += len(batch) - len(out.Errors)
+		stats.failed += len(out.Errors)
+		ids = ids[len(batch):]
+	}
+	return stats, nil
 }
 
 func ExtractParamsFromQK(qk block.QualifiedKey) (string, string) {
