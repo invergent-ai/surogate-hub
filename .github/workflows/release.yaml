@@ -12,7 +12,7 @@ permissions:
 jobs:
   build-binaries:
     name: Build sghub & hubctl (linux/amd64)
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -72,7 +72,7 @@ jobs:
 
   build-python-client:
     name: Build Python client SDK
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -102,7 +102,7 @@ jobs:
 
   build-java-client:
     name: Build Java client SDK
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -141,7 +141,7 @@ jobs:
 
   build-docker:
     name: Build & push Docker images
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -198,7 +198,7 @@ jobs:
 
   publish-helm-chart:
     name: Package & push Helm chart (OCI)
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -271,7 +271,7 @@ jobs:
   release:
     name: Create GitHub Release
     needs: [build-binaries, build-python-client, build-java-client, build-docker, publish-helm-chart]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Download binaries artifact
         uses: actions/download-artifact@v4
