@@ -617,13 +617,18 @@ func normalizeVerifyMaxConcurrent(maxConcurrent int) int {
 	return runtime.NumCPU()
 }
 
-func (h *Handler) presignedReconstructionRangeResolverFactory(r *http.Request, fileHash string, _ []reconstruct.Term) (reconstruct.RangeResolver, error) {
+func (h *Handler) presignedReconstructionRangeResolverFactory(r *http.Request, fileHash string, terms []reconstruct.Term) (reconstruct.RangeResolver, error) {
 	if h.xorbs == nil {
 		return nil, fmt.Errorf("xorb store is not configured")
 	}
 	ctx := r.Context()
 	proxyBaseURL := reconstructionProxyBaseURL(r)
 	parsed := make(map[string]parsedXorbInfo)
+	urls := make(map[string]string)
+	grantedRanges, err := h.reconstructionGrantedRanges(ctx, terms, parsed)
+	if err != nil {
+		return nil, err
+	}
 	return func(xorbHash string, chunks reconstruct.IndexRange) (reconstruct.ResolvedRange, error) {
 		info, ok := parsed[xorbHash]
 		if !ok {
@@ -646,17 +651,54 @@ func (h *Handler) presignedReconstructionRangeResolverFactory(r *http.Request, f
 		if err != nil {
 			return reconstruct.ResolvedRange{}, err
 		}
-		url, _, err := h.xorbs.adapter.GetPreSignedURL(ctx, xetstore.XorbObjectPointer(h.xorbs.storageNamespace, "default", xorbHash), block.PreSignModeRead)
-		if errors.Is(err, block.ErrOperationNotSupported) {
-			url, err = h.proxyXorbURL(proxyBaseURL, fileHash, "default", xorbHash, []reconstruct.HTTPRange{byteRange})
-			if err != nil {
+		url, ok := urls[xorbHash]
+		if !ok {
+			url, _, err = h.xorbs.adapter.GetPreSignedURL(ctx, xetstore.XorbObjectPointer(h.xorbs.storageNamespace, "default", xorbHash), block.PreSignModeRead)
+			if errors.Is(err, block.ErrOperationNotSupported) {
+				url, err = h.proxyXorbURL(proxyBaseURL, fileHash, "default", xorbHash, grantedRanges[xorbHash])
+				if err != nil {
+					return reconstruct.ResolvedRange{}, err
+				}
+			} else if err != nil {
 				return reconstruct.ResolvedRange{}, err
 			}
-		} else if err != nil {
-			return reconstruct.ResolvedRange{}, err
+			urls[xorbHash] = url
 		}
 		return reconstruct.ResolvedRange{URL: url, Bytes: byteRange}, nil
 	}, nil
+}
+
+func (h *Handler) reconstructionGrantedRanges(ctx context.Context, terms []reconstruct.Term, parsed map[string]parsedXorbInfo) (map[string][]reconstruct.HTTPRange, error) {
+	groupedTerms, err := reconstruct.GroupTerms(terms)
+	if err != nil {
+		return nil, err
+	}
+	grants := make(map[string][]reconstruct.HTTPRange)
+	for _, term := range groupedTerms {
+		info, ok := parsed[term.Hash]
+		if !ok {
+			reader, err := h.xorbs.Get(ctx, "default", term.Hash)
+			if err != nil {
+				return nil, err
+			}
+			data, err := io.ReadAll(reader)
+			_ = reader.Close()
+			if err != nil {
+				return nil, err
+			}
+			info, _, err = parseXorbInfo(data)
+			if err != nil {
+				return nil, err
+			}
+			parsed[term.Hash] = info
+		}
+		byteRange, err := xorbByteRange(info, term.Range)
+		if err != nil {
+			return nil, err
+		}
+		grants[term.Hash] = append(grants[term.Hash], byteRange)
+	}
+	return grants, nil
 }
 
 func (h *Handler) proxyXorbURL(baseURL, fileHash, prefix, xorbHash string, ranges []reconstruct.HTTPRange) (string, error) {

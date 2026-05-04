@@ -62,6 +62,27 @@ func BuildManifest(terms []Term, resolve RangeResolver) (Manifest, error) {
 	}
 	manifest.OffsetIntoFirstRange = terms[0].ChunkOffset
 
+	groupedTerms, err := GroupTerms(terms)
+	if err != nil {
+		return Manifest{}, err
+	}
+	for _, current := range groupedTerms {
+		resolved, err := resolve(current.Hash, current.Range)
+		if err != nil {
+			return Manifest{}, err
+		}
+		manifest.Terms = append(manifest.Terms, current)
+		manifest.appendXorbRange(current.Hash, resolved.URL, XorbRangeDescriptor{
+			Chunks: current.Range,
+			Bytes:  resolved.Bytes,
+		})
+	}
+
+	return manifest, nil
+}
+
+func GroupTerms(terms []Term) ([]ManifestTerm, error) {
+	var grouped []ManifestTerm
 	for i := 0; i < len(terms); {
 		current := ManifestTerm{
 			Hash: terms[i].XorbHash,
@@ -71,35 +92,38 @@ func BuildManifest(terms []Term, resolve RangeResolver) (Manifest, error) {
 			},
 		}
 		if terms[i].ChunkSizeBytes > uint64(^uint32(0)) {
-			return Manifest{}, fmt.Errorf("chunk too large")
+			return nil, fmt.Errorf("chunk too large")
 		}
 		current.UnpackedLength = uint32(terms[i].ChunkSizeBytes)
 		i++
 
 		for i < len(terms) && terms[i].XorbHash == current.Hash && terms[i].ChunkIndex == current.Range.End {
 			if terms[i].ChunkSizeBytes > uint64(^uint32(0))-uint64(current.UnpackedLength) {
-				return Manifest{}, fmt.Errorf("term too large")
+				return nil, fmt.Errorf("term too large")
 			}
 			current.Range.End++
 			current.UnpackedLength += uint32(terms[i].ChunkSizeBytes)
 			i++
 		}
 
-		resolved, err := resolve(current.Hash, current.Range)
-		if err != nil {
-			return Manifest{}, err
-		}
-		manifest.Terms = append(manifest.Terms, current)
-		manifest.Xorbs[current.Hash] = append(manifest.Xorbs[current.Hash], XorbMultiRangeFetch{
-			URL: resolved.URL,
-			Ranges: []XorbRangeDescriptor{{
-				Chunks: current.Range,
-				Bytes:  resolved.Bytes,
-			}},
-		})
+		grouped = append(grouped, current)
 	}
+	return grouped, nil
+}
 
-	return manifest, nil
+func (m *Manifest) appendXorbRange(xorbHash, url string, descriptor XorbRangeDescriptor) {
+	fetches := m.Xorbs[xorbHash]
+	for i := range fetches {
+		if fetches[i].URL == url {
+			fetches[i].Ranges = append(fetches[i].Ranges, descriptor)
+			m.Xorbs[xorbHash] = fetches
+			return
+		}
+	}
+	m.Xorbs[xorbHash] = append(fetches, XorbMultiRangeFetch{
+		URL:    url,
+		Ranges: []XorbRangeDescriptor{descriptor},
+	})
 }
 
 func (m Manifest) V1() ManifestV1 {

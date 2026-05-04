@@ -824,6 +824,28 @@ func TestGetReconstructionFallsBackToGrantedProxyURL(t *testing.T) {
 	require.Equal(t, xorbBytes[byteRange.Start:byteRange.End+1], proxyRec.Body.Bytes())
 }
 
+func TestReconstructionGrantedRangesMatchGroupedManifestTerms(t *testing.T) {
+	handler := &Handler{}
+	parsed := map[string]parsedXorbInfo{
+		"xorb-a": {ChunkBoundaries: []uint32{10, 20, 30}},
+		"xorb-b": {ChunkBoundaries: []uint32{40}},
+	}
+	terms := []reconstruct.Term{
+		{XorbHash: "xorb-a", ChunkIndex: 0, ChunkSizeBytes: 10},
+		{XorbHash: "xorb-a", ChunkIndex: 1, ChunkSizeBytes: 10},
+		{XorbHash: "xorb-b", ChunkIndex: 0, ChunkSizeBytes: 40},
+		{XorbHash: "xorb-a", ChunkIndex: 2, ChunkSizeBytes: 10},
+	}
+
+	grants, err := handler.reconstructionGrantedRanges(context.Background(), terms, parsed)
+	require.NoError(t, err)
+
+	require.Equal(t, []reconstruct.HTTPRange{
+		{Start: 0, End: 19},
+		{Start: 20, End: 29},
+	}, grants["xorb-a"])
+}
+
 func TestReconstructFileRangeReadsXorbBytes(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
