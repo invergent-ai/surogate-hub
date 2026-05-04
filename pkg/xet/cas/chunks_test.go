@@ -841,8 +841,7 @@ func TestReconstructionGrantedRangesMatchGroupedManifestTerms(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, []reconstruct.HTTPRange{
-		{Start: 0, End: 19},
-		{Start: 20, End: 29},
+		{Start: 0, End: 29},
 	}, grants["xorb-a"])
 }
 

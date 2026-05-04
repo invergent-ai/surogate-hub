@@ -78,15 +78,9 @@ func TestBuildManifestCoalescesRepeatedXorbRangesByURL(t *testing.T) {
 	}, manifest.Terms)
 	require.Equal(t, []XorbMultiRangeFetch{{
 		URL: "https://cas.example/xorb-a",
-		Ranges: []XorbRangeDescriptor{
-			{
-				Chunks: IndexRange{Start: 0, End: 2},
-				Bytes:  HTTPRange{Start: 0, End: 199},
-			},
-			{
-				Chunks: IndexRange{Start: 2, End: 3},
-				Bytes:  HTTPRange{Start: 200, End: 299},
-			},
-		},
+		Ranges: []XorbRangeDescriptor{{
+			Chunks: IndexRange{Start: 0, End: 3},
+			Bytes:  HTTPRange{Start: 0, End: 299},
+		}},
 	}}, manifest.Xorbs["xorb-a"])
 }

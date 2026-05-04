@@ -115,7 +115,11 @@ func (m *Manifest) appendXorbRange(xorbHash, url string, descriptor XorbRangeDes
 	fetches := m.Xorbs[xorbHash]
 	for i := range fetches {
 		if fetches[i].URL == url {
-			fetches[i].Ranges = append(fetches[i].Ranges, descriptor)
+			if len(fetches[i].Ranges) == 0 {
+				fetches[i].Ranges = append(fetches[i].Ranges, descriptor)
+			} else {
+				fetches[i].Ranges[0] = mergeXorbRangeDescriptor(fetches[i].Ranges[0], descriptor)
+			}
 			m.Xorbs[xorbHash] = fetches
 			return
 		}
@@ -124,6 +128,19 @@ func (m *Manifest) appendXorbRange(xorbHash, url string, descriptor XorbRangeDes
 		URL:    url,
 		Ranges: []XorbRangeDescriptor{descriptor},
 	})
+}
+
+func mergeXorbRangeDescriptor(a, b XorbRangeDescriptor) XorbRangeDescriptor {
+	return XorbRangeDescriptor{
+		Chunks: IndexRange{
+			Start: min(a.Chunks.Start, b.Chunks.Start),
+			End:   max(a.Chunks.End, b.Chunks.End),
+		},
+		Bytes: HTTPRange{
+			Start: min(a.Bytes.Start, b.Bytes.Start),
+			End:   max(a.Bytes.End, b.Bytes.End),
+		},
+	}
 }
 
 func (m Manifest) V1() ManifestV1 {

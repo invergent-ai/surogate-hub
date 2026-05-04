@@ -696,9 +696,20 @@ func (h *Handler) reconstructionGrantedRanges(ctx context.Context, terms []recon
 		if err != nil {
 			return nil, err
 		}
-		grants[term.Hash] = append(grants[term.Hash], byteRange)
+		grants[term.Hash] = appendGrantedRange(grants[term.Hash], byteRange)
 	}
 	return grants, nil
+}
+
+func appendGrantedRange(ranges []reconstruct.HTTPRange, next reconstruct.HTTPRange) []reconstruct.HTTPRange {
+	if len(ranges) == 0 {
+		return []reconstruct.HTTPRange{next}
+	}
+	ranges[0] = reconstruct.HTTPRange{
+		Start: min(ranges[0].Start, next.Start),
+		End:   max(ranges[0].End, next.End),
+	}
+	return ranges
 }
 
 func (h *Handler) proxyXorbURL(baseURL, fileHash, prefix, xorbHash string, ranges []reconstruct.HTTPRange) (string, error) {
