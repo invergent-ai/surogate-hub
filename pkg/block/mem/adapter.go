@@ -377,5 +377,6 @@ func (a *Adapter) ListMultipartUploads(_ context.Context, _ block.ObjectPointer,
 	return nil, block.ErrOperationNotSupported
 }
 
-func (l *Adapter) Destroy(storageNamespace string) {
+func (l *Adapter) Destroy(storageNamespace string) error {
+	return nil
 }

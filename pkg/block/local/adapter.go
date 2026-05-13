@@ -587,19 +587,16 @@ func (l *Adapter) RuntimeStats() map[string]string {
 	return nil
 }
 
-func (l *Adapter) Destroy(storageNamespace string) {
+func (l *Adapter) Destroy(storageNamespace string) error {
 	p, err := l.extractParamsFromObj(block.ObjectPointer{
 		StorageNamespace: storageNamespace,
 		Identifier:       "",
 		IdentifierType:   block.IdentifierTypeRelative,
 	})
 	if err != nil {
-		return
+		return err
 	}
-
-	go func() {
-		_ = os.RemoveAll(p)
-	}()
+	return os.RemoveAll(p)
 }
 
 func VerifyAbsPath(absPath, adapterPath string, allowedPrefixes []string) error {

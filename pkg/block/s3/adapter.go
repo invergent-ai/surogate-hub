@@ -1006,27 +1006,28 @@ const destroyBatchSize = 1000
 
 // Destroy purges every object under the given storage namespace's prefix.
 // Called after a repository is deleted so the underlying object store does not
-// retain orphaned blobs. Runs asynchronously: the caller has already returned
-// to the API client, so errors are logged and swallowed. Refuses to operate on
-// a bare-bucket namespace (no prefix) to avoid wiping unrelated data.
-func (a *Adapter) Destroy(storageNamespace string) {
+// retain orphaned blobs. Runs synchronously: the controller waits for cleanup
+// before returning 204, otherwise a subsequent recreate races against the
+// purge and fails with "namespace in use". Refuses to operate on a bare-bucket
+// namespace (no prefix) to avoid wiping unrelated data.
+func (a *Adapter) Destroy(storageNamespace string) error {
 	u, err := url.ParseRequestURI(storageNamespace)
 	if err != nil || u.Host == "" {
-		return
+		return nil
 	}
 	bucket := u.Host
 	prefix := strings.TrimPrefix(u.Path, "/")
 	if prefix == "" {
 		// A bare-bucket namespace would mean wiping the whole bucket.
-		return
+		return nil
 	}
 	if !strings.HasSuffix(prefix, "/") {
 		prefix += "/"
 	}
-	go a.destroyPrefix(bucket, prefix, storageNamespace)
+	return a.destroyPrefix(bucket, prefix, storageNamespace)
 }
 
-func (a *Adapter) destroyPrefix(bucket, prefix, storageNamespace string) {
+func (a *Adapter) destroyPrefix(bucket, prefix, storageNamespace string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), destroyTimeout)
 	defer cancel()
 	log := a.log(ctx).WithFields(logging.Fields{
@@ -1040,22 +1041,23 @@ func (a *Adapter) destroyPrefix(bucket, prefix, storageNamespace string) {
 	stats, err := a.deletePrefixObjectVersions(ctx, client, bucket, prefix, log)
 	if err != nil {
 		log.WithError(err).WithField("deleted", stats.deleted).Warn("Destroy: list versions failed; aborting cleanup")
-		return
+		return fmt.Errorf("list object versions under %s: %w", storageNamespace, err)
 	}
 	currentStats, err := a.deletePrefixCurrentObjects(ctx, client, bucket, prefix, log)
 	stats.add(currentStats)
 	if err != nil {
 		log.WithError(err).WithField("deleted", stats.deleted).Warn("Destroy: list page failed; aborting cleanup")
-		return
+		return fmt.Errorf("list current objects under %s: %w", storageNamespace, err)
 	}
 	if stats.failed > 0 {
 		log.WithFields(logging.Fields{
 			"deleted": stats.deleted,
 			"failed":  stats.failed,
 		}).Warn("Destroy: storage namespace cleanup completed with delete errors")
-		return
+		return fmt.Errorf("failed to delete %d object(s) under %s", stats.failed, storageNamespace)
 	}
 	log.WithField("deleted", stats.deleted).Info("Destroy: storage namespace purged")
+	return nil
 }
 
 type destroyStats struct {

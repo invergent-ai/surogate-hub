@@ -219,7 +219,11 @@ type Adapter interface {
 	GetRegion(ctx context.Context, storageID, storageNamespace string) (string, error)
 
 	RuntimeStats() map[string]string
-	Destroy(storageNamespace string)
+	// Destroy purges every object under the given storage namespace.
+	// Runs synchronously: callers (e.g. DeleteRepository) must wait for
+	// cleanup before responding, otherwise an immediate recreate races
+	// against the still-pending purge and fails with "namespace in use".
+	Destroy(storageNamespace string) error
 }
 
 type WalkerOptions struct {

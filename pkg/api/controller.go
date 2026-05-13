@@ -2260,7 +2260,16 @@ func (c *Controller) DeleteRepository(w http.ResponseWriter, r *http.Request, ow
 	}
 
 	if repo != nil {
-		c.Catalog.BlockAdapter.Destroy(repo.StorageNamespace)
+		// Synchronous: a recreate that lands on a different replica must
+		// not see the leftover `_hub/dummy` marker. Failing loudly is
+		// better than a silent orphan that blocks future creates.
+		if err := c.Catalog.BlockAdapter.Destroy(repo.StorageNamespace); err != nil {
+			c.Logger.WithContext(ctx).WithError(err).WithField("storage_namespace", repo.StorageNamespace).
+				Error("DeleteRepository: storage namespace cleanup failed; orphaned objects may remain")
+			writeError(w, r, http.StatusInternalServerError,
+				fmt.Sprintf("repository metadata deleted but storage cleanup failed for %s: %s", repo.StorageNamespace, err))
+			return
+		}
 	}
 
 	writeResponse(w, r, http.StatusNoContent, nil)

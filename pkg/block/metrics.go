@@ -135,6 +135,6 @@ func (m *MetricsAdapter) RuntimeStats() map[string]string {
 	return m.adapter.RuntimeStats()
 }
 
-func (m *MetricsAdapter) Destroy(storageNamespace string) {
-	m.adapter.Destroy(storageNamespace)
+func (m *MetricsAdapter) Destroy(storageNamespace string) error {
+	return m.adapter.Destroy(storageNamespace)
 }

@@ -100,7 +100,7 @@ func TestDestroyPrefixDeletesObjectVersionsAndDeleteMarkers(t *testing.T) {
 	defer srv.Close()
 
 	adapter := newDestroyTestAdapter(srv.URL)
-	adapter.destroyPrefix("bucket", "repo/", "s3://bucket/repo")
+	require.NoError(t, adapter.destroyPrefix("bucket", "repo/", "s3://bucket/repo"))
 
 	require.ElementsMatch(t, []deletedObject{
 		{Key: "repo/live", VersionID: "v2"},
@@ -164,7 +164,9 @@ func TestDestroyPrefixWarnsInsteadOfPurgedWhenDeleteErrors(t *testing.T) {
 	defer srv.Close()
 
 	adapter := newDestroyTestAdapter(srv.URL)
-	adapter.destroyPrefix("bucket", "repo/", "s3://bucket/repo")
+	err := adapter.destroyPrefix("bucket", "repo/", "s3://bucket/repo")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to delete")
 
 	logs, err := os.ReadFile(logPath)
 	require.NoError(t, err)

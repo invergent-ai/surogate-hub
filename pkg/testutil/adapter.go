@@ -165,5 +165,6 @@ func (a *MockAdapter) RuntimeStats() map[string]string {
 	return nil
 }
 
-func (a *MockAdapter) Destroy(_ string) {
+func (a *MockAdapter) Destroy(_ string) error {
+	return nil
 }

@@ -700,7 +700,8 @@ func (a *Adapter) RuntimeStats() map[string]string {
 	return nil
 }
 
-func (l *Adapter) Destroy(storageNamespace string) {
+func (l *Adapter) Destroy(storageNamespace string) error {
+	return nil
 }
 
 func formatMultipartFilename(uploadID string, partNumber int) string {

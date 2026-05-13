@@ -649,7 +649,8 @@ func (a *Adapter) ListMultipartUploads(_ context.Context, _ block.ObjectPointer,
 	return nil, block.ErrOperationNotSupported
 }
 
-func (l *Adapter) Destroy(storageNamespace string) {
+func (l *Adapter) Destroy(storageNamespace string) error {
+	return nil
 }
 
 // ParseURL - parses url and extracts account name and domain. If either are not found returns an error
