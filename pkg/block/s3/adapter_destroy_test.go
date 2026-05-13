@@ -174,6 +174,52 @@ func TestDestroyPrefixWarnsInsteadOfPurgedWhenDeleteErrors(t *testing.T) {
 	require.NotContains(t, string(logs), "Destroy: storage namespace purged")
 }
 
+func TestDestroyPrefixSkipsVersioningWhenBackendReturnsNotImplemented(t *testing.T) {
+	var deleted []deletedObject
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && hasQueryParam(r, "versions"):
+			w.Header().Set("Content-Type", "application/xml")
+			w.WriteHeader(http.StatusNotImplemented)
+			_, _ = w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?>
+<Error><Code>NotImplemented</Code><Message>ListObjectVersions not implemented</Message></Error>`))
+		case r.Method == http.MethodGet && r.URL.Query().Get("list-type") == "2":
+			w.Header().Set("Content-Type", "application/xml")
+			_, _ = w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?>
+<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+  <Name>bucket</Name>
+  <Prefix>repo/</Prefix>
+  <KeyCount>1</KeyCount>
+  <MaxKeys>1000</MaxKeys>
+  <IsTruncated>false</IsTruncated>
+  <Contents>
+    <Key>repo/_hub/dummy</Key>
+    <LastModified>2026-05-13T00:00:00.000Z</LastModified>
+    <ETag>"etag"</ETag>
+    <Size>5</Size>
+    <StorageClass>STANDARD</StorageClass>
+  </Contents>
+</ListBucketResult>`))
+		case r.Method == http.MethodPost && hasQueryParam(r, "delete"):
+			var req deleteObjectRequest
+			require.NoError(t, xml.NewDecoder(r.Body).Decode(&req))
+			deleted = append(deleted, req.Objects...)
+			w.Header().Set("Content-Type", "application/xml")
+			_, _ = w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?>
+<DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"></DeleteResult>`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer srv.Close()
+
+	adapter := newDestroyTestAdapter(srv.URL)
+	require.NoError(t, adapter.destroyPrefix("bucket", "repo/", "s3://bucket/repo"))
+	require.ElementsMatch(t, []deletedObject{
+		{Key: "repo/_hub/dummy"},
+	}, deleted)
+}
+
 func hasQueryParam(r *http.Request, key string) bool {
 	_, ok := r.URL.Query()[key]
 	return ok

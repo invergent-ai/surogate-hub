@@ -21,6 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/invergent-ai/surogate-hub/pkg/block"
@@ -1040,8 +1041,17 @@ func (a *Adapter) destroyPrefix(bucket, prefix, storageNamespace string) error {
 
 	stats, err := a.deletePrefixObjectVersions(ctx, client, bucket, prefix, log)
 	if err != nil {
-		log.WithError(err).WithField("deleted", stats.deleted).Warn("Destroy: list versions failed; aborting cleanup")
-		return fmt.Errorf("list object versions under %s: %w", storageNamespace, err)
+		// Some S3-compatible backends (notably CloudFlare R2) return 501
+		// NotImplemented for ListObjectVersions. Versioning isn't a hub
+		// requirement; fall through to the unversioned listing path
+		// instead of leaving objects behind.
+		if isListVersionsUnsupported(err) {
+			log.WithError(err).Debug("Destroy: ListObjectVersions unsupported by backend; skipping versioned cleanup")
+			stats = destroyStats{}
+		} else {
+			log.WithError(err).WithField("deleted", stats.deleted).Warn("Destroy: list versions failed; aborting cleanup")
+			return fmt.Errorf("list object versions under %s: %w", storageNamespace, err)
+		}
 	}
 	currentStats, err := a.deletePrefixCurrentObjects(ctx, client, bucket, prefix, log)
 	stats.add(currentStats)
@@ -1068,6 +1078,25 @@ type destroyStats struct {
 func (s *destroyStats) add(other destroyStats) {
 	s.deleted += other.deleted
 	s.failed += other.failed
+}
+
+// isListVersionsUnsupported reports whether the error from ListObjectVersions
+// indicates the backend doesn't implement that API. CloudFlare R2 returns 501
+// NotImplemented; other S3-compatible stores without versioning may report
+// similar codes.
+func isListVersionsUnsupported(err error) bool {
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		switch apiErr.ErrorCode() {
+		case "NotImplemented", "MethodNotAllowed":
+			return true
+		}
+	}
+	var httpErr *smithyhttp.ResponseError
+	if errors.As(err, &httpErr) && httpErr.HTTPStatusCode() == http.StatusNotImplemented {
+		return true
+	}
+	return false
 }
 
 func (a *Adapter) deletePrefixObjectVersions(ctx context.Context, client *s3.Client, bucket, prefix string, log logging.Logger) (destroyStats, error) {
