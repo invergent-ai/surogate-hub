@@ -16,8 +16,8 @@
 
 - [x] Task 1: KV key helpers (`pkg/stats/storage_keys.go`)
 - [x] Task 2: `StorageAccountant` (also folds in `DeleteRepo`, `InitRepo`, and the Task 16.5 doc comment)
-- [ ] Task 3: `QuotaChecker` *(in progress)*
-- [ ] Task 4: `auth:WriteUser` permission
+- [x] Task 3: `QuotaChecker`
+- [ ] Task 4: `auth:WriteUser` permission *(in progress)*
 - [ ] Task 5: `storage_usage` config block
 - [ ] Task 6: `StorageReconciler`
 - [ ] Task 7: Catalog + block-adapter wiring
