@@ -30,7 +30,7 @@
 - [x] Task 15: Quota enforcement on upload paths (UploadObject + CompletePresignMultipartUpload + gateway handlePut + HandleCompleteMultipartUpload)
 - [x] Task 16: End-to-end and drift tests
 - [x] Task 16.5: Document omitted delete hooks *(folded into Task 2)*
-- [ ] Task 17: User-facing docs *(in progress)*
+- [x] Task 17: User-facing docs (`docs/storage-usage.md` + `pkg/stats/README.md`)
 - [ ] Acceptance: `go vet ./...` + `go test ./...` green
 
 ---
