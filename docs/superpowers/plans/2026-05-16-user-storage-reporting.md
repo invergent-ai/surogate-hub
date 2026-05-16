@@ -20,8 +20,8 @@
 - [x] Task 4: `auth:WriteUser` permission
 - [x] Task 5: `storage_usage` config block
 - [x] Task 6: `StorageReconciler`
-- [ ] Task 7: Catalog + block-adapter wiring *(in progress)*
-- [ ] Task 8 + 8.5 + 9: Runtime + test-fixture wiring
+- [x] Task 7: Catalog + block-adapter wiring (moved to `pkg/stats/storagewiring` to avoid import cycle with block/s3 → stats)
+- [ ] Task 8 + 8.5 + 9: Runtime + test-fixture wiring *(in progress)*
 - [ ] Task 10: Accountant hooks in API upload paths
 - [ ] Task 11: Accountant hooks in gateway upload paths
 - [ ] Task 12: Counter maintenance on repo create/delete
