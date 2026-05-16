@@ -2097,6 +2097,14 @@ func (c *Controller) CreateRepository(w http.ResponseWriter, r *http.Request, bo
 		if c.handleAPIError(ctx, w, r, err) {
 			return
 		}
+		if c.StorageAccountant != nil {
+			if ownerSlug, repoName, splitErr := stats.SplitNamespacedRepo(repo.Name); splitErr == nil {
+				if err := c.StorageAccountant.InitRepo(ctx, ownerSlug, repoName); err != nil {
+					c.Logger.WithContext(ctx).WithError(err).WithField("repo", repo.Name).
+						Warn("failed to initialize storage counter for repository")
+				}
+			}
+		}
 		response := apigen.Repository{
 			CreationDate:     repo.CreationDate.Unix(),
 			DefaultBranch:    repo.DefaultBranch,
@@ -2112,6 +2120,15 @@ func (c *Controller) CreateRepository(w http.ResponseWriter, r *http.Request, bo
 	if err != nil {
 		c.handleAPIError(ctx, w, r, fmt.Errorf("error creating repository: %w", err))
 		return
+	}
+
+	if c.StorageAccountant != nil {
+		if ownerSlug, repoName, splitErr := stats.SplitNamespacedRepo(newRepo.Name); splitErr == nil {
+			if err := c.StorageAccountant.InitRepo(ctx, ownerSlug, repoName); err != nil {
+				c.Logger.WithContext(ctx).WithError(err).WithField("repo", newRepo.Name).
+					Warn("failed to initialize storage counter for repository")
+			}
+		}
 	}
 
 	if sampleData {
@@ -2267,6 +2284,15 @@ func (c *Controller) DeleteRepository(w http.ResponseWriter, r *http.Request, ow
 	err = c.Catalog.DeleteRepository(ctx, repository, graveler.WithForce(swag.BoolValue(params.Force)))
 	if c.handleAPIError(ctx, w, r, err) {
 		return
+	}
+
+	if c.StorageAccountant != nil {
+		if ownerSlug, repoName, splitErr := stats.SplitNamespacedRepo(repository); splitErr == nil {
+			if err := c.StorageAccountant.DeleteRepo(ctx, ownerSlug, repoName); err != nil {
+				c.Logger.WithContext(ctx).WithError(err).WithField("repo", repository).
+					Warn("failed to clean up storage counter for repository")
+			}
+		}
 	}
 
 	if repo != nil {

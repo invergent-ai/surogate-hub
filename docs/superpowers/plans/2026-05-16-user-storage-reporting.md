@@ -24,8 +24,8 @@
 - [x] Task 8 + 8.5 + 9: Runtime + test-fixture wiring
 - [x] Task 10: Accountant hooks in API upload paths (UploadObject + CompletePresignMultipartUpload; CopyObject deliberately no-op)
 - [x] Task 11: Accountant hooks in gateway upload paths (handlePut + HandleCompleteMultipartUpload)
-- [ ] Task 12: Counter maintenance on repo create/delete *(in progress)*
-- [ ] Task 13: `GET /auth/users/{userId}/storage`
+- [x] Task 12: Counter maintenance on repo create/delete
+- [ ] Task 13: `GET /auth/users/{userId}/storage` *(in progress)*
 - [ ] Task 14: `PUT/DELETE /auth/users/{userId}/quota`
 - [ ] Task 15: Quota enforcement on upload paths
 - [ ] Task 16: End-to-end and drift tests

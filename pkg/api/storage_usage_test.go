@@ -84,6 +84,44 @@ func TestUploadObject_NoAccountantDoesNotPanic(t *testing.T) {
 	require.Equal(t, http.StatusCreated, status)
 }
 
+func TestCreateRepository_InitializesRepoCounter(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	const owner, repoName = "alice", "training"
+	repoID := owner + "/" + repoName
+
+	resp, err := clt.CreateRepositoryWithResponse(ctx, &apigen.CreateRepositoryParams{}, apigen.CreateRepositoryJSONRequestBody{
+		Name:             repoID,
+		StorageNamespace: onBlock(deps, repoID),
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, resp.StatusCode())
+
+	got, err := deps.kvStore.Get(ctx, stats.StoragePartition, stats.StorageRepoKey(owner, repoName))
+	require.NoError(t, err, "InitRepo must materialize the repo counter key, not leave it absent")
+	require.Equal(t, "0", string(got.Value))
+}
+
+func TestDeleteRepository_DropsCounterAndDecrementsUserTotal(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	const owner, repoName, branch = "alice", "training", "main"
+	repoID := owner + "/" + repoName
+	_, err := deps.catalog.CreateRepository(ctx, repoID, "", onBlock(deps, repoID), branch, false)
+	require.NoError(t, err)
+	// Seed a non-zero repo + user counter so we can verify decrement.
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageRepoKey(owner, repoName), []byte("500")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey(owner), []byte("500")))
+
+	resp, err := clt.DeleteRepositoryWithResponse(ctx, apigen.RepositoryOwner(repoID), apigen.RepositoryName(repoID), &apigen.DeleteRepositoryParams{})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNoContent, resp.StatusCode())
+
+	_, err = deps.kvStore.Get(ctx, stats.StoragePartition, stats.StorageRepoKey(owner, repoName))
+	require.ErrorIs(t, err, kv.ErrNotFound)
+	require.Equal(t, int64(0), readInt64KV(t, deps.kvStore, stats.StorageUserKey(owner)))
+}
+
 func TestCopyObject_DoesNotDoubleCount(t *testing.T) {
 	// CopyObject reuses the source physical address inside the same repo, so the per-repo
 	// allocated-bytes counter must not increase.
