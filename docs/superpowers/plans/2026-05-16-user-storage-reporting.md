@@ -29,7 +29,7 @@
 
 - `api/swagger.yml` — three new operations under `/auth/users/{userId}/...`.
 - `pkg/api/apigen/sghub.gen.go` — regenerated.
-- `pkg/api/controller.go` — three new controller methods, calls to accountant and quota checker from upload/copy/delete sites, `splitNamespacedRepository` helper.
+- `pkg/api/controller.go` — three new controller methods, calls to accountant and quota checker from upload/copy/repository-delete sites, and access to the catalog KV store for storage counters.
 - `pkg/api/controller_test.go` — endpoint and enforcement tests.
 - `pkg/permissions/actions.go` — add `WriteUserAction = "auth:WriteUser"`.
 - `pkg/config/config.go` — new `StorageUsage` block under `BaseConfig`.
@@ -37,8 +37,7 @@
 - `cmd/sghub/cmd/run.go` — construct accountant + reconciler + quota checker, pass into controller and gateway.
 - `pkg/api/serve.go` — accept accountant + quota checker in handler setup.
 - `pkg/api/serve_test.go` — wire accountant + quota checker into `setupHandler`.
-- `pkg/catalog/catalog.go` — call accountant on `CreateRepository` (init counter) and `DeleteRepository` (drop counter).
-- `pkg/gateway/operations/` — call accountant + quota checker in `PutObject`, `UploadPart`, `UploadPartCopy`, `CompleteMultipartUpload`, `CopyObject`.
+- `pkg/gateway/handler.go`, `pkg/gateway/middleware.go`, `pkg/gateway/operations/base.go`, `pkg/gateway/operations/putobject.go`, `pkg/gateway/operations/postobject.go` — pass accountant/quota dependencies into gateway operations and call them in `PutObject`, upload part, upload copy part/range, multipart completion, and copy object.
 
 **File responsibility split:**
 
@@ -46,7 +45,7 @@
 - `storage_accountant.go` knows nothing about HTTP, repos, or block storage. It exposes `Add(owner, repo, delta)` and runs a flusher.
 - `storage_reconciler.go` knows about the block adapter and the catalog (to list repos and get storage namespaces). It calls into the accountant's KV writer to overwrite per-repo counters.
 - `storage_quota.go` exposes `Allow(ctx, owner, contentLength)`. It only reads KV; it does not call the accountant.
-- The controller is the integration point: it knows the request, the owner, the bytes, and calls into all three.
+- The controller and gateway operation context are the integration points: they know the request, owner, repository, and byte count. Repository creation/deletion counter maintenance belongs in the controller handlers, not in `pkg/catalog`, because the catalog package does not own HTTP auth context or per-user API behavior.
 
 ---
 
@@ -800,7 +799,7 @@ func (q *QuotaChecker) readUserUsage(ctx context.Context, owner string) (int64, 
 }
 ```
 
-> Note: confirm that `kv.Store` has a `Delete(ctx, partition, key) error` method by reading `pkg/kv/store.go`. If only `DeleteIf` or no Delete exists, replace `q.storage.Delete(...)` with `q.storage.SetIf(ctx, StoragePartition, StorageQuotaKey(owner), nil, anyValuePredicate)` per existing patterns in `pkg/auth` for KV deletion.
+`kv.Store.Delete(ctx, partition, key)` exists and is idempotent for missing keys, so `ClearQuota` should call it directly.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -877,10 +876,14 @@ Open `/work/surogate-hub/pkg/config/config.go`. Find the `UsageReport` field (ar
 
 ```go
 StorageUsage struct {
-    Enabled            bool          `mapstructure:"enabled"`
-    AccountantInterval time.Duration `mapstructure:"accountant_interval"`
-    ReconcilerInterval time.Duration `mapstructure:"reconciler_interval"`
-    ReconcilerConcurrency int        `mapstructure:"reconciler_concurrency"`
+    Enabled bool `mapstructure:"enabled"`
+    StorageAccountant struct {
+        FlushInterval time.Duration `mapstructure:"flush_interval"`
+    } `mapstructure:"storage_accountant"`
+    StorageReconciler struct {
+        Interval    time.Duration `mapstructure:"interval"`
+        Concurrency int           `mapstructure:"concurrency"`
+    } `mapstructure:"storage_reconciler"`
 } `mapstructure:"storage_usage"`
 ```
 
@@ -892,10 +895,14 @@ UsageReport struct {
     FlushInterval time.Duration `mapstructure:"flush_interval"`
 } `mapstructure:"usage_report"`
 StorageUsage struct {
-    Enabled               bool          `mapstructure:"enabled"`
-    AccountantInterval    time.Duration `mapstructure:"accountant_interval"`
-    ReconcilerInterval    time.Duration `mapstructure:"reconciler_interval"`
-    ReconcilerConcurrency int           `mapstructure:"reconciler_concurrency"`
+    Enabled bool `mapstructure:"enabled"`
+    StorageAccountant struct {
+        FlushInterval time.Duration `mapstructure:"flush_interval"`
+    } `mapstructure:"storage_accountant"`
+    StorageReconciler struct {
+        Interval    time.Duration `mapstructure:"interval"`
+        Concurrency int           `mapstructure:"concurrency"`
+    } `mapstructure:"storage_reconciler"`
 } `mapstructure:"storage_usage"`
 ```
 
@@ -905,9 +912,9 @@ Open `/work/surogate-hub/pkg/config/defaults.go`. Find the `usage_report.flush_i
 
 ```go
 viper.SetDefault("storage_usage.enabled", false)
-viper.SetDefault("storage_usage.accountant_interval", 5*time.Second)
-viper.SetDefault("storage_usage.reconciler_interval", time.Hour)
-viper.SetDefault("storage_usage.reconciler_concurrency", 4)
+viper.SetDefault("storage_usage.storage_accountant.flush_interval", 5*time.Second)
+viper.SetDefault("storage_usage.storage_reconciler.interval", time.Hour)
+viper.SetDefault("storage_usage.storage_reconciler.concurrency", 4)
 ```
 
 - [ ] **Step 3: Build**
@@ -1309,7 +1316,7 @@ func startsWithBytes(b, prefix []byte) bool {
 }
 ```
 
-> Note: `kv.Store.Scan(..., kv.ScanOptions{KeyStart: prefix})` starts scanning at the prefix; the loop manually checks the prefix to stop when keys leave the namespace. If `kv.ScanOptions` does not have `KeyStart`, replace with whatever the local KV API uses to start at a key — read `pkg/kv/store.go` lines 78–84 for the actual field names.
+`kv.Store.Scan(..., kv.ScanOptions{KeyStart: prefix})` starts scanning at the prefix; the loop manually checks the prefix to stop when keys leave the namespace.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -1345,6 +1352,7 @@ package stats
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/invergent-ai/surogate-hub/pkg/block"
@@ -1360,11 +1368,12 @@ func (l *CatalogRepoLister) ListRepos(ctx context.Context, fn func(ReconcilerRep
 	const pageSize = 100
 	var after string
 	for {
-		repos, hasMore, err := l.Catalog.ListRepositories(ctx, pageSize, "", after)
+		repos, hasMore, err := l.Catalog.ListRepositories(ctx, pageSize, "", "", after)
 		if err != nil {
 			return fmt.Errorf("list repositories: %w", err)
 		}
 		for _, repo := range repos {
+			after = repo.Name
 			owner, name, splitErr := splitNamespacedRepo(repo.Name)
 			if splitErr != nil {
 				// A repo whose id is not in {owner}/{name} form is not part of this scheme.
@@ -1378,7 +1387,6 @@ func (l *CatalogRepoLister) ListRepos(ctx context.Context, fn func(ReconcilerRep
 			}); err != nil {
 				return err
 			}
-			after = repo.Name
 		}
 		if !hasMore {
 			return nil
@@ -1394,18 +1402,27 @@ func splitNamespacedRepo(id string) (owner, name string, err error) {
 	return id[:i], id[i+1:], nil
 }
 
+// SplitNamespacedRepo exposes the owner/name splitter to API and gateway packages.
+func SplitNamespacedRepo(id string) (owner, name string, err error) {
+	return splitNamespacedRepo(id)
+}
+
 // BlockNamespaceSizer implements NamespaceSizer by walking the block adapter.
 type BlockNamespaceSizer struct {
 	Adapter block.Adapter
 }
 
 func (s *BlockNamespaceSizer) NamespaceSize(ctx context.Context, storageID, storageNamespace string) (int64, error) {
-	walker, err := s.Adapter.GetWalker(storageID, block.WalkerOptions{StorageURI: storageNamespace})
+	storageURI, err := url.Parse(storageNamespace)
+	if err != nil {
+		return 0, fmt.Errorf("parse storage namespace %s: %w", storageNamespace, err)
+	}
+	walker, err := s.Adapter.GetWalker(storageID, block.WalkerOptions{StorageURI: storageURI})
 	if err != nil {
 		return 0, fmt.Errorf("get walker for %s: %w", storageNamespace, err)
 	}
 	var total int64
-	walkErr := walker.Walk(ctx, block.WalkOptions{}, func(e block.ObjectStoreEntry) error {
+	walkErr := walker.Walk(ctx, storageURI, block.WalkOptions{}, func(e block.ObjectStoreEntry) error {
 		total += e.Size
 		return nil
 	})
@@ -1416,7 +1433,11 @@ func (s *BlockNamespaceSizer) NamespaceSize(ctx context.Context, storageID, stor
 }
 ```
 
-> Note: verify exact signatures of `catalog.Catalog.ListRepositories`, `block.WalkerOptions`, `block.WalkOptions`, and `Walker.Walk` against `/work/surogate-hub/pkg/catalog/catalog.go` and `/work/surogate-hub/pkg/block/walker.go`. Adjust field names if they differ (e.g. `StorageURI` may be `Prefix` or similar). The semantic — list every repo and walk its storage namespace — must hold; field names are mechanical.
+Add `net/url` to the imports. The current signatures are:
+
+- `catalog.Catalog.ListRepositories(ctx, limit, prefix, searchString, after)`
+- `block.WalkerOptions{StorageURI: *url.URL}`
+- `Walker.Walk(ctx, storageURI *url.URL, op block.WalkOptions, fn)`
 
 - [ ] **Step 2: Build**
 
@@ -1435,7 +1456,7 @@ git -C /work/surogate-hub commit -m "stats: add catalog + block-adapter wiring f
 
 ---
 
-## Task 8: Wire accountant/quota/reconciler into `cmd/sghub/cmd/run.go`
+## Task 8: Prepare runtime wiring in `cmd/sghub/cmd/run.go`
 
 **Files:**
 - Modify: `/work/surogate-hub/cmd/sghub/cmd/run.go`
@@ -1450,21 +1471,21 @@ var storageAccountant *stats.StorageAccountant
 var quotaChecker *stats.QuotaChecker
 if baseCfg.StorageUsage.Enabled {
     storageAccountant = stats.NewStorageAccountant(kvStore)
-    storageAccountant.Start(ctx, baseCfg.StorageUsage.AccountantInterval, logger.WithField("service", "storage_accountant"))
+    storageAccountant.Start(ctx, baseCfg.StorageUsage.StorageAccountant.FlushInterval, logger.WithField("service", "storage_accountant"))
     quotaChecker = stats.NewQuotaChecker(kvStore)
     reconciler := stats.NewStorageReconciler(
         kvStore,
         &stats.CatalogRepoLister{Catalog: c},
-        &stats.BlockNamespaceSizer{Adapter: blockAdapter},
+        &stats.BlockNamespaceSizer{Adapter: blockStore},
         storageAccountant,
-    ).WithConcurrency(baseCfg.StorageUsage.ReconcilerConcurrency)
-    reconciler.Start(ctx, baseCfg.StorageUsage.ReconcilerInterval, logger.WithField("service", "storage_reconciler"))
+    ).WithConcurrency(baseCfg.StorageUsage.StorageReconciler.Concurrency)
+    reconciler.Start(ctx, baseCfg.StorageUsage.StorageReconciler.Interval, logger.WithField("service", "storage_reconciler"))
 }
 ```
 
-(Confirm the variable name of the block adapter — it should already be in scope in `run.go`. Read the relevant section first; if it is called `blockStore` or `adapter`, use that name. Same for `c` — the catalog. Adjust accordingly.)
+The current local variable names are `blockStore` for the block adapter and `c` for the catalog.
 
-Pass `storageAccountant` and `quotaChecker` into the API setup. Find the call to `api.Serve(...)` or `api.NewController(...)` (the function that constructs the controller) and add the two parameters; if those signatures are not yet ready, defer the actual wiring to Task 9 (which modifies the controller / serve setup).
+Do not leave these variables unused. In the same edit batch, perform Task 9 so `api.Serve(...)` and `gateway.NewHandler(...)` accept and receive `storageAccountant` and `quotaChecker`.
 
 - [ ] **Step 2: Build**
 
@@ -1472,7 +1493,7 @@ Pass `storageAccountant` and `quotaChecker` into the API setup. Find the call to
 cd /work/surogate-hub && go build ./cmd/sghub/...
 ```
 
-Expected: no errors. If compile fails because the controller does not yet accept the new parameters, leave them as locally-scoped variables that are unused for now (add `_ = storageAccountant; _ = quotaChecker` comment-tagged with TODO removed in Task 9). Prefer to make Task 8 and Task 9 a single commit to avoid the dangling state.
+Expected: no errors after Task 9 is done in the same edit batch.
 
 - [ ] **Step 3: Commit (deferred — combine with Task 9)**
 
@@ -1485,7 +1506,7 @@ Do not commit on its own; commit together with Task 9.
 **Files:**
 - Modify: `/work/surogate-hub/pkg/api/serve_test.go`
 
-Add the `withStorageAccountant()` option and surface accountant/reconciler/kv on `*dependencies` so subsequent test tasks can use them.
+Add the `withStorageAccountant()` option and surface accountant/reconciler/KV on `*dependencies` so subsequent test tasks can use them. The current fixture has `blocks block.Adapter`, `catalog *catalog.Catalog`, and no KV field, so add `kvStore kv.Store`.
 
 - [ ] **Step 1: Add option fn**
 
@@ -1496,13 +1517,13 @@ type setupOption func(*dependencies)
 
 func withStorageAccountant() setupOption {
     return func(d *dependencies) {
-        d.storageAccountant = stats.NewStorageAccountant(d.kv)
-        d.quotaChecker = stats.NewQuotaChecker(d.kv)
+        d.storageAccountant = stats.NewStorageAccountant(d.kvStore)
+        d.quotaChecker = stats.NewQuotaChecker(d.kvStore)
         // Reconciler with a fake lister that drains `d.catalog`; sizer wraps the in-memory block adapter.
         d.storageReconciler = stats.NewStorageReconciler(
-            d.kv,
+            d.kvStore,
             &stats.CatalogRepoLister{Catalog: d.catalog},
-            &stats.BlockNamespaceSizer{Adapter: d.blockAdapter},
+            &stats.BlockNamespaceSizer{Adapter: d.blocks},
             d.storageAccountant,
         )
     }
@@ -1515,11 +1536,10 @@ Extend `*dependencies` to expose:
 storageAccountant *stats.StorageAccountant
 quotaChecker      *stats.QuotaChecker
 storageReconciler *stats.StorageReconciler
-kv                kv.Store
-blockAdapter      block.Adapter
+kvStore           kv.Store
 ```
 
-Set those fields wherever `*dependencies` is constructed (the fields likely already exist for `kv` and `blockAdapter` under different names; rename or alias as needed).
+Set `kvStore: kvStore` in the `dependencies` return value from `setupHandler`. Keep using the existing `blocks: c.BlockAdapter` field for the block adapter.
 
 Extend `setupHandler(t, opts ...setupOption)` to apply options after defaults, and pass `d.storageAccountant` and `d.quotaChecker` into the controller constructor.
 
@@ -1532,15 +1552,15 @@ Extend `setupClientWithAdmin(t, opts ...setupOption)` to forward options through
 func clientAs(t testing.TB, deps *dependencies, username string) apigen.ClientWithResponsesInterface {
     t.Helper()
     ctx := context.Background()
-    _, err := deps.auth.CreateUser(ctx, &model.User{Username: username})
+    _, err := deps.authService.CreateUser(ctx, &authmodel.User{Username: username})
     require.NoError(t, err)
-    cred, err := deps.auth.CreateCredentials(ctx, username)
+    cred, err := deps.authService.CreateCredentials(ctx, username)
     require.NoError(t, err)
     return setupClientByEndpoint(t, deps.server.URL, cred.AccessKeyID, cred.SecretAccessKey)
 }
 ```
 
-(Adjust to whatever the actual auth-service signatures are.)
+Add `authmodel "github.com/invergent-ai/surogate-hub/pkg/auth/model"` to imports if the file does not already have that alias.
 
 - [ ] **Step 3: Build**
 
@@ -1580,11 +1600,18 @@ QuotaChecker      *stats.QuotaChecker
 
 Add import for `github.com/invergent-ai/surogate-hub/pkg/stats` if not already present.
 
-In `pkg/api/serve.go`, find the constructor that builds the controller (`NewController(...)` or `Serve(...)`). Add two parameters of the same types and assign them onto the controller fields.
+In `pkg/api/serve.go`, extend `Serve(...)` with two parameters of the same types and pass them to `NewController(...)`. In `pkg/api/controller.go`, extend `NewController(...)` with those parameters and assign them onto the controller fields.
 
 In `cmd/sghub/cmd/run.go`, pass `storageAccountant` and `quotaChecker` into that constructor.
 
 In `pkg/api/serve_test.go`, in `setupHandler`, pass `nil, nil` for now (tests that need the accountant will pass a real one in later tasks).
+
+Also extend the S3 gateway dependency path in the same edit:
+
+- `pkg/gateway/handler.go`: add `storageAccountant *stats.StorageAccountant, quotaChecker *stats.QuotaChecker` to `NewHandler(...)` and `ServerContext`.
+- `pkg/gateway/middleware.go`: copy those fields from `ServerContext` into the `operations.Operation` constructed in `EnrichWithOperation`.
+- `pkg/gateway/operations/base.go`: add `StorageAccountant *stats.StorageAccountant` and `QuotaChecker *stats.QuotaChecker` to `Operation`.
+- `cmd/sghub/cmd/run.go`: pass the same two variables to `gateway.NewHandler(...)`.
 
 - [ ] **Step 2: Build**
 
@@ -1617,7 +1644,7 @@ git -C /work/surogate-hub commit -m "api: wire StorageAccountant and QuotaChecke
 - Modify: `/work/surogate-hub/pkg/api/controller.go`
 - Modify: `/work/surogate-hub/pkg/api/controller_test.go`
 
-Targets: `Controller.UploadObject` (line ~3329), `Controller.StageObject` (line ~3500), `Controller.CopyObject` (line ~3577).
+Targets: `Controller.UploadObject`, `Controller.CompletePresignMultipartUpload`, and `Controller.CopyObject`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1626,8 +1653,8 @@ In `/work/surogate-hub/pkg/api/controller_test.go`, add:
 ```go
 func TestUploadObject_IncrementsStorageCounter(t *testing.T) {
 	ctx := context.Background()
-	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
-	_, err := deps.catalog.CreateRepository(ctx, "alice/training", "", onBlock(deps, "alice-training"), "main", false)
+	_, deps := setupClientWithAdmin(t, withStorageAccountant())
+	_, err := deps.catalog.CreateRepository(ctx, "alice/training", "", "mem://alice-training", "main", false)
 	require.NoError(t, err)
 
 	body := bytes.NewReader([]byte("hello world"))
@@ -1636,13 +1663,13 @@ func TestUploadObject_IncrementsStorageCounter(t *testing.T) {
 	require.Equal(t, http.StatusCreated, resp.StatusCode())
 
 	require.NoError(t, deps.storageAccountant.Flush(ctx))
-	got, err := deps.kv.Get(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training"))
+	got, err := deps.kvStore.Get(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training"))
 	require.NoError(t, err)
 	require.Equal(t, "11", string(got.Value))
 }
 ```
 
-`withStorageAccountant()` and `deps.storageAccountant` / `deps.kv` must be added to the test fixture — extend `setupHandler` (in `pkg/api/serve_test.go`) to accept variadic option funcs that flip on a real accountant/quota checker, and expose them on `*dependencies`. `onBlock(deps, "alice-training")` is shorthand for whatever storage-namespace helper the existing test suite uses; if no helper exists, construct the namespace string directly per existing test patterns.
+`withStorageAccountant()` and `deps.storageAccountant` / `deps.kvStore` were added in Task 8.5. Use explicit mem namespaces in tests, for example `mem://alice-training`.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -1658,29 +1685,16 @@ In `controller.go` `UploadObject` (around line 3398, after `upload.WriteBlob` re
 
 ```go
 if c.StorageAccountant != nil {
-    c.StorageAccountant.Add(ctx, owner, repository[len(owner)+1:], blob.Size)
-}
-```
-
-(`repository` at this point is `namespacedRepository(owner, repo)`, i.e. `"alice/training"`. The repo name is what follows the first slash. Reuse `splitNamespacedRepo` from Task 7 instead of the slice trick — add a public alias in `pkg/stats/storage_adapters.go`:
-
-```go
-// SplitNamespacedRepo exposes the splitter for callers outside pkg/stats.
-func SplitNamespacedRepo(id string) (string, string, error) { return splitNamespacedRepo(id) }
-```
-
-Then call:
-
-```go
-if c.StorageAccountant != nil {
     _, repoName, _ := stats.SplitNamespacedRepo(repository)
     c.StorageAccountant.Add(ctx, owner, repoName, blob.Size)
 }
 ```
 
+`repository` at this point is `namespacedRepository(owner, repo)`, i.e. `"alice/training"`.
+
 For the multipart branch (else case) the `blob` is set similarly — perform the same call after the multipart path assigns `blob`.
 
-For `StageObject`: after the staged object is committed, call `c.StorageAccountant.Add(ctx, owner, repoName, blob.Size)` with the size reported by the staging path. If the staging path does not return a size (it accepts a client-supplied size), use `body.SizeBytes` or whatever field carries it; look at `StageObject` lines 3500–3560 and pick the parameter that holds the byte count.
+Do not add a generic accountant hook to `StageObject`: it only creates metadata for a supplied physical address and can be called repeatedly for the same object. Counting there would double count aliases. For presigned multipart uploads, count in `CompletePresignMultipartUpload` using `mpuResp.ContentLength`, immediately after `BlockAdapter.CompleteMultiPartUpload` succeeds and before the entry is created. A failed entry create after completion may leave drift; the reconciler corrects it.
 
 For `CopyObject`: after the catalog `CopyEntry` returns successfully, call the accountant with the source entry's size (available from `srcEntry.Size`).
 
@@ -1692,7 +1706,7 @@ cd /work/surogate-hub && go test ./pkg/api/ -run TestUploadObject_IncrementsStor
 
 Expected: PASS.
 
-- [ ] **Step 5: Add equivalent tests for StageObject and CopyObject** following the same template.
+- [ ] **Step 5: Add equivalent tests for CompletePresignMultipartUpload and CopyObject** following the same template.
 
 Write each, run it (FAIL), add the hook, re-run (PASS).
 
@@ -1700,7 +1714,7 @@ Write each, run it (FAIL), add the hook, re-run (PASS).
 
 ```bash
 git -C /work/surogate-hub add pkg/api/controller.go pkg/api/controller_test.go pkg/api/serve_test.go pkg/stats/storage_adapters.go
-git -C /work/surogate-hub commit -m "api: count bytes from UploadObject, StageObject, CopyObject"
+git -C /work/surogate-hub commit -m "api: count bytes from upload, presign multipart, and copy"
 ```
 
 ---
@@ -1709,18 +1723,19 @@ git -C /work/surogate-hub commit -m "api: count bytes from UploadObject, StageOb
 
 **Files:**
 - Modify: `/work/surogate-hub/pkg/gateway/operations/putobject.go`
-- Modify: `/work/surogate-hub/pkg/gateway/operations/<multipart files>` — find via `grep -l 'UploadPart\|CompleteMultiPartUpload\|UploadPartCopy' pkg/gateway/operations/`
+- Modify: `/work/surogate-hub/pkg/gateway/operations/putobject.go`
+- Modify: `/work/surogate-hub/pkg/gateway/operations/postobject.go`
 - Modify: tests under `pkg/gateway/operations/` covering the same paths
 
 Same shape as Task 10: write a failing test that PUTs via the S3 gateway and checks the counter incremented, add the hook, repeat for multipart.
 
 - [ ] **Step 1: Identify the entry struct**
 
-The gateway has its own `Operation` context. Verify how the storage accountant is reachable from the operation handler. The likely path: the `ServerContext` (or equivalent) carries dependencies; add `StorageAccountant *stats.StorageAccountant` there, wired in `cmd/sghub/cmd/run.go` next to the existing controller wiring.
+The gateway dependencies were added in Task 9: `gateway.ServerContext` carries them into `operations.Operation` through `EnrichWithOperation`.
 
 - [ ] **Step 2: Per-path test + hook**
 
-For each of `PutObject`, `UploadPart`, `UploadPartCopy`, `CompleteMultiPartUpload`, `CopyObject`:
+For each of `handlePut`, `handleUploadPart` body upload, `handleUploadPart` copy/range-copy, `PostObject.HandleCompleteMultipartUpload`, and `handleCopy`:
 
 1. Write a failing gateway integration test that exercises the path and asserts the counter increments by the bytes actually written. Reuse the existing gateway test fixtures in `pkg/gateway/operations/*_test.go`.
 2. Add the hook after the block-store call succeeds.
@@ -1742,27 +1757,29 @@ git -C /work/surogate-hub commit -m "gateway: count bytes from put/multipart/cop
 **Files:**
 - Modify: `/work/surogate-hub/pkg/api/controller.go` (CreateRepository, DeleteRepository handler methods — search `func (c *Controller) CreateRepository` and `DeleteRepository`)
 - Modify: `/work/surogate-hub/pkg/api/controller_test.go`
+- Modify: `/work/surogate-hub/pkg/stats/storage_accountant.go`
+- Modify: `/work/surogate-hub/pkg/stats/storage_accountant_test.go`
 
 - [ ] **Step 1: Write the failing test (delete-decrements)**
 
 ```go
 func TestDeleteRepository_DecrementsStorageCounter(t *testing.T) {
 	ctx := context.Background()
-	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
-	_, err := deps.catalog.CreateRepository(ctx, "alice/training", "", onBlock(deps, "alice-training"), "main", false)
+	_, deps := setupClientWithAdmin(t, withStorageAccountant())
+	_, err := deps.catalog.CreateRepository(ctx, "alice/training", "", "mem://alice-training", "main", false)
 	require.NoError(t, err)
 	// Seed counter to a non-zero value.
-	require.NoError(t, deps.kv.Set(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training"), []byte("500")))
-	require.NoError(t, deps.kv.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("500")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training"), []byte("500")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("500")))
 
 	resp, err := clt.DeleteRepositoryWithResponse(ctx, "alice", "training", &apigen.DeleteRepositoryParams{})
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNoContent, resp.StatusCode())
 
-	if _, err := deps.kv.Get(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training")); err != kv.ErrNotFound {
+	if _, err := deps.kvStore.Get(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training")); err != kv.ErrNotFound {
 		t.Errorf("repo counter should be deleted, got err=%v", err)
 	}
-	got, err := deps.kv.Get(ctx, stats.StoragePartition, stats.StorageUserKey("alice"))
+	got, err := deps.kvStore.Get(ctx, stats.StoragePartition, stats.StorageUserKey("alice"))
 	require.NoError(t, err)
 	require.Equal(t, "0", string(got.Value))
 }
@@ -1776,31 +1793,56 @@ cd /work/surogate-hub && go test ./pkg/api/ -run TestDeleteRepository_Decrements
 
 - [ ] **Step 3: Add the hook in `Controller.DeleteRepository`**
 
-After the catalog `DeleteRepository` returns success and before `writeResponse(...204...)`, add:
+First add this method to `pkg/stats/storage_accountant.go` so repository deletion does not recreate the repo counter with a negative value:
+
+```go
+// DeleteRepo removes the repo counter and decrements the denormalized user total by the
+// repo's recorded bytes. It does not call Add(owner, repo, -n), because that would recreate
+// the repo key on the next flush.
+func (a *StorageAccountant) DeleteRepo(ctx context.Context, owner, repo string) error {
+    a.mu.Lock()
+    delete(a.deltas, accountantKey{owner: owner, repo: repo})
+    a.mu.Unlock()
+
+    key := StorageRepoKey(owner, repo)
+    got, err := a.storage.Get(ctx, StoragePartition, key)
+    if errors.Is(err, kv.ErrNotFound) {
+        return nil
+    }
+    if err != nil {
+        return err
+    }
+    current, err := strconv.ParseInt(string(got.Value), 10, 64)
+    if err != nil {
+        return fmt.Errorf("parse repo counter %s/%s: %w", owner, repo, err)
+    }
+    if err := a.storage.Delete(ctx, StoragePartition, key); err != nil {
+        return err
+    }
+    if current == 0 {
+        return nil
+    }
+    return a.applyDelta(ctx, StorageUserKey(owner), -current)
+}
+```
+
+Add a focused unit test in `storage_accountant_test.go` that seeds `storage/repo/alice/training=500` and `storage/user/alice=500`, calls `DeleteRepo(ctx, "alice", "training")`, and asserts the repo key is gone while the user key is `0`.
+
+Then, after the catalog `DeleteRepository` returns success and before `writeResponse(...204...)`, add:
 
 ```go
 if c.StorageAccountant != nil {
     owner, repoName, splitErr := stats.SplitNamespacedRepo(repository)
     if splitErr == nil {
-        ctx := r.Context()
-        // Read current repo counter and decrement user total by exactly that.
-        got, err := c.KV.Get(ctx, stats.StoragePartition, stats.StorageRepoKey(owner, repoName))
-        var current int64
-        if err == nil {
-            current, _ = strconv.ParseInt(string(got.Value), 10, 64)
+        if err := c.StorageAccountant.DeleteRepo(r.Context(), owner, repoName); err != nil {
+            writeError(w, r, http.StatusInternalServerError, err.Error())
+            return
         }
-        if current != 0 {
-            c.StorageAccountant.Add(ctx, owner, repoName, -current)
-        }
-        // Delete the repo key explicitly (accountant Add only writes via Set/SetIf; we want it gone).
-        _ = c.KV.Delete(ctx, stats.StoragePartition, stats.StorageRepoKey(owner, repoName))
     }
 }
 ```
 
-(The controller already has a KV handle — find the field name; if not, store a `KV kv.Store` field on the controller and wire it in.)
-
-Add `import "strconv"` if not present.
+No controller-level KV field is needed; storage counter KV access stays encapsulated in `StorageAccountant`.
 
 - [ ] **Step 4: Add a hook in `Controller.CreateRepository`**
 
@@ -1810,7 +1852,7 @@ After the catalog `CreateRepository` returns success:
 if c.StorageAccountant != nil {
     owner, repoName, splitErr := stats.SplitNamespacedRepo(repository)
     if splitErr == nil {
-        _ = c.KV.Set(r.Context(), stats.StoragePartition, stats.StorageRepoKey(owner, repoName), []byte("0"))
+        _ = c.Catalog.KVStore.Set(r.Context(), stats.StoragePartition, stats.StorageRepoKey(owner, repoName), []byte("0"))
     }
 }
 ```
@@ -1827,7 +1869,7 @@ cd /work/surogate-hub && go test ./pkg/api/ -run TestCreateRepository -v
 - [ ] **Step 6: Commit**
 
 ```bash
-git -C /work/surogate-hub add pkg/api/controller.go pkg/api/controller_test.go
+git -C /work/surogate-hub add pkg/api/controller.go pkg/api/controller_test.go pkg/stats/storage_accountant.go pkg/stats/storage_accountant_test.go
 git -C /work/surogate-hub commit -m "api: counter init on repo create, decrement on repo delete"
 ```
 
@@ -1928,7 +1970,7 @@ Under `components.schemas`, add:
 cd /work/surogate-hub && go generate ./pkg/api/apigen/...
 ```
 
-(Confirm the generate target by reading `pkg/api/apigen/doc.go`. If `go generate` is not wired, run the oapi-codegen command directly using the line from `doc.go`.)
+`pkg/api/apigen` is generated by the local `go generate` target; use the command above.
 
 Expected: `pkg/api/apigen/sghub.gen.go` updated.
 
@@ -1945,13 +1987,12 @@ Expected: compile error in `pkg/api/controller.go` because `GetUserStorage` is n
 ```go
 func TestGetUserStorage_SelfReadsOwnCounter(t *testing.T) {
 	ctx := context.Background()
-	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
-	require.NoError(t, deps.kv.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("1234")))
-	require.NoError(t, deps.kv.Set(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training"), []byte("1000")))
-	require.NoError(t, deps.kv.Set(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "evals"), []byte("234")))
-
-	// Authenticate as alice for this call.
+	_, deps := setupClientWithAdmin(t, withStorageAccountant())
 	aliceClt := clientAs(t, deps, "alice")
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("1234")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training"), []byte("1000")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "evals"), []byte("234")))
+
 	resp, err := aliceClt.GetUserStorageWithResponse(ctx, "alice")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode())
@@ -1962,8 +2003,9 @@ func TestGetUserStorage_SelfReadsOwnCounter(t *testing.T) {
 
 func TestGetUserStorage_NonSelfRequiresReadUser(t *testing.T) {
 	ctx := context.Background()
-	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
-	require.NoError(t, deps.kv.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("100")))
+	_, deps := setupClientWithAdmin(t, withStorageAccountant())
+	_ = clientAs(t, deps, "alice")
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("100")))
 	bobClt := clientAs(t, deps, "bob") // bob has no auth:ReadUser
 
 	resp, err := bobClt.GetUserStorageWithResponse(ctx, "alice")
@@ -1974,7 +2016,8 @@ func TestGetUserStorage_NonSelfRequiresReadUser(t *testing.T) {
 func TestGetUserStorage_AdminCanReadOthers(t *testing.T) {
 	ctx := context.Background()
 	clt, deps := setupClientWithAdmin(t, withStorageAccountant()) // clt is admin
-	require.NoError(t, deps.kv.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("100")))
+	_ = clientAs(t, deps, "alice")
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("100")))
 
 	resp, err := clt.GetUserStorageWithResponse(ctx, "alice")
 	require.NoError(t, err)
@@ -1985,8 +2028,9 @@ func TestGetUserStorage_AdminCanReadOthers(t *testing.T) {
 func TestGetUserStorage_IncludesQuota(t *testing.T) {
 	ctx := context.Background()
 	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
-	require.NoError(t, deps.kv.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("700")))
-	require.NoError(t, deps.kv.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"), []byte("1000")))
+	_ = clientAs(t, deps, "alice")
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("700")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"), []byte("1000")))
 
 	resp, err := clt.GetUserStorageWithResponse(ctx, "alice")
 	require.NoError(t, err)
@@ -2032,7 +2076,7 @@ func (c *Controller) GetUserStorage(w http.ResponseWriter, r *http.Request, user
 
     // Top-level total.
     var bytesUsed int64
-    if got, err := c.KV.Get(ctx, stats.StoragePartition, stats.StorageUserKey(userID)); err == nil {
+    if got, err := c.Catalog.KVStore.Get(ctx, stats.StoragePartition, stats.StorageUserKey(userID)); err == nil {
         bytesUsed, _ = strconv.ParseInt(string(got.Value), 10, 64)
     } else if !errors.Is(err, kv.ErrNotFound) {
         writeError(w, r, http.StatusInternalServerError, err.Error())
@@ -2041,7 +2085,7 @@ func (c *Controller) GetUserStorage(w http.ResponseWriter, r *http.Request, user
 
     // Per-repo list.
     var repos []apigen.UserStorageRepo
-    iter, err := c.KV.Scan(ctx, stats.StoragePartition, kv.ScanOptions{KeyStart: stats.StorageRepoPrefix(userID)})
+    iter, err := c.Catalog.KVStore.Scan(ctx, stats.StoragePartition, kv.ScanOptions{KeyStart: stats.StorageRepoPrefix(userID)})
     if err != nil {
         writeError(w, r, http.StatusInternalServerError, err.Error())
         return
@@ -2081,7 +2125,7 @@ func (c *Controller) GetUserStorage(w http.ResponseWriter, r *http.Request, user
 
     // last_reconciled_at.
     var lastReconciledAt *time.Time
-    if got, err := c.KV.Get(ctx, stats.StoragePartition, stats.StorageMetaLastReconciledAtKey(userID)); err == nil {
+    if got, err := c.Catalog.KVStore.Get(ctx, stats.StoragePartition, stats.StorageMetaLastReconciledAtKey(userID)); err == nil {
         if t, perr := time.Parse(time.RFC3339, string(got.Value)); perr == nil {
             lastReconciledAt = &t
         }
@@ -2100,7 +2144,7 @@ func (c *Controller) GetUserStorage(w http.ResponseWriter, r *http.Request, user
 }
 ```
 
-Confirm imports: `bytes`, `strconv`, `time`, `github.com/invergent-ai/surogate-hub/pkg/kv`, `github.com/invergent-ai/surogate-hub/pkg/stats`.
+Required imports for this handler include `bytes`, `strconv`, `time`, `github.com/invergent-ai/surogate-hub/pkg/kv`, and `github.com/invergent-ai/surogate-hub/pkg/stats`.
 
 - [ ] **Step 6: Run tests to verify they pass**
 
@@ -2205,19 +2249,21 @@ cd /work/surogate-hub && go generate ./pkg/api/apigen/...
 func TestSetUserQuota_AdminCanSet(t *testing.T) {
 	ctx := context.Background()
 	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	_ = clientAs(t, deps, "alice")
 
 	resp, err := clt.SetUserQuotaWithResponse(ctx, "alice", apigen.UserQuota{QuotaBytes: 12345})
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNoContent, resp.StatusCode())
 
-	got, err := deps.kv.Get(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"))
+	got, err := deps.kvStore.Get(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"))
 	require.NoError(t, err)
 	require.Equal(t, "12345", string(got.Value))
 }
 
 func TestSetUserQuota_NegativeRejected(t *testing.T) {
 	ctx := context.Background()
-	clt, _ := setupClientWithAdmin(t, withStorageAccountant())
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	_ = clientAs(t, deps, "alice")
 	resp, err := clt.SetUserQuotaWithResponse(ctx, "alice", apigen.UserQuota{QuotaBytes: -1})
 	require.NoError(t, err)
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode())
@@ -2225,7 +2271,7 @@ func TestSetUserQuota_NegativeRejected(t *testing.T) {
 
 func TestSetUserQuota_NonAdminForbidden(t *testing.T) {
 	ctx := context.Background()
-	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	_, deps := setupClientWithAdmin(t, withStorageAccountant())
 	aliceClt := clientAs(t, deps, "alice")
 	resp, err := aliceClt.SetUserQuotaWithResponse(ctx, "alice", apigen.UserQuota{QuotaBytes: 1000})
 	require.NoError(t, err)
@@ -2235,13 +2281,14 @@ func TestSetUserQuota_NonAdminForbidden(t *testing.T) {
 func TestDeleteUserQuota_Removes(t *testing.T) {
 	ctx := context.Background()
 	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
-	require.NoError(t, deps.kv.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"), []byte("1000")))
+	_ = clientAs(t, deps, "alice")
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"), []byte("1000")))
 
 	resp, err := clt.DeleteUserQuotaWithResponse(ctx, "alice")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNoContent, resp.StatusCode())
 
-	if _, err := deps.kv.Get(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice")); err != kv.ErrNotFound {
+	if _, err := deps.kvStore.Get(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice")); err != kv.ErrNotFound {
 		t.Errorf("expected ErrNotFound, got %v", err)
 	}
 }
@@ -2321,15 +2368,9 @@ func (c *Controller) DeleteUserQuota(w http.ResponseWriter, r *http.Request, use
 cd /work/surogate-hub && go test ./pkg/api/ -run 'TestSetUserQuota|TestDeleteUserQuota' -v
 ```
 
-- [ ] **Step 6: Wire `auth:WriteUser` into the default admin policy**
+- [ ] **Step 6: Verify admin policy coverage**
 
-Find `pkg/auth/setup` (or wherever the default admin policy is built) and add `WriteUserAction` to the list of admin-granted actions, with `arn:sghub:auth:::user/*` resource. The exact file may be `pkg/auth/setup/setup.go` — search for `ReadUserAction` and add the new action in the same place.
-
-```bash
-cd /work/surogate-hub && grep -rn 'ReadUserAction' pkg/auth/
-```
-
-Add `WriteUserAction` next to it.
+No extra default-policy edit is needed for admins: `pkg/auth/setup/setup.go` creates `AuthFullAccess` with action `auth:*`, which covers the new `auth:WriteUser` action after Task 4 regenerates the action list. Keep quota write tests against the admin client to verify this remains true.
 
 - [ ] **Step 7: Commit**
 
@@ -2353,18 +2394,18 @@ git -C /work/surogate-hub commit -m "api: add PUT/DELETE /auth/users/{userId}/qu
 func TestUploadObject_RejectedOverQuota(t *testing.T) {
 	ctx := context.Background()
 	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
-	_, err := deps.catalog.CreateRepository(ctx, "alice/training", "", onBlock(deps, "alice-training"), "main", false)
+	_, err := deps.catalog.CreateRepository(ctx, "alice/training", "", "mem://alice-training", "main", false)
 	require.NoError(t, err)
 	// quota=10, already used 8.
-	require.NoError(t, deps.kv.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"), []byte("10")))
-	require.NoError(t, deps.kv.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("8")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"), []byte("10")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("8")))
 
 	resp, err := clt.UploadObjectWithBody(ctx, "alice", "training", "main", &apigen.UploadObjectParams{Path: "a.txt"}, "application/octet-stream", bytes.NewReader([]byte("hello"))) // 5 bytes ⇒ 13 > 10
 	require.NoError(t, err)
 	require.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode())
 
 	// Counter unchanged because upload rejected before WriteBlob.
-	got, err := deps.kv.Get(ctx, stats.StoragePartition, stats.StorageUserKey("alice"))
+	got, err := deps.kvStore.Get(ctx, stats.StoragePartition, stats.StorageUserKey("alice"))
 	require.NoError(t, err)
 	require.Equal(t, "8", string(got.Value))
 }
@@ -2372,10 +2413,10 @@ func TestUploadObject_RejectedOverQuota(t *testing.T) {
 func TestUploadObject_AllowedUnderQuota(t *testing.T) {
 	ctx := context.Background()
 	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
-	_, err := deps.catalog.CreateRepository(ctx, "alice/training", "", onBlock(deps, "alice-training"), "main", false)
+	_, err := deps.catalog.CreateRepository(ctx, "alice/training", "", "mem://alice-training", "main", false)
 	require.NoError(t, err)
-	require.NoError(t, deps.kv.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"), []byte("100")))
-	require.NoError(t, deps.kv.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("0")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"), []byte("100")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("0")))
 
 	resp, err := clt.UploadObjectWithBody(ctx, "alice", "training", "main", &apigen.UploadObjectParams{Path: "a.txt"}, "application/octet-stream", bytes.NewReader([]byte("hello")))
 	require.NoError(t, err)
@@ -2424,14 +2465,14 @@ func writeQuotaRejection(w http.ResponseWriter, r *http.Request, dec stats.Quota
 }
 ```
 
-- [ ] **Step 4: Repeat for `StageObject`, `CopyObject`, and the gateway operations**
+- [ ] **Step 4: Repeat for `CopyObject`, `CompletePresignMultipartUpload`, and the gateway operations**
 
-Apply the same check at the start of each write path. For copy, the byte count is the source entry's size.
+Apply the same check before each path writes or materializes bytes. For copy, the byte count is the source entry's size. For `CompletePresignMultipartUpload`, use the final `mpuResp.ContentLength` immediately after completion; if over quota at that point, return 413 and rely on the reconciler/GC for any already-written bytes. Do not quota-check `StageObject` as a generic write path because it only creates metadata for an existing physical address.
 
 - [ ] **Step 5: Run all related tests, expect PASS**
 
 ```bash
-cd /work/surogate-hub && go test ./pkg/api/ -run 'TestUploadObject|TestStageObject|TestCopyObject' -v
+cd /work/surogate-hub && go test ./pkg/api/ -run 'TestUploadObject|TestCopyObject|TestCompletePresignMultipartUpload' -v
 ```
 
 - [ ] **Step 6: Commit**
@@ -2467,7 +2508,7 @@ import (
 func TestStorageUsage_EndToEnd(t *testing.T) {
 	ctx := context.Background()
 	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
-	_, err := deps.catalog.CreateRepository(ctx, "alice/training", "", onBlock(deps, "alice-training"), "main", false)
+	_, err := deps.catalog.CreateRepository(ctx, "alice/training", "", "mem://alice-training", "main", false)
 	require.NoError(t, err)
 
 	// Upload three objects.
@@ -2488,19 +2529,19 @@ func TestStorageUsage_EndToEnd(t *testing.T) {
 func TestStorageUsage_ReconcilerCorrectsDrift(t *testing.T) {
 	ctx := context.Background()
 	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
-	_, err := deps.catalog.CreateRepository(ctx, "alice/training", "", onBlock(deps, "alice-training"), "main", false)
+	_, err := deps.catalog.CreateRepository(ctx, "alice/training", "", "mem://alice-training", "main", false)
 	require.NoError(t, err)
 
 	// Seed deliberately-wrong counter.
-	require.NoError(t, deps.kv.Set(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training"), []byte("999999")))
-	require.NoError(t, deps.kv.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("999999")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training"), []byte("999999")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("999999")))
 
 	require.NoError(t, deps.storageReconciler.RunOnce(ctx))
 
-	got, err := deps.kv.Get(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training"))
+	got, err := deps.kvStore.Get(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training"))
 	require.NoError(t, err)
 	require.Equal(t, "0", string(got.Value)) // empty namespace ⇒ 0
-	gotUser, err := deps.kv.Get(ctx, stats.StoragePartition, stats.StorageUserKey("alice"))
+	gotUser, err := deps.kvStore.Get(ctx, stats.StoragePartition, stats.StorageUserKey("alice"))
 	require.NoError(t, err)
 	require.Equal(t, "0", string(gotUser.Value))
 }
@@ -2523,7 +2564,7 @@ git -C /work/surogate-hub commit -m "test: end-to-end storage usage and reconcil
 
 ---
 
-## Task 16.5: Note on object-delete hooks (no code change)
+## Task 16.5: Document omitted object-delete hooks
 
 The spec acknowledges that `block.Adapter.Remove` does not return the deleted byte count, so object-level delete hooks are skipped in this implementation. We rely on the reconciler to correct the resulting drift within one reconciler interval (default 1 h).
 
@@ -2565,7 +2606,7 @@ In the docs directory tree, add a page that explains:
 
 - [ ] **Step 2: Add a sentence to the existing config docs**
 
-Wherever `usage_report` config is documented, add `storage_usage` block with the four fields and defaults.
+Wherever `usage_report` config is documented, add the nested `storage_usage` block with `enabled`, `storage_accountant.flush_interval`, `storage_reconciler.interval`, and `storage_reconciler.concurrency`.
 
 - [ ] **Step 3: Commit**
 
