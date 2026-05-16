@@ -3,11 +3,13 @@ package stats_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/invergent-ai/surogate-hub/pkg/kv"
 	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
 	"github.com/invergent-ai/surogate-hub/pkg/stats"
+	"github.com/stretchr/testify/require"
 )
 
 func TestQuotaChecker_AbsentMeansUnlimited(t *testing.T) {
@@ -140,6 +142,52 @@ func TestQuotaChecker_SetRejectsNegative(t *testing.T) {
 	if !errors.Is(err, stats.ErrInvalidQuota) {
 		t.Errorf("expected ErrInvalidQuota for negative quota, got %v", err)
 	}
+}
+
+// TestQuotaChecker_SoftCheckOverageWindow exercises the documented soft-check semantics:
+// two concurrent Allow() calls can both succeed when together they would exceed the quota.
+// This is documented behaviour ("the check reads the last-flushed counter, so concurrent
+// uploads in flight from the same user can temporarily push the user above quota") — the
+// test pins the behaviour so any future tightening to a hard check is intentional.
+func TestQuotaChecker_SoftCheckOverageWindow(t *testing.T) {
+	ctx := context.Background()
+	store := kvtest.GetStore(ctx, t)
+	q := stats.NewQuotaChecker(store)
+	// quota=100, used=80. Two concurrent uploads of 25 each should both pass the start check
+	// (80+25 = 105 > 100 would reject, BUT 80+25 ≤ 100 is FALSE, so each WOULD reject).
+	// Test the boundary: quota=100, used=80, each upload is 10 bytes — both pass, then total
+	// after both complete would be 100 (at-cap). Third concurrent upload of 10 would push to
+	// 110 over the cap. We assert that the first two Allow() calls succeed concurrently and
+	// the third fails after the accountant flushes.
+	require.NoError(t, q.SetQuota(ctx, "alice", 100))
+	a := stats.NewStorageAccountant(store)
+	a.Add(ctx, "alice", "x", 80)
+	require.NoError(t, a.Flush(ctx))
+
+	// Two concurrent Allow() calls — both see used=80 and contentLength=10, both pass.
+	var wg sync.WaitGroup
+	results := make([]stats.QuotaDecision, 2)
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			dec, err := q.Allow(ctx, "alice", 10)
+			require.NoError(t, err)
+			results[i] = dec
+		}(i)
+	}
+	wg.Wait()
+	require.True(t, results[0].Allowed && results[1].Allowed, "both concurrent uploads must pass the soft check; got %+v / %+v", results[0], results[1])
+
+	// Simulate both uploads having completed — accountant has the 20 extra bytes.
+	a.Add(ctx, "alice", "x", 10)
+	a.Add(ctx, "alice", "x", 10)
+	require.NoError(t, a.Flush(ctx))
+
+	// A subsequent upload of 10 bytes now sees used=100 + 10 > 100, so it must be rejected.
+	dec, err := q.Allow(ctx, "alice", 10)
+	require.NoError(t, err)
+	require.False(t, dec.Allowed, "after flush reveals used=100, subsequent over-quota upload must reject")
 }
 
 func TestQuotaChecker_ClearMissingIsNoop(t *testing.T) {

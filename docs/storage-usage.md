@@ -51,7 +51,9 @@ Returns the per-user total, per-repository breakdown, and quota (if set).
   user. `is_estimate` is `true` while it is `null`.
 
 Authorization: callers may always read their own user (`{userId}` equals the authenticated user's
-username); reading another user's record requires `auth:ReadUser`.
+username); reading another user's record requires `auth:ReadUser`. Authenticated callers without
+that permission receive **401 Unauthorized** (Surogate Hub's `authorize` wrapper returns 401 for
+both unauthenticated and authenticated-but-insufficient-permission cases — there is no 403 path).
 
 ### `PUT /auth/users/{userId}/quota`
 
@@ -64,6 +66,12 @@ Admin-only (`auth:WriteUser`). Sets or replaces the storage quota for the user.
 - `204 No Content` on success.
 - `400 Bad Request` when `quota_bytes < 0`.
 - `404 Not Found` when the user does not exist.
+- `503 Service Unavailable` when `storage_usage.enabled = false`.
+
+> **Operator note:** `quota_bytes: 0` is accepted and hard-blocks every subsequent upload by the
+> user (since `used + content_length > 0` for any non-empty upload). Treat 0 as an intentional
+> "lock the user out" value, not as a sensible default. To remove a quota and revert to unlimited,
+> use `DELETE /quota` rather than `PUT { "quota_bytes": 0 }`.
 
 ### `DELETE /auth/users/{userId}/quota`
 

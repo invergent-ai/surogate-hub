@@ -111,8 +111,11 @@ Path:
   }
 
 404 Not Found: user does not exist
-403 Forbidden: caller is not {userId} and lacks auth:ReadUser
-401 Unauthorized
+401 Unauthorized: caller is not {userId} and lacks auth:ReadUser
+                  (also covers unauthenticated requests — the codebase's authorize wrapper
+                  consistently returns 401 for "authenticated but insufficient permissions";
+                  there is no 403 path)
+503 Service Unavailable: storage_usage.enabled = false
 500 Internal Server Error
 ```
 
@@ -131,17 +134,22 @@ Body:
 204 No Content: set or replaced
 400 Bad Request: quota_bytes < 0
 404 Not Found: user does not exist
-403 Forbidden: caller lacks auth:WriteUser
+401 Unauthorized: caller lacks auth:WriteUser (see note under GET about 401-vs-403)
+503 Service Unavailable: storage_usage.enabled = false
 ```
 
-Writes `storage/quota/{userId}`.
+Writes `storage/quota/{userId}`. Setting `quota_bytes: 0` is allowed and hard-blocks every
+subsequent upload by the user, because `used + content_length > 0` for any content length ≥ 1.
+Operators should treat 0 as an intentional "lock the user out" value rather than a sensible
+default; use `DELETE /quota` to revert to unlimited.
 
 ### `DELETE /auth/users/{userId}/quota`
 
 ```
 204 No Content: removed (or already absent)
 404 Not Found: user does not exist
-403 Forbidden: caller lacks auth:WriteUser
+401 Unauthorized: caller lacks auth:WriteUser
+503 Service Unavailable: storage_usage.enabled = false
 ```
 
 Removes `storage/quota/{userId}`, reverting the user to unlimited.

@@ -2560,10 +2560,14 @@ paths:
                 $ref: "#/components/schemas/UserStorage"
         401:
           $ref: "#/components/responses/Unauthorized"
-        403:
-          $ref: "#/components/responses/Forbidden"
         404:
           $ref: "#/components/responses/NotFound"
+        503:
+          description: storage usage tracking is disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         default:
           $ref: "#/components/responses/ServerError"
 
@@ -2592,10 +2596,14 @@ paths:
           $ref: "#/components/responses/BadRequest"
         401:
           $ref: "#/components/responses/Unauthorized"
-        403:
-          $ref: "#/components/responses/Forbidden"
         404:
           $ref: "#/components/responses/NotFound"
+        503:
+          description: storage usage tracking is disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         default:
           $ref: "#/components/responses/ServerError"
     delete:
@@ -2608,10 +2616,14 @@ paths:
           description: quota cleared
         401:
           $ref: "#/components/responses/Unauthorized"
-        403:
-          $ref: "#/components/responses/Forbidden"
         404:
           $ref: "#/components/responses/NotFound"
+        503:
+          description: storage usage tracking is disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         default:
           $ref: "#/components/responses/ServerError"
 

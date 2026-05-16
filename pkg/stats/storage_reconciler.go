@@ -95,6 +95,13 @@ func (r *StorageReconciler) Start(ctx context.Context, interval time.Duration, l
 // RunOnce reconciles every repo once. Errors are collected and returned as a joined error after
 // every repo has been attempted.
 func (r *StorageReconciler) RunOnce(ctx context.Context) error {
+	// Reset the per-repo lock map at the start of each pass: locks are only useful for
+	// serializing dispatch within the current pass, and leaving them in place across passes
+	// would leak one mutex per ever-seen repo (deleted repos' locks would never be reclaimed).
+	r.mu.Lock()
+	r.locks = make(map[string]*sync.Mutex)
+	r.mu.Unlock()
+
 	// Flush accountant deltas before walking, so the per-user counter we will compute by summing
 	// repo counters reflects any pending writes. We tolerate the flush error: if a per-repo
 	// counter write fails, the per-repo overwrite below (or a future reconciler pass) will
@@ -139,10 +146,12 @@ func (r *StorageReconciler) RunOnce(ctx context.Context) error {
 	}()
 
 	ownersTouched := make(map[string]struct{})
+	ownersWithErrors := make(map[string]struct{})
 	var errs []error
 	for res := range results {
 		if res.err != nil {
 			errs = append(errs, fmt.Errorf("reconcile %s: %w", res.owner, res.err))
+			ownersWithErrors[res.owner] = struct{}{}
 		}
 		ownersTouched[res.owner] = struct{}{}
 	}
@@ -150,10 +159,15 @@ func (r *StorageReconciler) RunOnce(ctx context.Context) error {
 		errs = append(errs, fmt.Errorf("list repos: %w", err))
 	}
 
-	// Recompute per-user totals and write last_reconciled_at.
+	// For each owner whose every repo was reconciled cleanly, recompute the per-user total from
+	// the (now fresh) repo counters and stamp last_reconciled_at. Owners with at least one failed
+	// repo still get their user total recomputed (the sum of whatever counters are present), but
+	// last_reconciled_at is NOT updated — otherwise the API would flip is_estimate to false even
+	// though a counter is stale.
 	now := time.Now().UTC()
 	for owner := range ownersTouched {
-		if err := r.recomputeUserTotal(ctx, owner, now); err != nil {
+		_, hadError := ownersWithErrors[owner]
+		if err := r.recomputeUserTotal(ctx, owner, now, !hadError); err != nil {
 			errs = append(errs, fmt.Errorf("user total %s: %w", owner, err))
 		}
 	}
@@ -187,7 +201,11 @@ func (r *StorageReconciler) reconcileRepo(ctx context.Context, repo ReconcilerRe
 	return r.storage.Set(ctx, StoragePartition, StorageRepoKey(repo.Owner, repo.Name), []byte(strconv.FormatInt(size, 10)))
 }
 
-func (r *StorageReconciler) recomputeUserTotal(ctx context.Context, owner string, now time.Time) error {
+// recomputeUserTotal sums all of the owner's repo counters and writes the result to the
+// denormalized per-user key. When markClean is true the last_reconciled_at timestamp is also
+// written; callers pass false when at least one of the owner's repos failed to reconcile, so the
+// API response keeps is_estimate=true to signal that the figure is not authoritative.
+func (r *StorageReconciler) recomputeUserTotal(ctx context.Context, owner string, now time.Time, markClean bool) error {
 	prefix := StorageRepoPrefix(owner)
 	iter, err := r.storage.Scan(ctx, StoragePartition, kv.ScanOptions{KeyStart: prefix})
 	if err != nil {
@@ -211,6 +229,9 @@ func (r *StorageReconciler) recomputeUserTotal(ctx context.Context, owner string
 	}
 	if err := r.storage.Set(ctx, StoragePartition, StorageUserKey(owner), []byte(strconv.FormatInt(total, 10))); err != nil {
 		return err
+	}
+	if !markClean {
+		return nil
 	}
 	return r.storage.Set(ctx, StoragePartition, StorageMetaLastReconciledAtKey(owner), []byte(now.Format(time.RFC3339)))
 }

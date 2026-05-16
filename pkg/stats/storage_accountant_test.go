@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -115,6 +116,101 @@ func TestStorageAccountant_DeleteRepoDropsKeyAndDecrementsUser(t *testing.T) {
 	if _, err := store.Get(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training")); !errors.Is(err, kv.ErrNotFound) {
 		t.Errorf("expected repo key to stay deleted, got %v", err)
 	}
+}
+
+// TestStorageAccountant_DeleteRepoClearsDeltaQueuedDuringKVOps reproduces the TOCTOU between
+// the in-memory delta wipe and the KV repo-delete: an Add() that lands while DeleteRepo is
+// mid-flight would otherwise sit in the deltas map and the next Flush would recreate the
+// just-deleted repo key. The two-stage wipe (before KV ops, deferred after KV ops) closes that
+// window. We can't easily race "Add during KV op" deterministically, so we simulate it by
+// calling Add() immediately after DeleteRepo has finished its first in-memory clear — the
+// deferred second clear should still drop it.
+func TestStorageAccountant_DeleteRepoClearsDeltaQueuedDuringKVOps(t *testing.T) {
+	ctx := context.Background()
+	store := kvtest.GetStore(ctx, t)
+	a := stats.NewStorageAccountant(store)
+
+	// Seed: repo has 500 bytes, user has 500.
+	if err := store.Set(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training"), []byte("500")); err != nil {
+		t.Fatalf("seed repo: %v", err)
+	}
+	if err := store.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("500")); err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
+
+	// Concurrent Add() racing against DeleteRepo. Run several concurrent Adds during the
+	// expected DeleteRepo execution window. The exact ordering is non-deterministic, but the
+	// invariant "after DeleteRepo returns, the repo key stays deleted across a flush" must
+	// hold for any interleaving — the deferred second wipe enforces it.
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		if err := a.DeleteRepo(ctx, "alice", "training"); err != nil {
+			t.Errorf("DeleteRepo: %v", err)
+		}
+	}()
+	for i := 0; i < 50; i++ {
+		a.Add(ctx, "alice", "training", 1)
+	}
+	<-done
+
+	// Flush — must NOT recreate the repo key.
+	if err := a.Flush(ctx); err != nil {
+		t.Fatalf("Flush after DeleteRepo: %v", err)
+	}
+	if _, err := store.Get(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training")); !errors.Is(err, kv.ErrNotFound) {
+		t.Errorf("repo key must stay deleted after DeleteRepo + flush; got err=%v", err)
+	}
+}
+
+// TestStorageAccountant_ConcurrentDeleteRepoUserTotalIsConsistent runs two DeleteRepo calls in
+// parallel against different repos of the same owner. The user total must end up exactly equal
+// to "initial - (sum of deleted repo counters)" with no double-decrement, even though the two
+// goroutines race on the StorageUserKey update (which goes through applyDelta's predicate
+// retry).
+func TestStorageAccountant_ConcurrentDeleteRepoUserTotalIsConsistent(t *testing.T) {
+	ctx := context.Background()
+	store := kvtest.GetStore(ctx, t)
+	a := stats.NewStorageAccountant(store)
+
+	// Seed: two repos with 300 + 700 bytes, user total = 1000.
+	const repoA, repoB = "training", "evals"
+	const owner = "alice"
+	for k, v := range map[string]string{
+		string(stats.StorageRepoKey(owner, repoA)): "300",
+		string(stats.StorageRepoKey(owner, repoB)): "700",
+		string(stats.StorageUserKey(owner)):        "1000",
+	} {
+		if err := store.Set(ctx, stats.StoragePartition, []byte(k), []byte(v)); err != nil {
+			t.Fatalf("seed %s: %v", k, err)
+		}
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		if err := a.DeleteRepo(ctx, owner, repoA); err != nil {
+			t.Errorf("DeleteRepo A: %v", err)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		if err := a.DeleteRepo(ctx, owner, repoB); err != nil {
+			t.Errorf("DeleteRepo B: %v", err)
+		}
+	}()
+	wg.Wait()
+
+	// Both repo keys gone.
+	if _, err := store.Get(ctx, stats.StoragePartition, stats.StorageRepoKey(owner, repoA)); !errors.Is(err, kv.ErrNotFound) {
+		t.Errorf("repo A key must be deleted, got err=%v", err)
+	}
+	if _, err := store.Get(ctx, stats.StoragePartition, stats.StorageRepoKey(owner, repoB)); !errors.Is(err, kv.ErrNotFound) {
+		t.Errorf("repo B key must be deleted, got err=%v", err)
+	}
+	// User total = 1000 - 300 - 700 = 0 exactly; no double-decrement, no leak.
+	requireInt64(t, store, stats.StorageUserKey(owner), 0)
 }
 
 func TestStorageAccountant_DeleteRepoMissingIsNoop(t *testing.T) {

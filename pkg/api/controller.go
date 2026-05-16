@@ -437,21 +437,9 @@ func (c *Controller) CompletePresignMultipartUpload(w http.ResponseWriter, r *ht
 	}
 	entry := entryBuilder.Build()
 
-	err = c.Catalog.CreateEntry(ctx, repo.Name, branch, entry)
-	if c.handleAPIError(ctx, w, r, err) {
-		return
-	}
-
-	if c.StorageAccountant != nil {
-		if ownerSlug, repoName, splitErr := stats.SplitNamespacedRepo(repository); splitErr == nil {
-			c.StorageAccountant.Add(ctx, ownerSlug, repoName, mpuResp.ContentLength)
-		}
-	}
-	// Quota enforcement at completion: the parts are already physically uploaded by the time we
-	// observe the final size. Bytes briefly over quota will be reclaimed by GC if the entry is
-	// not retained (rejecting here aborts the catalog-side commit only; the soft-check semantic
-	// in the spec accepts this transient overage).
-	if !c.checkStorageQuota(w, r, owner, mpuResp.ContentLength) {
+	// Quota check → CreateEntry → accountant increment, in that order. Parts are already on
+	// disk by this point; rejecting here leaves orphan parts that GC will reclaim.
+	if !c.commitCompletedUpload(ctx, w, r, owner, repository, repo.Name, branch, entry, mpuResp.ContentLength) {
 		return
 	}
 
@@ -1625,6 +1613,8 @@ func (c *Controller) GetUser(w http.ResponseWriter, r *http.Request, userID stri
 
 // GetUserStorage returns the storage-usage figure (and quota, if any) for the named user. Self
 // access is always allowed; reading another user's number requires auth:ReadUser.
+// When storage_usage.enabled=false the endpoint returns 503 Service Unavailable so consumers do
+// not see misleadingly-zero counters that look authoritative.
 func (c *Controller) GetUserStorage(w http.ResponseWriter, r *http.Request, userID string) {
 	ctx := r.Context()
 	callerIsSelf := false
@@ -1642,6 +1632,11 @@ func (c *Controller) GetUserStorage(w http.ResponseWriter, r *http.Request, user
 		}
 	}
 	c.LogAction(ctx, "get_user_storage", r, "", "", "")
+
+	if c.StorageAccountant == nil {
+		writeError(w, r, http.StatusServiceUnavailable, "storage usage tracking is not enabled")
+		return
+	}
 
 	if _, err := c.Auth.GetUser(ctx, userID); errors.Is(err, auth.ErrNotFound) {
 		writeError(w, r, http.StatusNotFound, "user not found")
@@ -1668,6 +1663,7 @@ func (c *Controller) GetUserStorage(w http.ResponseWriter, r *http.Request, user
 		writeError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
+	defer iter.Close()
 	var repos []apigen.UserStorageRepo
 	for iter.Next() {
 		ent := iter.Entry()
@@ -1682,11 +1678,9 @@ func (c *Controller) GetUserStorage(w http.ResponseWriter, r *http.Request, user
 		repos = append(repos, apigen.UserStorageRepo{Name: repoName, BytesUsed: n})
 	}
 	if iterErr := iter.Err(); iterErr != nil {
-		iter.Close()
 		writeError(w, r, http.StatusInternalServerError, iterErr.Error())
 		return
 	}
-	iter.Close()
 
 	var quotaBytes *int64
 	var remaining *int64
@@ -6199,6 +6193,39 @@ func (c *Controller) authorizeCallback(w http.ResponseWriter, r *http.Request, p
 
 func (c *Controller) authorize(w http.ResponseWriter, r *http.Request, perms permissions.Node) bool {
 	return c.authorizeCallback(w, r, perms, writeError)
+}
+
+// commitCompletedUpload finalizes a server-known-size upload (e.g. after multipart completion):
+// it checks the quota, creates the catalog entry, and increments the storage counter — in that
+// order. Callers that need to write the response on success (e.g. the entry's ObjectStats) do
+// so after this helper returns true.
+//
+// The ordering is load-bearing: if the quota check is moved after CreateEntry, an over-quota
+// upload would leave a live entry plus a leaked counter increment behind. See the regression
+// test `TestCommitCompletedUpload_QuotaRejectionLeavesNoState`.
+func (c *Controller) commitCompletedUpload(
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+	owner, namespacedRepo, repoName, branch string,
+	entry catalog.DBEntry,
+	sizeBytes int64,
+) bool {
+	if !c.checkStorageQuota(w, r, owner, sizeBytes) {
+		return false
+	}
+	if err := c.Catalog.CreateEntry(ctx, repoName, branch, entry); err != nil {
+		if c.handleAPIError(ctx, w, r, err) {
+			return false
+		}
+		return false
+	}
+	if c.StorageAccountant != nil {
+		if ownerSlug, rn, splitErr := stats.SplitNamespacedRepo(namespacedRepo); splitErr == nil {
+			c.StorageAccountant.Add(ctx, ownerSlug, rn, sizeBytes)
+		}
+	}
+	return true
 }
 
 // checkStorageQuota verifies that an upload of contentLength bytes can fit under the configured

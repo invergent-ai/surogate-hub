@@ -117,10 +117,26 @@ func (a *StorageAccountant) Flush(ctx context.Context) error {
 // DeleteRepo removes the repo counter and decrements the denormalized user total by the
 // repo's recorded bytes. It does not call Add(owner, repo, -n), because that would recreate
 // the repo key on the next flush.
+//
+// Concurrency: an Add() call concurrent with DeleteRepo may queue a delta into the in-memory
+// map between the time we wipe it and the time the KV delete lands. We close that window by
+// clearing the in-memory delta a second time, after every KV mutation has completed. A delta
+// queued by an Add() that fires AFTER DeleteRepo returns will recreate the repo key on the
+// next flush; the spec accepts this "late write after delete" drift and relies on the next
+// reconciler pass to correct it.
 func (a *StorageAccountant) DeleteRepo(ctx context.Context, owner, repo string) error {
+	accKey := accountantKey{owner: owner, repo: repo}
 	a.mu.Lock()
-	delete(a.deltas, accountantKey{owner: owner, repo: repo})
+	delete(a.deltas, accKey)
 	a.mu.Unlock()
+
+	defer func() {
+		// Second clear: drops any delta that snuck in during the KV ops above. Any delta
+		// queued after this point recreates the key (acceptable per spec).
+		a.mu.Lock()
+		delete(a.deltas, accKey)
+		a.mu.Unlock()
+	}()
 
 	key := StorageRepoKey(owner, repo)
 	got, err := a.storage.Get(ctx, StoragePartition, key)
