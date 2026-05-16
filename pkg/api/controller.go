@@ -17,6 +17,7 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -1613,6 +1614,171 @@ func (c *Controller) GetUser(w http.ResponseWriter, r *http.Request, userID stri
 		Id:           u.Username,
 	}
 	writeResponse(w, r, http.StatusOK, response)
+}
+
+// GetUserStorage returns the storage-usage figure (and quota, if any) for the named user. Self
+// access is always allowed; reading another user's number requires auth:ReadUser.
+func (c *Controller) GetUserStorage(w http.ResponseWriter, r *http.Request, userID string) {
+	ctx := r.Context()
+	callerIsSelf := false
+	if u, err := auth.GetUser(ctx); err == nil && u.Username == userID {
+		callerIsSelf = true
+	}
+	if !callerIsSelf {
+		if !c.authorize(w, r, permissions.Node{
+			Permission: permissions.Permission{
+				Action:   permissions.ReadUserAction,
+				Resource: permissions.UserArn(userID),
+			},
+		}) {
+			return
+		}
+	}
+	c.LogAction(ctx, "get_user_storage", r, "", "", "")
+
+	if _, err := c.Auth.GetUser(ctx, userID); errors.Is(err, auth.ErrNotFound) {
+		writeError(w, r, http.StatusNotFound, "user not found")
+		return
+	} else if c.handleAPIError(ctx, w, r, err) {
+		return
+	}
+
+	kvStore := c.Catalog.KVStore
+	var bytesUsed int64
+	if got, err := kvStore.Get(ctx, stats.StoragePartition, stats.StorageUserKey(userID)); err == nil {
+		if n, perr := strconv.ParseInt(string(got.Value), 10, 64); perr == nil {
+			bytesUsed = n
+		}
+	} else if !errors.Is(err, kv.ErrNotFound) {
+		writeError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Per-repo breakdown.
+	prefix := stats.StorageRepoPrefix(userID)
+	iter, err := kvStore.Scan(ctx, stats.StoragePartition, kv.ScanOptions{KeyStart: prefix})
+	if err != nil {
+		writeError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	var repos []apigen.UserStorageRepo
+	for iter.Next() {
+		ent := iter.Entry()
+		if !bytes.HasPrefix(ent.Key, prefix) {
+			break
+		}
+		_, repoName, perr := stats.ParseStorageRepoKey(ent.Key)
+		if perr != nil {
+			continue
+		}
+		n, _ := strconv.ParseInt(string(ent.Value), 10, 64)
+		repos = append(repos, apigen.UserStorageRepo{Name: repoName, BytesUsed: n})
+	}
+	if iterErr := iter.Err(); iterErr != nil {
+		iter.Close()
+		writeError(w, r, http.StatusInternalServerError, iterErr.Error())
+		return
+	}
+	iter.Close()
+
+	var quotaBytes *int64
+	var remaining *int64
+	if c.QuotaChecker != nil {
+		if v, ok, qerr := c.QuotaChecker.GetQuota(ctx, userID); qerr == nil && ok {
+			q := v
+			quotaBytes = &q
+			rem := q - bytesUsed
+			if rem < 0 {
+				rem = 0
+			}
+			remaining = &rem
+		}
+	}
+
+	var lastReconciledAt *time.Time
+	if got, err := kvStore.Get(ctx, stats.StoragePartition, stats.StorageMetaLastReconciledAtKey(userID)); err == nil {
+		if parsed, perr := time.Parse(time.RFC3339, string(got.Value)); perr == nil {
+			lastReconciledAt = &parsed
+		}
+	}
+
+	if repos == nil {
+		repos = []apigen.UserStorageRepo{}
+	}
+	resp := apigen.UserStorage{
+		User:             userID,
+		BytesUsed:        bytesUsed,
+		QuotaBytes:       quotaBytes,
+		BytesRemaining:   remaining,
+		Repositories:     repos,
+		LastReconciledAt: lastReconciledAt,
+		IsEstimate:       lastReconciledAt == nil,
+	}
+	writeResponse(w, r, http.StatusOK, resp)
+}
+
+// SetUserQuota sets (creates or replaces) the storage quota for the named user. Admin-only:
+// requires auth:WriteUser. The quota_bytes value must be ≥ 0.
+func (c *Controller) SetUserQuota(w http.ResponseWriter, r *http.Request, body apigen.SetUserQuotaJSONRequestBody, userID string) {
+	if !c.authorize(w, r, permissions.Node{
+		Permission: permissions.Permission{
+			Action:   permissions.WriteUserAction,
+			Resource: permissions.UserArn(userID),
+		},
+	}) {
+		return
+	}
+	ctx := r.Context()
+	c.LogAction(ctx, "set_user_quota", r, "", "", "")
+	if _, err := c.Auth.GetUser(ctx, userID); errors.Is(err, auth.ErrNotFound) {
+		writeError(w, r, http.StatusNotFound, "user not found")
+		return
+	} else if c.handleAPIError(ctx, w, r, err) {
+		return
+	}
+	if c.QuotaChecker == nil {
+		writeError(w, r, http.StatusServiceUnavailable, "storage usage tracking is not enabled")
+		return
+	}
+	if err := c.QuotaChecker.SetQuota(ctx, userID, body.QuotaBytes); err != nil {
+		if errors.Is(err, stats.ErrInvalidQuota) {
+			writeError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		writeError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeResponse(w, r, http.StatusNoContent, nil)
+}
+
+// DeleteUserQuota clears any existing storage quota for the named user. Admin-only.
+// Returns 204 whether or not a quota was previously set.
+func (c *Controller) DeleteUserQuota(w http.ResponseWriter, r *http.Request, userID string) {
+	if !c.authorize(w, r, permissions.Node{
+		Permission: permissions.Permission{
+			Action:   permissions.WriteUserAction,
+			Resource: permissions.UserArn(userID),
+		},
+	}) {
+		return
+	}
+	ctx := r.Context()
+	c.LogAction(ctx, "delete_user_quota", r, "", "", "")
+	if _, err := c.Auth.GetUser(ctx, userID); errors.Is(err, auth.ErrNotFound) {
+		writeError(w, r, http.StatusNotFound, "user not found")
+		return
+	} else if c.handleAPIError(ctx, w, r, err) {
+		return
+	}
+	if c.QuotaChecker == nil {
+		writeError(w, r, http.StatusServiceUnavailable, "storage usage tracking is not enabled")
+		return
+	}
+	if err := c.QuotaChecker.ClearQuota(ctx, userID); err != nil {
+		writeError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
 func (c *Controller) ListUserCredentials(w http.ResponseWriter, r *http.Request, userID string, params apigen.ListUserCredentialsParams) {

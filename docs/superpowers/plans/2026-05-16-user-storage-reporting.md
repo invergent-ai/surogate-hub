@@ -25,8 +25,8 @@
 - [x] Task 10: Accountant hooks in API upload paths (UploadObject + CompletePresignMultipartUpload; CopyObject deliberately no-op)
 - [x] Task 11: Accountant hooks in gateway upload paths (handlePut + HandleCompleteMultipartUpload)
 - [x] Task 12: Counter maintenance on repo create/delete
-- [ ] Task 13: `GET /auth/users/{userId}/storage` *(in progress)*
-- [ ] Task 14: `PUT/DELETE /auth/users/{userId}/quota`
+- [x] Task 13: `GET /auth/users/{userId}/storage`
+- [x] Task 14: `PUT/DELETE /auth/users/{userId}/quota` (folded into Task 13 commit)
 - [ ] Task 15: Quota enforcement on upload paths
 - [ ] Task 16: End-to-end and drift tests
 - [x] Task 16.5: Document omitted delete hooks *(folded into Task 2)*

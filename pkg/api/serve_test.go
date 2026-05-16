@@ -286,17 +286,26 @@ func setupClientWithAdmin(t testing.TB, opts ...setupOption) (apigen.ClientWithR
 	return clt, deps
 }
 
-// clientAs creates a non-admin user with the given username and returns a client authenticated as
-// them. The user has no policies attached, so it can read its own resources (per the self-serve
-// short-circuit) but cannot read other users' or perform admin actions.
-func clientAs(t testing.TB, deps *dependencies, username string) apigen.ClientWithResponsesInterface {
+// clientAs creates a non-admin user with the given username via the admin HTTP API and returns
+// an HTTP client authenticated as that user. The user is attached to whatever default group the
+// admin setup created, which carries no fs:*/auth:* permissions — so the user can read its own
+// resources via the self-serve short-circuit but cannot read other users' or perform admin
+// actions.
+//
+// adminClt must be the client returned by setupClientWithAdmin.
+func clientAs(t testing.TB, adminClt apigen.ClientWithResponsesInterface, deps *dependencies, username string) apigen.ClientWithResponsesInterface {
 	t.Helper()
 	ctx := context.Background()
-	_, err := deps.authService.CreateUser(ctx, &authmodel.User{Username: username})
+	createUsrRes, err := adminClt.CreateUserWithResponse(ctx, apigen.CreateUserJSONRequestBody{
+		Id:         username,
+		InviteUser: swag.Bool(false),
+	})
 	require.NoError(t, err)
-	cred, err := deps.authService.CreateCredentials(ctx, username)
+	require.NotNilf(t, createUsrRes.JSON201, "CreateUser returned status=%s body=%s", createUsrRes.HTTPResponse.Status, string(createUsrRes.Body))
+	createCredsRes, err := adminClt.CreateCredentialsWithResponse(ctx, createUsrRes.JSON201.Id)
 	require.NoError(t, err)
-	return setupClientByEndpoint(t, deps.server.URL, cred.AccessKeyID, cred.SecretAccessKey)
+	require.NotNilf(t, createCredsRes.JSON201, "CreateCredentials returned status=%s body=%s", createCredsRes.HTTPResponse.Status, string(createCredsRes.Body))
+	return setupClientByEndpoint(t, deps.server.URL, createCredsRes.JSON201.AccessKeyId, createCredsRes.JSON201.SecretAccessKey)
 }
 
 func setupXETHandler(t testing.TB) (http.Handler, *dependencies) {

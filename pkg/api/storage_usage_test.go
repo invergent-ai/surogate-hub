@@ -122,6 +122,148 @@ func TestDeleteRepository_DropsCounterAndDecrementsUserTotal(t *testing.T) {
 	require.Equal(t, int64(0), readInt64KV(t, deps.kvStore, stats.StorageUserKey(owner)))
 }
 
+func TestGetUserStorage_SelfReadsOwnCounter(t *testing.T) {
+	ctx := context.Background()
+	adminClt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	aliceClt := clientAs(t, adminClt, deps, "alice")
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("1234")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training"), []byte("1000")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "evals"), []byte("234")))
+
+	resp, err := aliceClt.GetUserStorageWithResponse(ctx, "alice")
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode())
+	require.NotNil(t, resp.JSON200)
+	require.Equal(t, int64(1234), resp.JSON200.BytesUsed)
+	require.Len(t, resp.JSON200.Repositories, 2)
+	require.True(t, resp.JSON200.IsEstimate, "no reconciler pass yet")
+}
+
+func TestGetUserStorage_NonSelfRequiresReadUser(t *testing.T) {
+	ctx := context.Background()
+	adminClt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	_ = clientAs(t, adminClt, deps, "alice")
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("100")))
+	bobClt := clientAs(t, adminClt, deps, "bob")
+
+	resp, err := bobClt.GetUserStorageWithResponse(ctx, "alice")
+	require.NoError(t, err)
+	// Surogate Hub's authorize() returns 401 for "authenticated but lacks permission" (see
+	// TestController_BranchProtectionRules in controller_test.go and authorizeCallback).
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode())
+}
+
+func TestGetUserStorage_AdminCanReadOthers(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	_ = clientAs(t, clt, deps, "alice")
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("100")))
+
+	resp, err := clt.GetUserStorageWithResponse(ctx, "alice")
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode())
+	require.Equal(t, int64(100), resp.JSON200.BytesUsed)
+}
+
+func TestGetUserStorage_IncludesQuotaWhenSet(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	_ = clientAs(t, clt, deps, "alice")
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("700")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"), []byte("1000")))
+
+	resp, err := clt.GetUserStorageWithResponse(ctx, "alice")
+	require.NoError(t, err)
+	require.NotNil(t, resp.JSON200.QuotaBytes)
+	require.Equal(t, int64(1000), *resp.JSON200.QuotaBytes)
+	require.NotNil(t, resp.JSON200.BytesRemaining)
+	require.Equal(t, int64(300), *resp.JSON200.BytesRemaining)
+}
+
+func TestGetUserStorage_RemainingClampsAtZero(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	_ = clientAs(t, clt, deps, "alice")
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("2000")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"), []byte("1000")))
+
+	resp, err := clt.GetUserStorageWithResponse(ctx, "alice")
+	require.NoError(t, err)
+	require.NotNil(t, resp.JSON200.BytesRemaining)
+	require.Equal(t, int64(0), *resp.JSON200.BytesRemaining)
+}
+
+func TestGetUserStorage_UnknownUserReturns404(t *testing.T) {
+	ctx := context.Background()
+	clt, _ := setupClientWithAdmin(t, withStorageAccountant())
+	resp, err := clt.GetUserStorageWithResponse(ctx, "ghost")
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNotFound, resp.StatusCode())
+}
+
+func TestSetUserQuota_AdminCanSet(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	_ = clientAs(t, clt, deps, "alice")
+
+	resp, err := clt.SetUserQuotaWithResponse(ctx, "alice", apigen.SetUserQuotaJSONRequestBody{QuotaBytes: 12345})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNoContent, resp.StatusCode())
+
+	got, err := deps.kvStore.Get(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"))
+	require.NoError(t, err)
+	require.Equal(t, "12345", string(got.Value))
+}
+
+func TestSetUserQuota_NegativeRejected(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	_ = clientAs(t, clt, deps, "alice")
+	resp, err := clt.SetUserQuotaWithResponse(ctx, "alice", apigen.SetUserQuotaJSONRequestBody{QuotaBytes: -1})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode())
+}
+
+func TestSetUserQuota_NonAdminForbidden(t *testing.T) {
+	ctx := context.Background()
+	adminClt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	aliceClt := clientAs(t, adminClt, deps, "alice")
+	resp, err := aliceClt.SetUserQuotaWithResponse(ctx, "alice", apigen.SetUserQuotaJSONRequestBody{QuotaBytes: 1000})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode())
+}
+
+func TestSetUserQuota_UnknownUserReturns404(t *testing.T) {
+	ctx := context.Background()
+	clt, _ := setupClientWithAdmin(t, withStorageAccountant())
+	resp, err := clt.SetUserQuotaWithResponse(ctx, "ghost", apigen.SetUserQuotaJSONRequestBody{QuotaBytes: 1000})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNotFound, resp.StatusCode())
+}
+
+func TestDeleteUserQuota_Removes(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	_ = clientAs(t, clt, deps, "alice")
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"), []byte("1000")))
+
+	resp, err := clt.DeleteUserQuotaWithResponse(ctx, "alice")
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNoContent, resp.StatusCode())
+
+	_, err = deps.kvStore.Get(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"))
+	require.ErrorIs(t, err, kv.ErrNotFound)
+}
+
+func TestDeleteUserQuota_AbsentIsIdempotent(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	_ = clientAs(t, clt, deps, "alice")
+	resp, err := clt.DeleteUserQuotaWithResponse(ctx, "alice")
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNoContent, resp.StatusCode())
+}
+
 func TestCopyObject_DoesNotDoubleCount(t *testing.T) {
 	// CopyObject reuses the source physical address inside the same repo, so the per-repo
 	// allocated-bytes counter must not increase.
