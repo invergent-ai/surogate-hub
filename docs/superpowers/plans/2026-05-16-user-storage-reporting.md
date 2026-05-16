@@ -21,8 +21,8 @@
 - [x] Task 5: `storage_usage` config block
 - [x] Task 6: `StorageReconciler`
 - [x] Task 7: Catalog + block-adapter wiring (moved to `pkg/stats/storagewiring` to avoid import cycle with block/s3 → stats)
-- [ ] Task 8 + 8.5 + 9: Runtime + test-fixture wiring *(in progress)*
-- [ ] Task 10: Accountant hooks in API upload paths
+- [x] Task 8 + 8.5 + 9: Runtime + test-fixture wiring
+- [ ] Task 10: Accountant hooks in API upload paths *(in progress)*
 - [ ] Task 11: Accountant hooks in gateway upload paths
 - [ ] Task 12: Counter maintenance on repo create/delete
 - [ ] Task 13: `GET /auth/users/{userId}/storage`

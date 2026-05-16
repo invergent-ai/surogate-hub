@@ -20,6 +20,7 @@ import (
 	"github.com/invergent-ai/surogate-hub/pkg/kv"
 	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	"github.com/invergent-ai/surogate-hub/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/stats"
 	"github.com/invergent-ai/surogate-hub/pkg/upload"
 )
 
@@ -57,6 +58,8 @@ type Operation struct {
 	MatchedHost       bool
 	PathProvider      upload.PathProvider
 	VerifyUnsupported bool
+	StorageAccountant *stats.StorageAccountant
+	QuotaChecker      *stats.QuotaChecker
 }
 
 func StorageClassFromHeader(header http.Header) *string {

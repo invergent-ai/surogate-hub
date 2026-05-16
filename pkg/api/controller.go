@@ -113,11 +113,13 @@ type Controller struct {
 	sessionStore          sessions.Store
 	PathProvider          upload.PathProvider
 	usageReporter         stats.UsageReporterOperations
+	StorageAccountant     *stats.StorageAccountant
+	QuotaChecker          *stats.QuotaChecker
 }
 
 var usageCounter = stats.NewUsageCounter()
 
-func NewController(cfg config.Config, catalog *catalog.Catalog, authenticator auth.Authenticator, authService auth.Service, authenticationService authentication.Service, blockAdapter block.Adapter, metadataManager auth.MetadataManager, migrator Migrator, collector stats.Collector, cloudMetadataProvider cloud.MetadataProvider, actions actionsHandler, auditChecker AuditChecker, logger logging.Logger, sessionStore sessions.Store, pathProvider upload.PathProvider, usageReporter stats.UsageReporterOperations) *Controller {
+func NewController(cfg config.Config, catalog *catalog.Catalog, authenticator auth.Authenticator, authService auth.Service, authenticationService authentication.Service, blockAdapter block.Adapter, metadataManager auth.MetadataManager, migrator Migrator, collector stats.Collector, cloudMetadataProvider cloud.MetadataProvider, actions actionsHandler, auditChecker AuditChecker, logger logging.Logger, sessionStore sessions.Store, pathProvider upload.PathProvider, usageReporter stats.UsageReporterOperations, storageAccountant *stats.StorageAccountant, quotaChecker *stats.QuotaChecker) *Controller {
 	return &Controller{
 		Config:                cfg,
 		Catalog:               catalog,
@@ -135,6 +137,8 @@ func NewController(cfg config.Config, catalog *catalog.Catalog, authenticator au
 		sessionStore:          sessionStore,
 		PathProvider:          pathProvider,
 		usageReporter:         usageReporter,
+		StorageAccountant:     storageAccountant,
+		QuotaChecker:          quotaChecker,
 	}
 }
 
