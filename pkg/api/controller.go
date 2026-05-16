@@ -441,6 +441,12 @@ func (c *Controller) CompletePresignMultipartUpload(w http.ResponseWriter, r *ht
 		return
 	}
 
+	if c.StorageAccountant != nil {
+		if ownerSlug, repoName, splitErr := stats.SplitNamespacedRepo(repository); splitErr == nil {
+			c.StorageAccountant.Add(ctx, ownerSlug, repoName, mpuResp.ContentLength)
+		}
+	}
+
 	metadata := apigen.ObjectUserMetadata{AdditionalProperties: entry.Metadata}
 	response := apigen.ObjectStats{
 		Checksum:        entry.Checksum,
@@ -3475,6 +3481,12 @@ func (c *Controller) UploadObject(w http.ResponseWriter, r *http.Request, owner,
 	}
 	if c.handleAPIError(ctx, w, r, err) {
 		return
+	}
+
+	if c.StorageAccountant != nil {
+		if ownerSlug, repoName, splitErr := stats.SplitNamespacedRepo(repository); splitErr == nil {
+			c.StorageAccountant.Add(ctx, ownerSlug, repoName, blob.Size)
+		}
 	}
 
 	identifierType := block.IdentifierTypeFull
