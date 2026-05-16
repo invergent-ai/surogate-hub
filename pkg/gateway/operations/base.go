@@ -20,6 +20,7 @@ import (
 	"github.com/invergent-ai/surogate-hub/pkg/kv"
 	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	"github.com/invergent-ai/surogate-hub/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/stats"
 	"github.com/invergent-ai/surogate-hub/pkg/upload"
 )
 
@@ -57,6 +58,8 @@ type Operation struct {
 	MatchedHost       bool
 	PathProvider      upload.PathProvider
 	VerifyUnsupported bool
+	StorageAccountant *stats.StorageAccountant
+	QuotaChecker      *stats.QuotaChecker
 }
 
 func StorageClassFromHeader(header http.Header) *string {
@@ -217,6 +220,39 @@ type RefOperation struct {
 type PathOperation struct {
 	*RefOperation
 	Path string
+}
+
+// checkStorageQuota gates a write against the configured per-user storage quota. It returns true
+// when the upload is allowed, and writes the rejection response (413 or 411) and returns false
+// when it is not. When the QuotaChecker is not configured (storage_usage disabled) every request
+// is allowed.
+//
+// The owner is derived from the repository id by splitting on the first '/' — repositories not in
+// `{owner}/{name}` form are silently allowed because they fall outside the per-user accounting
+// scheme.
+func (o *PathOperation) checkStorageQuota(w http.ResponseWriter, req *http.Request, contentLength int64) bool {
+	if o.QuotaChecker == nil {
+		return true
+	}
+	owner, _, splitErr := stats.SplitNamespacedRepo(o.Repository.Name)
+	if splitErr != nil {
+		return true
+	}
+	dec, err := o.QuotaChecker.Allow(req.Context(), owner, contentLength)
+	if err != nil {
+		_ = o.EncodeError(w, req, err, gwerrors.Codes.ToAPIErr(gwerrors.ErrInternalError))
+		return false
+	}
+	if dec.Allowed {
+		return true
+	}
+	apiErr := gwerrors.Codes.ToAPIErr(gwerrors.ErrEntityTooLarge)
+	if dec.Reason == stats.QuotaReasonUnknownSize {
+		// 411 Length Required — the gateway uses the closer "MissingContentLength" error code.
+		apiErr = gwerrors.Codes.ToAPIErr(gwerrors.ErrMissingContentLength)
+	}
+	_ = o.EncodeError(w, req, nil, apiErr)
+	return false
 }
 
 func (o *PathOperation) EncodeError(w http.ResponseWriter, req *http.Request, originalError error, fallbackError gwerrors.APIError) *http.Request {

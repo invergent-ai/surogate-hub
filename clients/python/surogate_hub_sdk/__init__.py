@@ -150,6 +150,9 @@ __all__ = [
     "User",
     "UserCreation",
     "UserList",
+    "UserQuota",
+    "UserStorage",
+    "UserStorageRepo",
     "VersionConfig",
 ]
 
@@ -289,5 +292,8 @@ from surogate_hub_sdk.models.usage_report import UsageReport as UsageReport
 from surogate_hub_sdk.models.user import User as User
 from surogate_hub_sdk.models.user_creation import UserCreation as UserCreation
 from surogate_hub_sdk.models.user_list import UserList as UserList
+from surogate_hub_sdk.models.user_quota import UserQuota as UserQuota
+from surogate_hub_sdk.models.user_storage import UserStorage as UserStorage
+from surogate_hub_sdk.models.user_storage_repo import UserStorageRepo as UserStorageRepo
 from surogate_hub_sdk.models.version_config import VersionConfig as VersionConfig
 

@@ -42,6 +42,7 @@ import (
 	_ "github.com/invergent-ai/surogate-hub/pkg/kv/postgres"
 	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	"github.com/invergent-ai/surogate-hub/pkg/stats"
+	"github.com/invergent-ai/surogate-hub/pkg/stats/storagewiring"
 	"github.com/invergent-ai/surogate-hub/pkg/upload"
 	"github.com/invergent-ai/surogate-hub/pkg/version"
 	"github.com/spf13/cobra"
@@ -156,6 +157,24 @@ var runCmd = &cobra.Command{
 			usageReporter = ur
 		}
 
+		// storage usage setup - accountant + quota checker + reconciler. When disabled, the
+		// accountant and quota checker are nil and every Controller/Operation call site guards
+		// on nil to skip counting and quota enforcement.
+		var storageAccountant *stats.StorageAccountant
+		var quotaChecker *stats.QuotaChecker
+		if baseCfg.StorageUsage.Enabled {
+			storageAccountant = stats.NewStorageAccountant(kvStore)
+			storageAccountant.Start(ctx, baseCfg.StorageUsage.StorageAccountant.FlushInterval, logger.WithField("service", "storage_accountant"))
+			quotaChecker = stats.NewQuotaChecker(kvStore)
+			reconciler := stats.NewStorageReconciler(
+				kvStore,
+				&storagewiring.CatalogRepoLister{Catalog: c},
+				&storagewiring.BlockNamespaceSizer{Adapter: blockStore},
+				storageAccountant,
+			).WithConcurrency(baseCfg.StorageUsage.StorageReconciler.Concurrency)
+			reconciler.Start(ctx, baseCfg.StorageUsage.StorageReconciler.Interval, logger.WithField("service", "storage_reconciler"))
+		}
+
 		deleteScheduler := gocron.NewScheduler(time.UTC)
 		err = scheduleCleanupJobs(ctx, deleteScheduler, c)
 		if err != nil {
@@ -241,6 +260,8 @@ var runCmd = &cobra.Command{
 			baseCfg.Gateways.S3.DomainNames,
 			upload.DefaultPathProvider,
 			usageReporter,
+			storageAccountant,
+			quotaChecker,
 		)
 
 		// init gateway server
@@ -280,6 +301,8 @@ var runCmd = &cobra.Command{
 			baseCfg.Logging.TraceRequestHeaders,
 			baseCfg.Gateways.S3.VerifyUnsupported,
 			false,
+			storageAccountant,
+			quotaChecker,
 		)
 		s3gatewayHandler = api.CORSMiddleware(s3gatewayHandler, cfg)
 		s3gatewayHandler = apiAuthenticator(s3gatewayHandler)

@@ -145,6 +145,57 @@ components:
             $ref: "#/components/schemas/Error"
 
   schemas:
+    UserStorage:
+      type: object
+      required:
+        - user
+        - bytes_used
+        - repositories
+        - is_estimate
+      properties:
+        user:
+          type: string
+        bytes_used:
+          type: integer
+          format: int64
+        quota_bytes:
+          type: integer
+          format: int64
+          nullable: true
+        bytes_remaining:
+          type: integer
+          format: int64
+          nullable: true
+        repositories:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserStorageRepo"
+        last_reconciled_at:
+          type: string
+          format: date-time
+          nullable: true
+        is_estimate:
+          type: boolean
+    UserStorageRepo:
+      type: object
+      required:
+        - name
+        - bytes_used
+      properties:
+        name:
+          type: string
+        bytes_used:
+          type: integer
+          format: int64
+    UserQuota:
+      type: object
+      required:
+        - quota_bytes
+      properties:
+        quota_bytes:
+          type: integer
+          format: int64
+          minimum: 0
     Pagination:
       type: object
       required:
@@ -2485,6 +2536,94 @@ paths:
           $ref: "#/components/responses/NotFound"
         420:
           description: too many requests
+        default:
+          $ref: "#/components/responses/ServerError"
+
+  /auth/users/{userId}/storage:
+    parameters:
+      - in: path
+        name: userId
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - auth
+      operationId: getUserStorage
+      summary: get a user's storage usage and quota
+      responses:
+        200:
+          description: storage usage
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserStorage"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+        503:
+          description: storage usage tracking is disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        default:
+          $ref: "#/components/responses/ServerError"
+
+  /auth/users/{userId}/quota:
+    parameters:
+      - in: path
+        name: userId
+        required: true
+        schema:
+          type: string
+    put:
+      tags:
+        - auth
+      operationId: setUserQuota
+      summary: set a user's storage quota
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserQuota"
+      responses:
+        204:
+          description: quota set
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+        503:
+          description: storage usage tracking is disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        default:
+          $ref: "#/components/responses/ServerError"
+    delete:
+      tags:
+        - auth
+      operationId: deleteUserQuota
+      summary: clear a user's storage quota
+      responses:
+        204:
+          description: quota cleared
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        404:
+          $ref: "#/components/responses/NotFound"
+        503:
+          description: storage usage tracking is disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         default:
           $ref: "#/components/responses/ServerError"
 

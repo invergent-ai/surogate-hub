@@ -17,6 +17,7 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -113,11 +114,13 @@ type Controller struct {
 	sessionStore          sessions.Store
 	PathProvider          upload.PathProvider
 	usageReporter         stats.UsageReporterOperations
+	StorageAccountant     *stats.StorageAccountant
+	QuotaChecker          *stats.QuotaChecker
 }
 
 var usageCounter = stats.NewUsageCounter()
 
-func NewController(cfg config.Config, catalog *catalog.Catalog, authenticator auth.Authenticator, authService auth.Service, authenticationService authentication.Service, blockAdapter block.Adapter, metadataManager auth.MetadataManager, migrator Migrator, collector stats.Collector, cloudMetadataProvider cloud.MetadataProvider, actions actionsHandler, auditChecker AuditChecker, logger logging.Logger, sessionStore sessions.Store, pathProvider upload.PathProvider, usageReporter stats.UsageReporterOperations) *Controller {
+func NewController(cfg config.Config, catalog *catalog.Catalog, authenticator auth.Authenticator, authService auth.Service, authenticationService authentication.Service, blockAdapter block.Adapter, metadataManager auth.MetadataManager, migrator Migrator, collector stats.Collector, cloudMetadataProvider cloud.MetadataProvider, actions actionsHandler, auditChecker AuditChecker, logger logging.Logger, sessionStore sessions.Store, pathProvider upload.PathProvider, usageReporter stats.UsageReporterOperations, storageAccountant *stats.StorageAccountant, quotaChecker *stats.QuotaChecker) *Controller {
 	return &Controller{
 		Config:                cfg,
 		Catalog:               catalog,
@@ -135,6 +138,8 @@ func NewController(cfg config.Config, catalog *catalog.Catalog, authenticator au
 		sessionStore:          sessionStore,
 		PathProvider:          pathProvider,
 		usageReporter:         usageReporter,
+		StorageAccountant:     storageAccountant,
+		QuotaChecker:          quotaChecker,
 	}
 }
 
@@ -432,8 +437,9 @@ func (c *Controller) CompletePresignMultipartUpload(w http.ResponseWriter, r *ht
 	}
 	entry := entryBuilder.Build()
 
-	err = c.Catalog.CreateEntry(ctx, repo.Name, branch, entry)
-	if c.handleAPIError(ctx, w, r, err) {
+	// Quota check → CreateEntry → accountant increment, in that order. Parts are already on
+	// disk by this point; rejecting here leaves orphan parts that GC will reclaim.
+	if !c.commitCompletedUpload(ctx, w, r, owner, repository, repo.Name, branch, entry, mpuResp.ContentLength) {
 		return
 	}
 
@@ -1605,6 +1611,177 @@ func (c *Controller) GetUser(w http.ResponseWriter, r *http.Request, userID stri
 	writeResponse(w, r, http.StatusOK, response)
 }
 
+// GetUserStorage returns the storage-usage figure (and quota, if any) for the named user. Self
+// access is always allowed; reading another user's number requires auth:ReadUser.
+// When storage_usage.enabled=false the endpoint returns 503 Service Unavailable so consumers do
+// not see misleadingly-zero counters that look authoritative.
+func (c *Controller) GetUserStorage(w http.ResponseWriter, r *http.Request, userID string) {
+	ctx := r.Context()
+	callerIsSelf := false
+	if u, err := auth.GetUser(ctx); err == nil && u.Username == userID {
+		callerIsSelf = true
+	}
+	if !callerIsSelf {
+		if !c.authorize(w, r, permissions.Node{
+			Permission: permissions.Permission{
+				Action:   permissions.ReadUserAction,
+				Resource: permissions.UserArn(userID),
+			},
+		}) {
+			return
+		}
+	}
+	c.LogAction(ctx, "get_user_storage", r, "", "", "")
+
+	if c.StorageAccountant == nil {
+		writeError(w, r, http.StatusServiceUnavailable, "storage usage tracking is not enabled")
+		return
+	}
+
+	if _, err := c.Auth.GetUser(ctx, userID); errors.Is(err, auth.ErrNotFound) {
+		writeError(w, r, http.StatusNotFound, "user not found")
+		return
+	} else if c.handleAPIError(ctx, w, r, err) {
+		return
+	}
+
+	kvStore := c.Catalog.KVStore
+	var bytesUsed int64
+	if got, err := kvStore.Get(ctx, stats.StoragePartition, stats.StorageUserKey(userID)); err == nil {
+		if n, perr := strconv.ParseInt(string(got.Value), 10, 64); perr == nil {
+			bytesUsed = n
+		}
+	} else if !errors.Is(err, kv.ErrNotFound) {
+		writeError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Per-repo breakdown.
+	prefix := stats.StorageRepoPrefix(userID)
+	iter, err := kvStore.Scan(ctx, stats.StoragePartition, kv.ScanOptions{KeyStart: prefix})
+	if err != nil {
+		writeError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer iter.Close()
+	var repos []apigen.UserStorageRepo
+	for iter.Next() {
+		ent := iter.Entry()
+		if !bytes.HasPrefix(ent.Key, prefix) {
+			break
+		}
+		_, repoName, perr := stats.ParseStorageRepoKey(ent.Key)
+		if perr != nil {
+			continue
+		}
+		n, _ := strconv.ParseInt(string(ent.Value), 10, 64)
+		repos = append(repos, apigen.UserStorageRepo{Name: repoName, BytesUsed: n})
+	}
+	if iterErr := iter.Err(); iterErr != nil {
+		writeError(w, r, http.StatusInternalServerError, iterErr.Error())
+		return
+	}
+
+	var quotaBytes *int64
+	var remaining *int64
+	if c.QuotaChecker != nil {
+		if v, ok, qerr := c.QuotaChecker.GetQuota(ctx, userID); qerr == nil && ok {
+			q := v
+			quotaBytes = &q
+			rem := q - bytesUsed
+			if rem < 0 {
+				rem = 0
+			}
+			remaining = &rem
+		}
+	}
+
+	var lastReconciledAt *time.Time
+	if got, err := kvStore.Get(ctx, stats.StoragePartition, stats.StorageMetaLastReconciledAtKey(userID)); err == nil {
+		if parsed, perr := time.Parse(time.RFC3339, string(got.Value)); perr == nil {
+			lastReconciledAt = &parsed
+		}
+	}
+
+	if repos == nil {
+		repos = []apigen.UserStorageRepo{}
+	}
+	resp := apigen.UserStorage{
+		User:             userID,
+		BytesUsed:        bytesUsed,
+		QuotaBytes:       quotaBytes,
+		BytesRemaining:   remaining,
+		Repositories:     repos,
+		LastReconciledAt: lastReconciledAt,
+		IsEstimate:       lastReconciledAt == nil,
+	}
+	writeResponse(w, r, http.StatusOK, resp)
+}
+
+// SetUserQuota sets (creates or replaces) the storage quota for the named user. Admin-only:
+// requires auth:WriteUser. The quota_bytes value must be ≥ 0.
+func (c *Controller) SetUserQuota(w http.ResponseWriter, r *http.Request, body apigen.SetUserQuotaJSONRequestBody, userID string) {
+	if !c.authorize(w, r, permissions.Node{
+		Permission: permissions.Permission{
+			Action:   permissions.WriteUserAction,
+			Resource: permissions.UserArn(userID),
+		},
+	}) {
+		return
+	}
+	ctx := r.Context()
+	c.LogAction(ctx, "set_user_quota", r, "", "", "")
+	if _, err := c.Auth.GetUser(ctx, userID); errors.Is(err, auth.ErrNotFound) {
+		writeError(w, r, http.StatusNotFound, "user not found")
+		return
+	} else if c.handleAPIError(ctx, w, r, err) {
+		return
+	}
+	if c.QuotaChecker == nil {
+		writeError(w, r, http.StatusServiceUnavailable, "storage usage tracking is not enabled")
+		return
+	}
+	if err := c.QuotaChecker.SetQuota(ctx, userID, body.QuotaBytes); err != nil {
+		if errors.Is(err, stats.ErrInvalidQuota) {
+			writeError(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		writeError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeResponse(w, r, http.StatusNoContent, nil)
+}
+
+// DeleteUserQuota clears any existing storage quota for the named user. Admin-only.
+// Returns 204 whether or not a quota was previously set.
+func (c *Controller) DeleteUserQuota(w http.ResponseWriter, r *http.Request, userID string) {
+	if !c.authorize(w, r, permissions.Node{
+		Permission: permissions.Permission{
+			Action:   permissions.WriteUserAction,
+			Resource: permissions.UserArn(userID),
+		},
+	}) {
+		return
+	}
+	ctx := r.Context()
+	c.LogAction(ctx, "delete_user_quota", r, "", "", "")
+	if _, err := c.Auth.GetUser(ctx, userID); errors.Is(err, auth.ErrNotFound) {
+		writeError(w, r, http.StatusNotFound, "user not found")
+		return
+	} else if c.handleAPIError(ctx, w, r, err) {
+		return
+	}
+	if c.QuotaChecker == nil {
+		writeError(w, r, http.StatusServiceUnavailable, "storage usage tracking is not enabled")
+		return
+	}
+	if err := c.QuotaChecker.ClearQuota(ctx, userID); err != nil {
+		writeError(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeResponse(w, r, http.StatusNoContent, nil)
+}
+
 func (c *Controller) ListUserCredentials(w http.ResponseWriter, r *http.Request, userID string, params apigen.ListUserCredentialsParams) {
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
@@ -2087,6 +2264,14 @@ func (c *Controller) CreateRepository(w http.ResponseWriter, r *http.Request, bo
 		if c.handleAPIError(ctx, w, r, err) {
 			return
 		}
+		if c.StorageAccountant != nil {
+			if ownerSlug, repoName, splitErr := stats.SplitNamespacedRepo(repo.Name); splitErr == nil {
+				if err := c.StorageAccountant.InitRepo(ctx, ownerSlug, repoName); err != nil {
+					c.Logger.WithContext(ctx).WithError(err).WithField("repo", repo.Name).
+						Warn("failed to initialize storage counter for repository")
+				}
+			}
+		}
 		response := apigen.Repository{
 			CreationDate:     repo.CreationDate.Unix(),
 			DefaultBranch:    repo.DefaultBranch,
@@ -2102,6 +2287,15 @@ func (c *Controller) CreateRepository(w http.ResponseWriter, r *http.Request, bo
 	if err != nil {
 		c.handleAPIError(ctx, w, r, fmt.Errorf("error creating repository: %w", err))
 		return
+	}
+
+	if c.StorageAccountant != nil {
+		if ownerSlug, repoName, splitErr := stats.SplitNamespacedRepo(newRepo.Name); splitErr == nil {
+			if err := c.StorageAccountant.InitRepo(ctx, ownerSlug, repoName); err != nil {
+				c.Logger.WithContext(ctx).WithError(err).WithField("repo", newRepo.Name).
+					Warn("failed to initialize storage counter for repository")
+			}
+		}
 	}
 
 	if sampleData {
@@ -2257,6 +2451,15 @@ func (c *Controller) DeleteRepository(w http.ResponseWriter, r *http.Request, ow
 	err = c.Catalog.DeleteRepository(ctx, repository, graveler.WithForce(swag.BoolValue(params.Force)))
 	if c.handleAPIError(ctx, w, r, err) {
 		return
+	}
+
+	if c.StorageAccountant != nil {
+		if ownerSlug, repoName, splitErr := stats.SplitNamespacedRepo(repository); splitErr == nil {
+			if err := c.StorageAccountant.DeleteRepo(ctx, ownerSlug, repoName); err != nil {
+				c.Logger.WithContext(ctx).WithError(err).WithField("repo", repository).
+					Warn("failed to clean up storage counter for repository")
+			}
+		}
 	}
 
 	if repo != nil {
@@ -3354,6 +3557,10 @@ func (c *Controller) UploadObject(w http.ResponseWriter, r *http.Request, owner,
 		return
 	}
 
+	if !c.checkStorageQuota(w, r, owner, r.ContentLength) {
+		return
+	}
+
 	// before writing body, ensure preconditions - this means we essentially check for object existence twice:
 	// once before uploading the body to save resources and time,
 	//	and then graveler will check again when passed a SetOptions.
@@ -3471,6 +3678,12 @@ func (c *Controller) UploadObject(w http.ResponseWriter, r *http.Request, owner,
 	}
 	if c.handleAPIError(ctx, w, r, err) {
 		return
+	}
+
+	if c.StorageAccountant != nil {
+		if ownerSlug, repoName, splitErr := stats.SplitNamespacedRepo(repository); splitErr == nil {
+			c.StorageAccountant.Add(ctx, ownerSlug, repoName, blob.Size)
+		}
 	}
 
 	identifierType := block.IdentifierTypeFull
@@ -5980,6 +6193,73 @@ func (c *Controller) authorizeCallback(w http.ResponseWriter, r *http.Request, p
 
 func (c *Controller) authorize(w http.ResponseWriter, r *http.Request, perms permissions.Node) bool {
 	return c.authorizeCallback(w, r, perms, writeError)
+}
+
+// commitCompletedUpload finalizes a server-known-size upload (e.g. after multipart completion):
+// it checks the quota, creates the catalog entry, and increments the storage counter — in that
+// order. Callers that need to write the response on success (e.g. the entry's ObjectStats) do
+// so after this helper returns true.
+//
+// The ordering is load-bearing: if the quota check is moved after CreateEntry, an over-quota
+// upload would leave a live entry plus a leaked counter increment behind. See the regression
+// test `TestCommitCompletedUpload_QuotaRejectionLeavesNoState`.
+func (c *Controller) commitCompletedUpload(
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+	owner, namespacedRepo, repoName, branch string,
+	entry catalog.DBEntry,
+	sizeBytes int64,
+) bool {
+	if !c.checkStorageQuota(w, r, owner, sizeBytes) {
+		return false
+	}
+	if err := c.Catalog.CreateEntry(ctx, repoName, branch, entry); err != nil {
+		if c.handleAPIError(ctx, w, r, err) {
+			return false
+		}
+		return false
+	}
+	if c.StorageAccountant != nil {
+		if ownerSlug, rn, splitErr := stats.SplitNamespacedRepo(namespacedRepo); splitErr == nil {
+			c.StorageAccountant.Add(ctx, ownerSlug, rn, sizeBytes)
+		}
+	}
+	return true
+}
+
+// checkStorageQuota verifies that an upload of contentLength bytes can fit under the configured
+// quota for owner. It writes the rejection response and returns false when the upload would
+// exceed quota; on allow, it returns true and writes nothing. When the QuotaChecker is not
+// configured (storage_usage.enabled = false) every request is allowed.
+//
+// Reject status codes:
+//   - 413 Request Entity Too Large — would exceed quota at the soft-check
+//   - 411 Length Required          — content length unknown and quota is set
+//
+// The response body is a JSON object with `error`, `quota_bytes`, and `bytes_used`.
+func (c *Controller) checkStorageQuota(w http.ResponseWriter, r *http.Request, owner string, contentLength int64) bool {
+	if c.QuotaChecker == nil {
+		return true
+	}
+	dec, err := c.QuotaChecker.Allow(r.Context(), owner, contentLength)
+	if err != nil {
+		writeError(w, r, http.StatusInternalServerError, err.Error())
+		return false
+	}
+	if dec.Allowed {
+		return true
+	}
+	status := http.StatusRequestEntityTooLarge
+	if dec.Reason == stats.QuotaReasonUnknownSize {
+		status = http.StatusLengthRequired
+	}
+	writeResponse(w, r, status, map[string]interface{}{
+		"error":       "storage quota exceeded",
+		"quota_bytes": dec.QuotaBytes,
+		"bytes_used":  dec.BytesUsed,
+	})
+	return false
 }
 
 func (c *Controller) isNameValid(name, nameType string) (bool, string) {

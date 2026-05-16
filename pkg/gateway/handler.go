@@ -60,9 +60,11 @@ type ServerContext struct {
 	stats             stats.Collector
 	pathProvider      upload.PathProvider
 	verifyUnsupported bool
+	storageAccountant *stats.StorageAccountant
+	quotaChecker      *stats.QuotaChecker
 }
 
-func NewHandler(region string, catalog *catalog.Catalog, multipartTracker multipart.Tracker, blockStore block.Adapter, authService auth.GatewayService, bareDomains []string, stats stats.Collector, pathProvider upload.PathProvider, fallbackURL *url.URL, auditLogLevel string, traceRequestHeaders bool, verifyUnsupported bool, isAdvancedAuth bool) http.Handler {
+func NewHandler(region string, catalog *catalog.Catalog, multipartTracker multipart.Tracker, blockStore block.Adapter, authService auth.GatewayService, bareDomains []string, stats stats.Collector, pathProvider upload.PathProvider, fallbackURL *url.URL, auditLogLevel string, traceRequestHeaders bool, verifyUnsupported bool, isAdvancedAuth bool, storageAccountant *stats.StorageAccountant, quotaChecker *stats.QuotaChecker) http.Handler {
 	var fallbackHandler http.Handler
 	if fallbackURL != nil {
 		fallbackProxy := gohttputil.NewSingleHostReverseProxy(fallbackURL)
@@ -87,6 +89,8 @@ func NewHandler(region string, catalog *catalog.Catalog, multipartTracker multip
 		stats:             stats,
 		pathProvider:      pathProvider,
 		verifyUnsupported: verifyUnsupported,
+		storageAccountant: storageAccountant,
+		quotaChecker:      quotaChecker,
 	}
 
 	// setup routes

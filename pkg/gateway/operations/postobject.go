@@ -19,6 +19,7 @@ import (
 	"github.com/invergent-ai/surogate-hub/pkg/httputil"
 	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	"github.com/invergent-ai/surogate-hub/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/stats"
 )
 
 const (
@@ -144,7 +145,13 @@ func (controller *PostObject) HandleCompleteMultipartUpload(w http.ResponseWrite
 		return
 	}
 	checksum := strings.Split(resp.ETag, "-")[0]
-	err = o.finishUpload(req, resp.MTime, checksum, objName, resp.ContentLength, true, multiPart.Metadata, multiPart.ContentType, allowOverwrite)
+	contentLength := resp.ContentLength
+	// Soft quota check at completion: the parts are already on disk; rejecting here only prevents
+	// us from committing the entry. GC will reclaim the orphan parts.
+	if !o.checkStorageQuota(w, req, contentLength) {
+		return
+	}
+	err = o.finishUpload(req, resp.MTime, checksum, objName, contentLength, true, multiPart.Metadata, multiPart.ContentType, allowOverwrite)
 	if errors.Is(err, graveler.ErrPreconditionFailed) {
 		_ = o.EncodeError(w, req, err, gatewayErrors.Codes.ToAPIErr(gatewayErrors.ErrPreconditionFailed))
 		return
@@ -161,6 +168,13 @@ func (controller *PostObject) HandleCompleteMultipartUpload(w http.ResponseWrite
 		_ = o.EncodeError(w, req, err, gatewayErrors.Codes.ToAPIErr(gatewayErrors.ErrInternalError))
 		return
 	}
+
+	if o.StorageAccountant != nil {
+		if owner, repoName, splitErr := stats.SplitNamespacedRepo(o.Repository.Name); splitErr == nil {
+			o.StorageAccountant.Add(req.Context(), owner, repoName, contentLength)
+		}
+	}
+
 	err = o.MultipartTracker.Delete(req.Context(), uploadID)
 	if err != nil {
 		o.Log(req).WithError(err).Warn("could not delete multipart record")

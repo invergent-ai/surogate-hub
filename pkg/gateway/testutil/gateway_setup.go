@@ -25,18 +25,34 @@ import (
 )
 
 type Dependencies struct {
-	blocks  block.Adapter
-	auth    *FakeAuthService
-	catalog *catalog.Catalog
+	blocks            block.Adapter
+	auth              *FakeAuthService
+	catalog           *catalog.Catalog
+	KVStore           kv.Store
+	StorageAccountant *stats.StorageAccountant
+	QuotaChecker      *stats.QuotaChecker
 }
 
-func GetBasicHandler(t *testing.T, authService *FakeAuthService, repoName string) (http.Handler, *Dependencies) {
+// SetupOption mutates the dependencies before the gateway handler is constructed. Use
+// WithStorageAccountant to opt-in to per-user byte counting and quota enforcement during tests.
+type SetupOption func(*Dependencies)
+
+// WithStorageAccountant installs a real StorageAccountant and QuotaChecker on the dependencies so
+// the gateway handler will count uploads and enforce quotas.
+func WithStorageAccountant() SetupOption {
+	return func(d *Dependencies) {
+		d.StorageAccountant = stats.NewStorageAccountant(d.KVStore)
+		d.QuotaChecker = stats.NewQuotaChecker(d.KVStore)
+	}
+}
+
+func GetBasicHandler(t *testing.T, authService *FakeAuthService, repoName string, opts ...SetupOption) (http.Handler, *Dependencies) {
 	ctx := context.Background()
 	viper.Set(config.BlockstoreTypeKey, block.BlockstoreTypeMem)
 
 	store, err := kv.Open(ctx, kvparams.Config{Type: "mem"})
 	testutil.MustDo(t, "open kv store", err)
-	defer store.Close()
+	t.Cleanup(store.Close)
 	multipartTracker := multipart.NewTracker(store)
 
 	blockstoreType, _ := os.LookupEnv(testutil.EnvKeyUseBlockAdapter)
@@ -64,13 +80,19 @@ func GetBasicHandler(t *testing.T, authService *FakeAuthService, repoName string
 	_, err = c.CreateRepository(ctx, repoName, "", storageNamespace, "main", false)
 	testutil.Must(t, err)
 
-	handler := gateway.NewHandler(authService.Region, c, multipartTracker, blockAdapter, authService, []string{authService.BareDomain}, &stats.NullCollector{}, upload.DefaultPathProvider, nil, config.DefaultLoggingAuditLogLevel, true, false, false)
-
-	return handler, &Dependencies{
+	deps := &Dependencies{
 		blocks:  blockAdapter,
 		auth:    authService,
 		catalog: c,
+		KVStore: store,
 	}
+	for _, opt := range opts {
+		opt(deps)
+	}
+
+	handler := gateway.NewHandler(authService.Region, c, multipartTracker, blockAdapter, authService, []string{authService.BareDomain}, &stats.NullCollector{}, upload.DefaultPathProvider, nil, config.DefaultLoggingAuditLogLevel, true, false, false, deps.StorageAccountant, deps.QuotaChecker)
+
+	return handler, deps
 }
 
 type FakeAuthService struct {

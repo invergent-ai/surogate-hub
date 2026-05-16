@@ -34,4 +34,5 @@ surogate_hub_sdk/xet.py
 surogate_hub_sdk/xet_objects_api.py
 test/test_parquet.py
 test/test_stats.py
+test/test_storage_usage.py
 test/test_xet_*.py

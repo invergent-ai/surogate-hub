@@ -140,7 +140,9 @@ func EnrichWithOperation(sc *ServerContext, next http.Handler) http.Handler {
 					Client:     client,
 				})
 			},
-			PathProvider: sc.pathProvider,
+			PathProvider:      sc.pathProvider,
+			StorageAccountant: sc.storageAccountant,
+			QuotaChecker:      sc.quotaChecker,
 		}
 		next.ServeHTTP(w, req.WithContext(context.WithValue(ctx, ContextKeyOperation, o)))
 	})

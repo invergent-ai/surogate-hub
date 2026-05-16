@@ -39,6 +39,7 @@ import (
 	"github.com/invergent-ai/surogate-hub/pkg/kv/mem"
 	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	"github.com/invergent-ai/surogate-hub/pkg/stats"
+	"github.com/invergent-ai/surogate-hub/pkg/stats/storagewiring"
 	"github.com/invergent-ai/surogate-hub/pkg/testutil"
 	"github.com/invergent-ai/surogate-hub/pkg/upload"
 	"github.com/invergent-ai/surogate-hub/pkg/version"
@@ -53,11 +54,51 @@ const (
 )
 
 type dependencies struct {
-	blocks      block.Adapter
-	catalog     *catalog.Catalog
-	authService auth.Service
-	collector   *memCollector
-	server      *httptest.Server
+	blocks                block.Adapter
+	catalog               *catalog.Catalog
+	authService           auth.Service
+	collector             *memCollector
+	server                *httptest.Server
+	kvStore               kv.Store
+	storageAccountant     *stats.StorageAccountant
+	quotaChecker          *stats.QuotaChecker
+	storageReconciler     *stats.StorageReconciler
+	storageNamespaceSizer *fakeNamespaceSizer
+}
+
+// setupOption tweaks the dependencies before api.Serve is constructed.
+type setupOption func(*dependencies)
+
+// fakeNamespaceSizer is a NamespaceSizer that returns a fixed total per namespace, defaulting to
+// zero. Tests that need to simulate "real bytes on disk" can populate `sizes` keyed by
+// storageNamespace. This sidesteps the mem block adapter's lack of a working GetWalker.
+type fakeNamespaceSizer struct {
+	sizes map[string]int64
+}
+
+func (f *fakeNamespaceSizer) NamespaceSize(_ context.Context, _ string, storageNamespace string) (int64, error) {
+	if f.sizes == nil {
+		return 0, nil
+	}
+	return f.sizes[storageNamespace], nil
+}
+
+// withStorageAccountant installs a real StorageAccountant, QuotaChecker, and StorageReconciler on
+// the test dependencies, so the controller will count uploads, enforce quotas, and the test can
+// drive RunOnce to verify drift correction. The reconciler uses a fake namespace sizer (default:
+// always-zero) because the mem block adapter does not support GetWalker.
+func withStorageAccountant() setupOption {
+	return func(d *dependencies) {
+		d.storageAccountant = stats.NewStorageAccountant(d.kvStore)
+		d.quotaChecker = stats.NewQuotaChecker(d.kvStore)
+		d.storageNamespaceSizer = &fakeNamespaceSizer{}
+		d.storageReconciler = stats.NewStorageReconciler(
+			d.kvStore,
+			&storagewiring.CatalogRepoLister{Catalog: d.catalog},
+			d.storageNamespaceSizer,
+			d.storageAccountant,
+		)
+	}
 }
 
 // memCollector in-memory collector stores events and metadata sent
@@ -135,7 +176,7 @@ func createUserWithDefaultGroup(t testing.TB, clt apigen.ClientWithResponsesInte
 	}
 }
 
-func setupHandler(t testing.TB) (http.Handler, *dependencies) {
+func setupHandler(t testing.TB, opts ...setupOption) (http.Handler, *dependencies) {
 	t.Helper()
 	ctx := context.Background()
 
@@ -196,14 +237,20 @@ func setupHandler(t testing.TB) (http.Handler, *dependencies) {
 	auditChecker := version.NewDefaultAuditChecker(cfg.Security.AuditCheckURL, "", nil)
 
 	authenticationService := authentication.NewDummyService()
-	handler := api.Serve(cfg, c, authenticator, authService, authenticationService, c.BlockAdapter, meta, migrator, collector, nil, actionsService, auditChecker, logging.ContextUnavailable(), nil, upload.DefaultPathProvider, stats.DefaultUsageReporter)
 
-	return handler, &dependencies{
+	deps := &dependencies{
 		blocks:      c.BlockAdapter,
 		authService: authService,
 		catalog:     c,
 		collector:   collector,
+		kvStore:     kvStore,
 	}
+	for _, opt := range opts {
+		opt(deps)
+	}
+
+	handler := api.Serve(cfg, c, authenticator, authService, authenticationService, c.BlockAdapter, meta, migrator, collector, nil, actionsService, auditChecker, logging.ContextUnavailable(), nil, upload.DefaultPathProvider, stats.DefaultUsageReporter, deps.storageAccountant, deps.quotaChecker)
+	return handler, deps
 }
 
 func setupClientByEndpoint(t testing.TB, endpointURL string, accessKeyID, secretAccessKey string, opts ...apigen.ClientOption) apigen.ClientWithResponsesInterface {
@@ -245,15 +292,37 @@ func shouldUseServerTimeout() bool {
 	return withServerTimeout
 }
 
-func setupClientWithAdmin(t testing.TB) (apigen.ClientWithResponsesInterface, *dependencies) {
+func setupClientWithAdmin(t testing.TB, opts ...setupOption) (apigen.ClientWithResponsesInterface, *dependencies) {
 	t.Helper()
-	handler, deps := setupHandler(t)
+	handler, deps := setupHandler(t, opts...)
 	server := setupServer(t, handler)
 	deps.server = server
 	clt := setupClientByEndpoint(t, server.URL, "", "")
 	cred := createDefaultAdminUser(t, clt)
 	clt = setupClientByEndpoint(t, server.URL, cred.AccessKeyID, cred.SecretAccessKey)
 	return clt, deps
+}
+
+// clientAs creates a non-admin user with the given username via the admin HTTP API and returns
+// an HTTP client authenticated as that user. The user is attached to whatever default group the
+// admin setup created, which carries no fs:*/auth:* permissions — so the user can read its own
+// resources via the self-serve short-circuit but cannot read other users' or perform admin
+// actions.
+//
+// adminClt must be the client returned by setupClientWithAdmin.
+func clientAs(t testing.TB, adminClt apigen.ClientWithResponsesInterface, deps *dependencies, username string) apigen.ClientWithResponsesInterface {
+	t.Helper()
+	ctx := context.Background()
+	createUsrRes, err := adminClt.CreateUserWithResponse(ctx, apigen.CreateUserJSONRequestBody{
+		Id:         username,
+		InviteUser: swag.Bool(false),
+	})
+	require.NoError(t, err)
+	require.NotNilf(t, createUsrRes.JSON201, "CreateUser returned status=%s body=%s", createUsrRes.HTTPResponse.Status, string(createUsrRes.Body))
+	createCredsRes, err := adminClt.CreateCredentialsWithResponse(ctx, createUsrRes.JSON201.Id)
+	require.NoError(t, err)
+	require.NotNilf(t, createCredsRes.JSON201, "CreateCredentials returned status=%s body=%s", createCredsRes.HTTPResponse.Status, string(createCredsRes.Body))
+	return setupClientByEndpoint(t, deps.server.URL, createCredsRes.JSON201.AccessKeyId, createCredsRes.JSON201.SecretAccessKey)
 }
 
 func setupXETHandler(t testing.TB) (http.Handler, *dependencies) {

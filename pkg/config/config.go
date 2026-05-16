@@ -548,6 +548,16 @@ type BaseConfig struct {
 		Enabled       bool          `mapstructure:"enabled"`
 		FlushInterval time.Duration `mapstructure:"flush_interval"`
 	} `mapstructure:"usage_report"`
+	StorageUsage struct {
+		Enabled           bool `mapstructure:"enabled"`
+		StorageAccountant struct {
+			FlushInterval time.Duration `mapstructure:"flush_interval"`
+		} `mapstructure:"storage_accountant"`
+		StorageReconciler struct {
+			Interval    time.Duration `mapstructure:"interval"`
+			Concurrency int           `mapstructure:"concurrency"`
+		} `mapstructure:"storage_reconciler"`
+	} `mapstructure:"storage_usage"`
 	CORS struct {
 		AllowedOrigins []string `mapstructure:"allowed_origins"`
 	} `mapstructure:"cors"`
