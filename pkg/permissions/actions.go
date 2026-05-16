@@ -40,6 +40,7 @@ const (
 	ListTagsAction                            = "fs:ListTags"
 	ReadConfigAction                          = "fs:ReadConfig"
 	ReadUserAction                            = "auth:ReadUser"
+	WriteUserAction                           = "auth:WriteUser"
 	CreateUserAction                          = "auth:CreateUser"
 	DeleteUserAction                          = "auth:DeleteUser"
 	ListUsersAction                           = "auth:ListUsers"
