@@ -122,6 +122,9 @@ docs/UsageReport.md
 docs/User.md
 docs/UserCreation.md
 docs/UserList.md
+docs/UserQuota.md
+docs/UserStorage.md
+docs/UserStorageRepo.md
 docs/VersionConfig.md
 pyproject.toml
 requirements.txt
@@ -257,6 +260,9 @@ surogate_hub_sdk/models/usage_report.py
 surogate_hub_sdk/models/user.py
 surogate_hub_sdk/models/user_creation.py
 surogate_hub_sdk/models/user_list.py
+surogate_hub_sdk/models/user_quota.py
+surogate_hub_sdk/models/user_storage.py
+surogate_hub_sdk/models/user_storage_repo.py
 surogate_hub_sdk/models/version_config.py
 surogate_hub_sdk/py.typed
 surogate_hub_sdk/rest.py
@@ -384,5 +390,8 @@ test/test_usage_report.py
 test/test_user.py
 test/test_user_creation.py
 test/test_user_list.py
+test/test_user_quota.py
+test/test_user_storage.py
+test/test_user_storage_repo.py
 test/test_version_config.py
 tox.ini

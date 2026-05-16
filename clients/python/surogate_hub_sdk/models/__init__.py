@@ -119,5 +119,8 @@ from surogate_hub_sdk.models.usage_report import UsageReport
 from surogate_hub_sdk.models.user import User
 from surogate_hub_sdk.models.user_creation import UserCreation
 from surogate_hub_sdk.models.user_list import UserList
+from surogate_hub_sdk.models.user_quota import UserQuota
+from surogate_hub_sdk.models.user_storage import UserStorage
+from surogate_hub_sdk.models.user_storage_repo import UserStorageRepo
 from surogate_hub_sdk.models.version_config import VersionConfig
 

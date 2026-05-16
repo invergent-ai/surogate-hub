@@ -138,6 +138,7 @@ Class | Method | HTTP request | Description
 *AuthApi* | [**delete_policy**](docs/AuthApi.md#delete_policy) | **DELETE** /auth/policies/{policyId} | delete policy
 *AuthApi* | [**delete_user**](docs/AuthApi.md#delete_user) | **DELETE** /auth/users/{userId} | delete user
 *AuthApi* | [**delete_user_external_principal**](docs/AuthApi.md#delete_user_external_principal) | **DELETE** /auth/users/{userId}/external/principals | delete external principal from user
+*AuthApi* | [**delete_user_quota**](docs/AuthApi.md#delete_user_quota) | **DELETE** /auth/users/{userId}/quota | clear a user&#39;s storage quota
 *AuthApi* | [**detach_policy_from_group**](docs/AuthApi.md#detach_policy_from_group) | **DELETE** /auth/groups/{groupId}/policies/{policyId} | detach policy from group
 *AuthApi* | [**detach_policy_from_user**](docs/AuthApi.md#detach_policy_from_user) | **DELETE** /auth/users/{userId}/policies/{policyId} | detach policy from user
 *AuthApi* | [**external_principal_login**](docs/AuthApi.md#external_principal_login) | **POST** /auth/external/principal/login | perform a login using an external authenticator
@@ -148,6 +149,7 @@ Class | Method | HTTP request | Description
 *AuthApi* | [**get_group_acl**](docs/AuthApi.md#get_group_acl) | **GET** /auth/groups/{groupId}/acl | get ACL of group
 *AuthApi* | [**get_policy**](docs/AuthApi.md#get_policy) | **GET** /auth/policies/{policyId} | get policy
 *AuthApi* | [**get_user**](docs/AuthApi.md#get_user) | **GET** /auth/users/{userId} | get user
+*AuthApi* | [**get_user_storage**](docs/AuthApi.md#get_user_storage) | **GET** /auth/users/{userId}/storage | get a user&#39;s storage usage and quota
 *AuthApi* | [**list_group_members**](docs/AuthApi.md#list_group_members) | **GET** /auth/groups/{groupId}/members | list group members
 *AuthApi* | [**list_group_policies**](docs/AuthApi.md#list_group_policies) | **GET** /auth/groups/{groupId}/policies | list group policies
 *AuthApi* | [**list_groups**](docs/AuthApi.md#list_groups) | **GET** /auth/groups | list groups
@@ -159,6 +161,7 @@ Class | Method | HTTP request | Description
 *AuthApi* | [**list_users**](docs/AuthApi.md#list_users) | **GET** /auth/users | list users
 *AuthApi* | [**login**](docs/AuthApi.md#login) | **POST** /auth/login | perform a login
 *AuthApi* | [**set_group_acl**](docs/AuthApi.md#set_group_acl) | **POST** /auth/groups/{groupId}/acl | set ACL of group
+*AuthApi* | [**set_user_quota**](docs/AuthApi.md#set_user_quota) | **PUT** /auth/users/{userId}/quota | set a user&#39;s storage quota
 *AuthApi* | [**update_policy**](docs/AuthApi.md#update_policy) | **PUT** /auth/policies/{policyId} | update policy
 *BranchesApi* | [**cherry_pick**](docs/BranchesApi.md#cherry_pick) | **POST** /repositories/{user}/{repository}/branches/{branch}/cherry-pick | Replay the changes from the given commit on the branch
 *BranchesApi* | [**create_branch**](docs/BranchesApi.md#create_branch) | **POST** /repositories/{user}/{repository}/branches | create branch
@@ -374,6 +377,9 @@ Class | Method | HTTP request | Description
  - [User](docs/User.md)
  - [UserCreation](docs/UserCreation.md)
  - [UserList](docs/UserList.md)
+ - [UserQuota](docs/UserQuota.md)
+ - [UserStorage](docs/UserStorage.md)
+ - [UserStorageRepo](docs/UserStorageRepo.md)
  - [VersionConfig](docs/VersionConfig.md)
 
 
