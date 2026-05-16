@@ -27,8 +27,8 @@
 - [x] Task 12: Counter maintenance on repo create/delete
 - [x] Task 13: `GET /auth/users/{userId}/storage`
 - [x] Task 14: `PUT/DELETE /auth/users/{userId}/quota` (folded into Task 13 commit)
-- [ ] Task 15: Quota enforcement on upload paths
-- [ ] Task 16: End-to-end and drift tests
+- [x] Task 15: Quota enforcement on upload paths (UploadObject + CompletePresignMultipartUpload + gateway handlePut + HandleCompleteMultipartUpload)
+- [ ] Task 16: End-to-end and drift tests *(in progress)*
 - [x] Task 16.5: Document omitted delete hooks *(folded into Task 2)*
 - [ ] Task 17: User-facing docs
 - [ ] Acceptance: `go vet ./...` + `go test ./...` green

@@ -447,6 +447,13 @@ func (c *Controller) CompletePresignMultipartUpload(w http.ResponseWriter, r *ht
 			c.StorageAccountant.Add(ctx, ownerSlug, repoName, mpuResp.ContentLength)
 		}
 	}
+	// Quota enforcement at completion: the parts are already physically uploaded by the time we
+	// observe the final size. Bytes briefly over quota will be reclaimed by GC if the entry is
+	// not retained (rejecting here aborts the catalog-side commit only; the soft-check semantic
+	// in the spec accepts this transient overage).
+	if !c.checkStorageQuota(w, r, owner, mpuResp.ContentLength) {
+		return
+	}
 
 	metadata := apigen.ObjectUserMetadata{AdditionalProperties: entry.Metadata}
 	response := apigen.ObjectStats{
@@ -3556,6 +3563,10 @@ func (c *Controller) UploadObject(w http.ResponseWriter, r *http.Request, owner,
 		return
 	}
 
+	if !c.checkStorageQuota(w, r, owner, r.ContentLength) {
+		return
+	}
+
 	// before writing body, ensure preconditions - this means we essentially check for object existence twice:
 	// once before uploading the body to save resources and time,
 	//	and then graveler will check again when passed a SetOptions.
@@ -6188,6 +6199,40 @@ func (c *Controller) authorizeCallback(w http.ResponseWriter, r *http.Request, p
 
 func (c *Controller) authorize(w http.ResponseWriter, r *http.Request, perms permissions.Node) bool {
 	return c.authorizeCallback(w, r, perms, writeError)
+}
+
+// checkStorageQuota verifies that an upload of contentLength bytes can fit under the configured
+// quota for owner. It writes the rejection response and returns false when the upload would
+// exceed quota; on allow, it returns true and writes nothing. When the QuotaChecker is not
+// configured (storage_usage.enabled = false) every request is allowed.
+//
+// Reject status codes:
+//   - 413 Request Entity Too Large — would exceed quota at the soft-check
+//   - 411 Length Required          — content length unknown and quota is set
+//
+// The response body is a JSON object with `error`, `quota_bytes`, and `bytes_used`.
+func (c *Controller) checkStorageQuota(w http.ResponseWriter, r *http.Request, owner string, contentLength int64) bool {
+	if c.QuotaChecker == nil {
+		return true
+	}
+	dec, err := c.QuotaChecker.Allow(r.Context(), owner, contentLength)
+	if err != nil {
+		writeError(w, r, http.StatusInternalServerError, err.Error())
+		return false
+	}
+	if dec.Allowed {
+		return true
+	}
+	status := http.StatusRequestEntityTooLarge
+	if dec.Reason == stats.QuotaReasonUnknownSize {
+		status = http.StatusLengthRequired
+	}
+	writeResponse(w, r, status, map[string]interface{}{
+		"error":       "storage quota exceeded",
+		"quota_bytes": dec.QuotaBytes,
+		"bytes_used":  dec.BytesUsed,
+	})
+	return false
 }
 
 func (c *Controller) isNameValid(name, nameType string) (bool, string) {

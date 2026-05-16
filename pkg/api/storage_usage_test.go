@@ -264,6 +264,54 @@ func TestDeleteUserQuota_AbsentIsIdempotent(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, resp.StatusCode())
 }
 
+func TestUploadObject_RejectedOverQuota(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	const owner, repoName, branch = "alice", "training", "main"
+	repoID := owner + "/" + repoName
+	_, err := deps.catalog.CreateRepository(ctx, repoID, "", onBlock(deps, repoID), branch, false)
+	require.NoError(t, err)
+	// quota=10, already used 8.
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey(owner), []byte("10")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey(owner), []byte("8")))
+
+	status := uploadObjectMultipart(t, ctx, clt, repoID, branch, "obj1", "hello") // 5 bytes ⇒ 13 > 10
+	require.Equal(t, http.StatusRequestEntityTooLarge, status)
+
+	// Counter unchanged because upload rejected before WriteBlob.
+	got, err := deps.kvStore.Get(ctx, stats.StoragePartition, stats.StorageUserKey(owner))
+	require.NoError(t, err)
+	require.Equal(t, "8", string(got.Value))
+}
+
+func TestUploadObject_AllowedUnderQuota(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	const owner, repoName, branch = "alice", "training", "main"
+	repoID := owner + "/" + repoName
+	_, err := deps.catalog.CreateRepository(ctx, repoID, "", onBlock(deps, repoID), branch, false)
+	require.NoError(t, err)
+	// The HTTP path uses Content-Length of the multipart envelope (which is larger than the file
+	// payload itself); use a generous quota so the envelope still fits.
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey(owner), []byte("10000")))
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey(owner), []byte("0")))
+
+	status := uploadObjectMultipart(t, ctx, clt, repoID, branch, "obj1", "hello world")
+	require.Equal(t, http.StatusCreated, status)
+}
+
+func TestUploadObject_UnlimitedWhenNoQuotaSet(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	const owner, repoName, branch = "alice", "training", "main"
+	repoID := owner + "/" + repoName
+	_, err := deps.catalog.CreateRepository(ctx, repoID, "", onBlock(deps, repoID), branch, false)
+	require.NoError(t, err)
+
+	status := uploadObjectMultipart(t, ctx, clt, repoID, branch, "obj1", "hello world")
+	require.Equal(t, http.StatusCreated, status)
+}
+
 func TestCopyObject_DoesNotDoubleCount(t *testing.T) {
 	// CopyObject reuses the source physical address inside the same repo, so the per-repo
 	// allocated-bytes counter must not increase.

@@ -146,6 +146,11 @@ func (controller *PostObject) HandleCompleteMultipartUpload(w http.ResponseWrite
 	}
 	checksum := strings.Split(resp.ETag, "-")[0]
 	contentLength := resp.ContentLength
+	// Soft quota check at completion: the parts are already on disk; rejecting here only prevents
+	// us from committing the entry. GC will reclaim the orphan parts.
+	if !o.checkStorageQuota(w, req, contentLength) {
+		return
+	}
 	err = o.finishUpload(req, resp.MTime, checksum, objName, contentLength, true, multiPart.Metadata, multiPart.ContentType, allowOverwrite)
 	if errors.Is(err, graveler.ErrPreconditionFailed) {
 		_ = o.EncodeError(w, req, err, gatewayErrors.Codes.ToAPIErr(gatewayErrors.ErrPreconditionFailed))

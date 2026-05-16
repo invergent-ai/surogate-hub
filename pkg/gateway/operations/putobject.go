@@ -305,6 +305,9 @@ func (controller *PutObject) Handle(w http.ResponseWriter, req *http.Request, o 
 
 func handlePut(w http.ResponseWriter, req *http.Request, o *PathOperation) {
 	o.Incr("put_object", o.Principal, o.Repository.Name, o.Reference)
+	if !o.checkStorageQuota(w, req, req.ContentLength) {
+		return
+	}
 	storageClass := StorageClassFromHeader(req.Header)
 	opts := block.PutOpts{StorageClass: storageClass}
 	// check and validate whether if-none-match header provided

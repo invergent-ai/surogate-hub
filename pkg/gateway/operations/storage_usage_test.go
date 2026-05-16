@@ -128,3 +128,21 @@ func TestGatewayHandlePut_NoAccountantStillSucceeds(t *testing.T) {
 	rec := putPayload(t, op, []byte("hello"))
 	require.Equal(t, http.StatusOK, rec.Code, "body=%s", rec.Body.String())
 }
+
+func TestGatewayHandlePut_RejectsOverQuota(t *testing.T) {
+	const owner, name = "alice", "training"
+	store, accountant, op := gatewayTestStore(t, owner, name, true)
+	// Set quota=8, usage=5, then attempt to upload 10 more bytes (5+10 > 8).
+	ctx := context.Background()
+	quoter := stats.NewQuotaChecker(store)
+	require.NoError(t, quoter.SetQuota(ctx, owner, 8))
+	require.NoError(t, store.Set(ctx, stats.StoragePartition, stats.StorageUserKey(owner), []byte("5")))
+	// Replace the operation's QuotaChecker so it reads from the same store.
+	op.QuotaChecker = quoter
+
+	rec := putPayload(t, op, []byte("0123456789"))
+	require.Equal(t, http.StatusBadRequest, rec.Code, "expected 4xx quota error, body=%s", rec.Body.String())
+	// Verify nothing landed in the counter (no flush either since the request was rejected).
+	require.NoError(t, accountant.Flush(ctx))
+	require.Equal(t, int64(5), readGatewayCounter(t, store, stats.StorageUserKey(owner)))
+}
