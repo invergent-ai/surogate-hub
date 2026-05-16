@@ -15,8 +15,8 @@
 ## Execution Status
 
 - [x] Task 1: KV key helpers (`pkg/stats/storage_keys.go`)
-- [ ] Task 2: `StorageAccountant` *(in progress)*
-- [ ] Task 3: `QuotaChecker`
+- [x] Task 2: `StorageAccountant` (also folds in `DeleteRepo`, `InitRepo`, and the Task 16.5 doc comment)
+- [ ] Task 3: `QuotaChecker` *(in progress)*
 - [ ] Task 4: `auth:WriteUser` permission
 - [ ] Task 5: `storage_usage` config block
 - [ ] Task 6: `StorageReconciler`
@@ -29,7 +29,7 @@
 - [ ] Task 14: `PUT/DELETE /auth/users/{userId}/quota`
 - [ ] Task 15: Quota enforcement on upload paths
 - [ ] Task 16: End-to-end and drift tests
-- [ ] Task 16.5: Document omitted delete hooks
+- [x] Task 16.5: Document omitted delete hooks *(folded into Task 2)*
 - [ ] Task 17: User-facing docs
 - [ ] Acceptance: `go vet ./...` + `go test ./...` green
 
