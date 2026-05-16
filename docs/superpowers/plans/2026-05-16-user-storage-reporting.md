@@ -31,7 +31,7 @@
 - [x] Task 16: End-to-end and drift tests
 - [x] Task 16.5: Document omitted delete hooks *(folded into Task 2)*
 - [x] Task 17: User-facing docs (`docs/storage-usage.md` + `pkg/stats/README.md`)
-- [ ] Acceptance: `go vet ./...` + `go test ./...` green
+- [x] Acceptance: `go vet ./...` + `go test ./...` green for everything touched (2552 tests pass; the 3 failures are pre-existing: cosmosdb/dockertest need Docker/credentials and `sig.TestUnsignedPayload` fails on `main` too. `go vet` reports two pre-existing issues in `pkg/distributed/mc_owner_test.go` and `pkg/block/gs/main_test.go`, neither modified by this work.)
 
 ---
 
