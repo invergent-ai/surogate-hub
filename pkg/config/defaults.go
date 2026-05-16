@@ -176,4 +176,9 @@ func setBaseDefaults(cfgType string) {
 	viper.SetDefault("xet.gc.min_age", 24*time.Hour)
 
 	viper.SetDefault("usage_report.flush_interval", 5*time.Minute)
+
+	viper.SetDefault("storage_usage.enabled", false)
+	viper.SetDefault("storage_usage.storage_accountant.flush_interval", 5*time.Second)
+	viper.SetDefault("storage_usage.storage_reconciler.interval", time.Hour)
+	viper.SetDefault("storage_usage.storage_reconciler.concurrency", 4)
 }

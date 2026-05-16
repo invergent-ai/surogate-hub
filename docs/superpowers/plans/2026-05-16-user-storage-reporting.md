@@ -18,8 +18,8 @@
 - [x] Task 2: `StorageAccountant` (also folds in `DeleteRepo`, `InitRepo`, and the Task 16.5 doc comment)
 - [x] Task 3: `QuotaChecker`
 - [x] Task 4: `auth:WriteUser` permission
-- [ ] Task 5: `storage_usage` config block *(in progress)*
-- [ ] Task 6: `StorageReconciler`
+- [x] Task 5: `storage_usage` config block
+- [ ] Task 6: `StorageReconciler` *(in progress)*
 - [ ] Task 7: Catalog + block-adapter wiring
 - [ ] Task 8 + 8.5 + 9: Runtime + test-fixture wiring
 - [ ] Task 10: Accountant hooks in API upload paths
