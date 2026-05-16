@@ -101,6 +101,23 @@ shubConfig: |
     type: local
   blockstore:
     type: local
+  # Per-user storage reporting and quota enforcement.
+  #
+  # When enabled the server tracks how many bytes each user's repositories occupy in block
+  # storage, exposes the figure (plus the admin-set quota) via three endpoints under
+  # /auth/users/{userId}, and rejects uploads that would exceed a configured quota.
+  #
+  # When disabled (default) those endpoints return 503 Service Unavailable and the upload
+  # paths skip the quota check entirely. See docs/storage-usage.md for the API surface and
+  # operator notes (including the quota_bytes=0 hard-block caveat).
+  #
+  # storage_usage:
+  #   enabled: false
+  #   storage_accountant:
+  #     flush_interval: 5s
+  #   storage_reconciler:
+  #     interval: 1h
+  #     concurrency: 4
 
 # yamllint disable rule:comments
 
