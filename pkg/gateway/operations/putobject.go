@@ -16,6 +16,7 @@ import (
 	"github.com/invergent-ai/surogate-hub/pkg/httputil"
 	"github.com/invergent-ai/surogate-hub/pkg/logging"
 	"github.com/invergent-ai/surogate-hub/pkg/permissions"
+	"github.com/invergent-ai/surogate-hub/pkg/stats"
 	"github.com/invergent-ai/surogate-hub/pkg/upload"
 )
 
@@ -356,6 +357,13 @@ func handlePut(w http.ResponseWriter, req *http.Request, o *PathOperation) {
 		_ = o.EncodeError(w, req, err, gatewayErrors.Codes.ToAPIErr(gatewayErrors.ErrInternalError))
 		return
 	}
+
+	if o.StorageAccountant != nil {
+		if owner, repoName, splitErr := stats.SplitNamespacedRepo(o.Repository.Name); splitErr == nil {
+			o.StorageAccountant.Add(req.Context(), owner, repoName, blob.Size)
+		}
+	}
+
 	o.SetHeader(w, "ETag", httputil.ETag(blob.Checksum))
 	w.WriteHeader(http.StatusOK)
 }

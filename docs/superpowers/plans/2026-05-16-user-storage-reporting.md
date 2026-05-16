@@ -23,8 +23,8 @@
 - [x] Task 7: Catalog + block-adapter wiring (moved to `pkg/stats/storagewiring` to avoid import cycle with block/s3 → stats)
 - [x] Task 8 + 8.5 + 9: Runtime + test-fixture wiring
 - [x] Task 10: Accountant hooks in API upload paths (UploadObject + CompletePresignMultipartUpload; CopyObject deliberately no-op)
-- [ ] Task 11: Accountant hooks in gateway upload paths *(in progress)*
-- [ ] Task 12: Counter maintenance on repo create/delete
+- [x] Task 11: Accountant hooks in gateway upload paths (handlePut + HandleCompleteMultipartUpload)
+- [ ] Task 12: Counter maintenance on repo create/delete *(in progress)*
 - [ ] Task 13: `GET /auth/users/{userId}/storage`
 - [ ] Task 14: `PUT/DELETE /auth/users/{userId}/quota`
 - [ ] Task 15: Quota enforcement on upload paths
