@@ -43,7 +43,7 @@
   value: 'postgres://shub:shub@postgres-server:5432/postgres?sslmode=disable'
 {{- end }}
 {{- if .Values.extraEnvVars }}
-{{- toYaml .Values.extraEnvVars }}
+{{ toYaml .Values.extraEnvVars }}
 {{- end }}
 {{- end }}
 
