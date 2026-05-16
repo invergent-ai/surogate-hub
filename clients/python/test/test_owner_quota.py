@@ -15,10 +15,10 @@
 
 import unittest
 
-from surogate_hub_sdk.models.user_quota import UserQuota
+from surogate_hub_sdk.models.owner_quota import OwnerQuota
 
-class TestUserQuota(unittest.TestCase):
-    """UserQuota unit test stubs"""
+class TestOwnerQuota(unittest.TestCase):
+    """OwnerQuota unit test stubs"""
 
     def setUp(self):
         pass
@@ -26,26 +26,26 @@ class TestUserQuota(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def make_instance(self, include_optional) -> UserQuota:
-        """Test UserQuota
+    def make_instance(self, include_optional) -> OwnerQuota:
+        """Test OwnerQuota
             include_optional is a boolean, when False only required
             params are included, when True both required and
             optional params are included """
-        # uncomment below to create an instance of `UserQuota`
+        # uncomment below to create an instance of `OwnerQuota`
         """
-        model = UserQuota()
+        model = OwnerQuota()
         if include_optional:
-            return UserQuota(
+            return OwnerQuota(
                 quota_bytes = 0
             )
         else:
-            return UserQuota(
+            return OwnerQuota(
                 quota_bytes = 0,
         )
         """
 
-    def testUserQuota(self):
-        """Test UserQuota"""
+    def testOwnerQuota(self):
+        """Test OwnerQuota"""
         # inst_req_only = self.make_instance(include_optional=False)
         # inst_req_and_optional = self.make_instance(include_optional=True)
 

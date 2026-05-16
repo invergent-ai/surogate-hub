@@ -33,7 +33,7 @@ func TestStorageUsage_EndToEnd(t *testing.T) {
 	require.NoError(t, deps.storageAccountant.Flush(ctx))
 
 	// Through the public API: GET /auth/users/alice/storage.
-	resp, err := clt.GetUserStorageWithResponse(ctx, owner)
+	resp, err := clt.GetOwnerStorageWithResponse(ctx, owner)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode())
 	require.Equal(t, expected, resp.JSON200.BytesUsed)
@@ -137,7 +137,7 @@ func TestStorageUsage_MultiRepoBreakdown(t *testing.T) {
 	}
 	require.NoError(t, deps.storageAccountant.Flush(ctx))
 
-	resp, err := clt.GetUserStorageWithResponse(ctx, owner)
+	resp, err := clt.GetOwnerStorageWithResponse(ctx, owner)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode())
 	require.Len(t, resp.JSON200.Repositories, 2)
@@ -162,7 +162,7 @@ func TestStorageUsage_AfterReconcilerIsEstimateFalse(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, deps.storageReconciler.RunOnce(ctx))
 
-	resp, err := clt.GetUserStorageWithResponse(ctx, owner)
+	resp, err := clt.GetOwnerStorageWithResponse(ctx, owner)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode())
 	require.False(t, resp.JSON200.IsEstimate)

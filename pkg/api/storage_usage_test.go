@@ -123,7 +123,7 @@ func TestDeleteRepository_DropsCounterAndDecrementsUserTotal(t *testing.T) {
 	require.Equal(t, int64(0), readInt64KV(t, deps.kvStore, stats.StorageUserKey(owner)))
 }
 
-func TestGetUserStorage_SelfReadsOwnCounter(t *testing.T) {
+func TestGetOwnerStorage_SelfReadsOwnCounter(t *testing.T) {
 	ctx := context.Background()
 	adminClt, deps := setupClientWithAdmin(t, withStorageAccountant())
 	aliceClt := clientAs(t, adminClt, deps, "alice")
@@ -131,7 +131,7 @@ func TestGetUserStorage_SelfReadsOwnCounter(t *testing.T) {
 	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "training"), []byte("1000")))
 	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageRepoKey("alice", "evals"), []byte("234")))
 
-	resp, err := aliceClt.GetUserStorageWithResponse(ctx, "alice")
+	resp, err := aliceClt.GetOwnerStorageWithResponse(ctx, "alice")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode())
 	require.NotNil(t, resp.JSON200)
@@ -140,40 +140,40 @@ func TestGetUserStorage_SelfReadsOwnCounter(t *testing.T) {
 	require.True(t, resp.JSON200.IsEstimate, "no reconciler pass yet")
 }
 
-func TestGetUserStorage_NonSelfRequiresReadUser(t *testing.T) {
+func TestGetOwnerStorage_NonSelfRequiresReadUser(t *testing.T) {
 	ctx := context.Background()
 	adminClt, deps := setupClientWithAdmin(t, withStorageAccountant())
 	_ = clientAs(t, adminClt, deps, "alice")
 	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("100")))
 	bobClt := clientAs(t, adminClt, deps, "bob")
 
-	resp, err := bobClt.GetUserStorageWithResponse(ctx, "alice")
+	resp, err := bobClt.GetOwnerStorageWithResponse(ctx, "alice")
 	require.NoError(t, err)
 	// Surogate Hub's authorize() returns 401 for "authenticated but lacks permission" (see
 	// TestController_BranchProtectionRules in controller_test.go and authorizeCallback).
 	require.Equal(t, http.StatusUnauthorized, resp.StatusCode())
 }
 
-func TestGetUserStorage_AdminCanReadOthers(t *testing.T) {
+func TestGetOwnerStorage_AdminCanReadOthers(t *testing.T) {
 	ctx := context.Background()
 	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
 	_ = clientAs(t, clt, deps, "alice")
 	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("100")))
 
-	resp, err := clt.GetUserStorageWithResponse(ctx, "alice")
+	resp, err := clt.GetOwnerStorageWithResponse(ctx, "alice")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode())
 	require.Equal(t, int64(100), resp.JSON200.BytesUsed)
 }
 
-func TestGetUserStorage_IncludesQuotaWhenSet(t *testing.T) {
+func TestGetOwnerStorage_IncludesQuotaWhenSet(t *testing.T) {
 	ctx := context.Background()
 	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
 	_ = clientAs(t, clt, deps, "alice")
 	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("700")))
 	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"), []byte("1000")))
 
-	resp, err := clt.GetUserStorageWithResponse(ctx, "alice")
+	resp, err := clt.GetOwnerStorageWithResponse(ctx, "alice")
 	require.NoError(t, err)
 	require.NotNil(t, resp.JSON200.QuotaBytes)
 	require.Equal(t, int64(1000), *resp.JSON200.QuotaBytes)
@@ -181,25 +181,31 @@ func TestGetUserStorage_IncludesQuotaWhenSet(t *testing.T) {
 	require.Equal(t, int64(300), *resp.JSON200.BytesRemaining)
 }
 
-func TestGetUserStorage_RemainingClampsAtZero(t *testing.T) {
+func TestGetOwnerStorage_RemainingClampsAtZero(t *testing.T) {
 	ctx := context.Background()
 	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
 	_ = clientAs(t, clt, deps, "alice")
 	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageUserKey("alice"), []byte("2000")))
 	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"), []byte("1000")))
 
-	resp, err := clt.GetUserStorageWithResponse(ctx, "alice")
+	resp, err := clt.GetOwnerStorageWithResponse(ctx, "alice")
 	require.NoError(t, err)
 	require.NotNil(t, resp.JSON200.BytesRemaining)
 	require.Equal(t, int64(0), *resp.JSON200.BytesRemaining)
 }
 
-func TestGetUserStorage_UnknownUserReturns404(t *testing.T) {
+// GetUserStorage does NOT 404 on unknown owner namespaces — the URL's userId is the repo
+// owner prefix (which may be a synthetic project workspace id, not a hub auth user). An
+// unknown owner just returns an empty payload (bytes_used=0, repositories=[]).
+func TestGetOwnerStorage_UnknownOwnerReturnsEmpty(t *testing.T) {
 	ctx := context.Background()
 	clt, _ := setupClientWithAdmin(t, withStorageAccountant())
-	resp, err := clt.GetUserStorageWithResponse(ctx, "ghost")
+	resp, err := clt.GetOwnerStorageWithResponse(ctx, "p-deadbeef")
 	require.NoError(t, err)
-	require.Equal(t, http.StatusNotFound, resp.StatusCode())
+	require.Equal(t, http.StatusOK, resp.StatusCode())
+	require.NotNil(t, resp.JSON200)
+	require.Equal(t, int64(0), resp.JSON200.BytesUsed)
+	require.Empty(t, resp.JSON200.Repositories)
 }
 
 // TestCompletePresignMultipartUpload_QuotaRejectionLeavesNoState exercises the post-completion
@@ -234,20 +240,20 @@ func TestCompletePresignMultipartUpload_QuotaRejectionLeavesNoState(t *testing.T
 
 // When storage_usage.enabled=false the StorageAccountant is nil and the endpoint must return
 // 503 so consumers don't see misleading zeros.
-func TestGetUserStorage_503WhenDisabled(t *testing.T) {
+func TestGetOwnerStorage_503WhenDisabled(t *testing.T) {
 	ctx := context.Background()
 	clt, _ := setupClientWithAdmin(t) // no withStorageAccountant — accountant stays nil
-	resp, err := clt.GetUserStorageWithResponse(ctx, "anyone")
+	resp, err := clt.GetOwnerStorageWithResponse(ctx, "anyone")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode())
 }
 
-func TestSetUserQuota_AdminCanSet(t *testing.T) {
+func TestSetOwnerQuota_AdminCanSet(t *testing.T) {
 	ctx := context.Background()
 	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
 	_ = clientAs(t, clt, deps, "alice")
 
-	resp, err := clt.SetUserQuotaWithResponse(ctx, "alice", apigen.SetUserQuotaJSONRequestBody{QuotaBytes: 12345})
+	resp, err := clt.SetOwnerQuotaWithResponse(ctx, "alice", apigen.SetOwnerQuotaJSONRequestBody{QuotaBytes: 12345})
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNoContent, resp.StatusCode())
 
@@ -256,39 +262,44 @@ func TestSetUserQuota_AdminCanSet(t *testing.T) {
 	require.Equal(t, "12345", string(got.Value))
 }
 
-func TestSetUserQuota_NegativeRejected(t *testing.T) {
+func TestSetOwnerQuota_NegativeRejected(t *testing.T) {
 	ctx := context.Background()
 	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
 	_ = clientAs(t, clt, deps, "alice")
-	resp, err := clt.SetUserQuotaWithResponse(ctx, "alice", apigen.SetUserQuotaJSONRequestBody{QuotaBytes: -1})
+	resp, err := clt.SetOwnerQuotaWithResponse(ctx, "alice", apigen.SetOwnerQuotaJSONRequestBody{QuotaBytes: -1})
 	require.NoError(t, err)
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode())
 }
 
-func TestSetUserQuota_NonAdminForbidden(t *testing.T) {
+func TestSetOwnerQuota_NonAdminForbidden(t *testing.T) {
 	ctx := context.Background()
 	adminClt, deps := setupClientWithAdmin(t, withStorageAccountant())
 	aliceClt := clientAs(t, adminClt, deps, "alice")
-	resp, err := aliceClt.SetUserQuotaWithResponse(ctx, "alice", apigen.SetUserQuotaJSONRequestBody{QuotaBytes: 1000})
+	resp, err := aliceClt.SetOwnerQuotaWithResponse(ctx, "alice", apigen.SetOwnerQuotaJSONRequestBody{QuotaBytes: 1000})
 	require.NoError(t, err)
 	require.Equal(t, http.StatusUnauthorized, resp.StatusCode())
 }
 
-func TestSetUserQuota_UnknownUserReturns404(t *testing.T) {
+// SetUserQuota accepts quotas on any owner namespace, registered hub auth user or not (e.g.
+// surogate-ops project workspace ids). Admin authz still gates the call.
+func TestSetOwnerQuota_AcceptsUnknownOwner(t *testing.T) {
 	ctx := context.Background()
-	clt, _ := setupClientWithAdmin(t, withStorageAccountant())
-	resp, err := clt.SetUserQuotaWithResponse(ctx, "ghost", apigen.SetUserQuotaJSONRequestBody{QuotaBytes: 1000})
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	resp, err := clt.SetOwnerQuotaWithResponse(ctx, "p-deadbeef", apigen.SetOwnerQuotaJSONRequestBody{QuotaBytes: 1000})
 	require.NoError(t, err)
-	require.Equal(t, http.StatusNotFound, resp.StatusCode())
+	require.Equal(t, http.StatusNoContent, resp.StatusCode())
+	got, err := deps.kvStore.Get(ctx, stats.StoragePartition, stats.StorageQuotaKey("p-deadbeef"))
+	require.NoError(t, err)
+	require.Equal(t, "1000", string(got.Value))
 }
 
-func TestDeleteUserQuota_Removes(t *testing.T) {
+func TestDeleteOwnerQuota_Removes(t *testing.T) {
 	ctx := context.Background()
 	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
 	_ = clientAs(t, clt, deps, "alice")
 	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey("alice"), []byte("1000")))
 
-	resp, err := clt.DeleteUserQuotaWithResponse(ctx, "alice")
+	resp, err := clt.DeleteOwnerQuotaWithResponse(ctx, "alice")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNoContent, resp.StatusCode())
 
@@ -296,11 +307,11 @@ func TestDeleteUserQuota_Removes(t *testing.T) {
 	require.ErrorIs(t, err, kv.ErrNotFound)
 }
 
-func TestDeleteUserQuota_AbsentIsIdempotent(t *testing.T) {
+func TestDeleteOwnerQuota_AbsentIsIdempotent(t *testing.T) {
 	ctx := context.Background()
 	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
 	_ = clientAs(t, clt, deps, "alice")
-	resp, err := clt.DeleteUserQuotaWithResponse(ctx, "alice")
+	resp, err := clt.DeleteOwnerQuotaWithResponse(ctx, "alice")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNoContent, resp.StatusCode())
 }

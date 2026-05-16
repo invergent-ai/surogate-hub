@@ -125,13 +125,6 @@ class TestAuthApi(unittest.TestCase):
         """
         pass
 
-    def test_delete_user_quota(self) -> None:
-        """Test case for delete_user_quota
-
-        clear a user's storage quota
-        """
-        pass
-
     def test_detach_policy_from_group(self) -> None:
         """Test case for detach_policy_from_group
 
@@ -199,13 +192,6 @@ class TestAuthApi(unittest.TestCase):
         """Test case for get_user
 
         get user
-        """
-        pass
-
-    def test_get_user_storage(self) -> None:
-        """Test case for get_user_storage
-
-        get a user's storage usage and quota
         """
         pass
 
@@ -283,13 +269,6 @@ class TestAuthApi(unittest.TestCase):
         """Test case for set_group_acl
 
         set ACL of group
-        """
-        pass
-
-    def test_set_user_quota(self) -> None:
-        """Test case for set_user_quota
-
-        set a user's storage quota
         """
         pass
 

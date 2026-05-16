@@ -15,10 +15,10 @@
 
 import unittest
 
-from surogate_hub_sdk.models.user_storage import UserStorage
+from surogate_hub_sdk.models.owner_storage import OwnerStorage
 
-class TestUserStorage(unittest.TestCase):
-    """UserStorage unit test stubs"""
+class TestOwnerStorage(unittest.TestCase):
+    """OwnerStorage unit test stubs"""
 
     def setUp(self):
         pass
@@ -26,22 +26,22 @@ class TestUserStorage(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def make_instance(self, include_optional) -> UserStorage:
-        """Test UserStorage
+    def make_instance(self, include_optional) -> OwnerStorage:
+        """Test OwnerStorage
             include_optional is a boolean, when False only required
             params are included, when True both required and
             optional params are included """
-        # uncomment below to create an instance of `UserStorage`
+        # uncomment below to create an instance of `OwnerStorage`
         """
-        model = UserStorage()
+        model = OwnerStorage()
         if include_optional:
-            return UserStorage(
-                user = '',
+            return OwnerStorage(
+                owner = '',
                 bytes_used = 56,
                 quota_bytes = 56,
                 bytes_remaining = 56,
                 repositories = [
-                    surogate_hub_sdk.models.user_storage_repo.UserStorageRepo(
+                    surogate_hub_sdk.models.owner_storage_repo.OwnerStorageRepo(
                         name = '', 
                         bytes_used = 56, )
                     ],
@@ -49,11 +49,11 @@ class TestUserStorage(unittest.TestCase):
                 is_estimate = True
             )
         else:
-            return UserStorage(
-                user = '',
+            return OwnerStorage(
+                owner = '',
                 bytes_used = 56,
                 repositories = [
-                    surogate_hub_sdk.models.user_storage_repo.UserStorageRepo(
+                    surogate_hub_sdk.models.owner_storage_repo.OwnerStorageRepo(
                         name = '', 
                         bytes_used = 56, )
                     ],
@@ -61,8 +61,8 @@ class TestUserStorage(unittest.TestCase):
         )
         """
 
-    def testUserStorage(self):
-        """Test UserStorage"""
+    def testOwnerStorage(self):
+        """Test OwnerStorage"""
         # inst_req_only = self.make_instance(include_optional=False)
         # inst_req_and_optional = self.make_instance(include_optional=True)
 

@@ -35,6 +35,7 @@ __all__ = [
     "RefsApi",
     "RepositoriesApi",
     "StagingApi",
+    "StorageApi",
     "TagsApi",
     "ApiResponse",
     "ApiClient",
@@ -104,6 +105,9 @@ __all__ = [
     "ObjectStats",
     "ObjectStatsList",
     "ObjectUploadMode",
+    "OwnerQuota",
+    "OwnerStorage",
+    "OwnerStorageRepo",
     "Pagination",
     "PathList",
     "Policy",
@@ -150,9 +154,6 @@ __all__ = [
     "User",
     "UserCreation",
     "UserList",
-    "UserQuota",
-    "UserStorage",
-    "UserStorageRepo",
     "VersionConfig",
 ]
 
@@ -173,6 +174,7 @@ from surogate_hub_sdk.api.pulls_api import PullsApi as PullsApi
 from surogate_hub_sdk.api.refs_api import RefsApi as RefsApi
 from surogate_hub_sdk.api.repositories_api import RepositoriesApi as RepositoriesApi
 from surogate_hub_sdk.api.staging_api import StagingApi as StagingApi
+from surogate_hub_sdk.api.storage_api import StorageApi as StorageApi
 from surogate_hub_sdk.api.tags_api import TagsApi as TagsApi
 
 # import ApiClient
@@ -246,6 +248,9 @@ from surogate_hub_sdk.models.object_stage_creation import ObjectStageCreation as
 from surogate_hub_sdk.models.object_stats import ObjectStats as ObjectStats
 from surogate_hub_sdk.models.object_stats_list import ObjectStatsList as ObjectStatsList
 from surogate_hub_sdk.models.object_upload_mode import ObjectUploadMode as ObjectUploadMode
+from surogate_hub_sdk.models.owner_quota import OwnerQuota as OwnerQuota
+from surogate_hub_sdk.models.owner_storage import OwnerStorage as OwnerStorage
+from surogate_hub_sdk.models.owner_storage_repo import OwnerStorageRepo as OwnerStorageRepo
 from surogate_hub_sdk.models.pagination import Pagination as Pagination
 from surogate_hub_sdk.models.path_list import PathList as PathList
 from surogate_hub_sdk.models.policy import Policy as Policy
@@ -292,8 +297,5 @@ from surogate_hub_sdk.models.usage_report import UsageReport as UsageReport
 from surogate_hub_sdk.models.user import User as User
 from surogate_hub_sdk.models.user_creation import UserCreation as UserCreation
 from surogate_hub_sdk.models.user_list import UserList as UserList
-from surogate_hub_sdk.models.user_quota import UserQuota as UserQuota
-from surogate_hub_sdk.models.user_storage import UserStorage as UserStorage
-from surogate_hub_sdk.models.user_storage_repo import UserStorageRepo as UserStorageRepo
 from surogate_hub_sdk.models.version_config import VersionConfig as VersionConfig
 

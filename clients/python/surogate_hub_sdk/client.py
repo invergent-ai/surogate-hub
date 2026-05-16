@@ -19,6 +19,7 @@ from surogate_hub_sdk.api import pulls_api
 from surogate_hub_sdk.api import refs_api
 from surogate_hub_sdk.api import repositories_api
 from surogate_hub_sdk.api import staging_api
+from surogate_hub_sdk.api import storage_api
 from surogate_hub_sdk.api import tags_api
 
 
@@ -81,6 +82,7 @@ class HubClient:
         self.refs_api = refs_api.RefsApi(self._api)
         self.repositories_api = repositories_api.RepositoriesApi(self._api)
         self.staging_api = staging_api.StagingApi(self._api)
+        self.storage_api = storage_api.StorageApi(self._api)
         self.tags_api = tags_api.TagsApi(self._api)
         self.objects_api = XetObjectsApi(self._api)
 

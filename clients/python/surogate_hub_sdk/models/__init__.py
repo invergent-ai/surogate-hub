@@ -73,6 +73,9 @@ from surogate_hub_sdk.models.object_stage_creation import ObjectStageCreation
 from surogate_hub_sdk.models.object_stats import ObjectStats
 from surogate_hub_sdk.models.object_stats_list import ObjectStatsList
 from surogate_hub_sdk.models.object_upload_mode import ObjectUploadMode
+from surogate_hub_sdk.models.owner_quota import OwnerQuota
+from surogate_hub_sdk.models.owner_storage import OwnerStorage
+from surogate_hub_sdk.models.owner_storage_repo import OwnerStorageRepo
 from surogate_hub_sdk.models.pagination import Pagination
 from surogate_hub_sdk.models.path_list import PathList
 from surogate_hub_sdk.models.policy import Policy
@@ -119,8 +122,5 @@ from surogate_hub_sdk.models.usage_report import UsageReport
 from surogate_hub_sdk.models.user import User
 from surogate_hub_sdk.models.user_creation import UserCreation
 from surogate_hub_sdk.models.user_list import UserList
-from surogate_hub_sdk.models.user_quota import UserQuota
-from surogate_hub_sdk.models.user_storage import UserStorage
-from surogate_hub_sdk.models.user_storage_repo import UserStorageRepo
 from surogate_hub_sdk.models.version_config import VersionConfig
 

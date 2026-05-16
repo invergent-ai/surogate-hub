@@ -24,9 +24,9 @@ from typing_extensions import Annotated
 from typing import Optional, Set
 from typing_extensions import Self
 
-class UserQuota(BaseModel):
+class OwnerQuota(BaseModel):
     """
-    UserQuota
+    OwnerQuota
     """ # noqa: E501
     quota_bytes: Annotated[int, Field(strict=True, ge=0)]
     __properties: ClassVar[List[str]] = ["quota_bytes"]
@@ -49,7 +49,7 @@ class UserQuota(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of UserQuota from a JSON string"""
+        """Create an instance of OwnerQuota from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -74,7 +74,7 @@ class UserQuota(BaseModel):
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of UserQuota from a dict"""
+        """Create an instance of OwnerQuota from a dict"""
         if obj is None:
             return None
 

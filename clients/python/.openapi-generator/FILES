@@ -71,6 +71,9 @@ docs/ObjectStats.md
 docs/ObjectStatsList.md
 docs/ObjectUploadMode.md
 docs/ObjectsApi.md
+docs/OwnerQuota.md
+docs/OwnerStorage.md
+docs/OwnerStorageRepo.md
 docs/Pagination.md
 docs/PathList.md
 docs/Policy.md
@@ -108,6 +111,7 @@ docs/StagingMetadata.md
 docs/Statement.md
 docs/StatsEvent.md
 docs/StatsEventsList.md
+docs/StorageApi.md
 docs/StorageConfig.md
 docs/StorageURI.md
 docs/StsAuthRequest.md
@@ -122,9 +126,6 @@ docs/UsageReport.md
 docs/User.md
 docs/UserCreation.md
 docs/UserList.md
-docs/UserQuota.md
-docs/UserStorage.md
-docs/UserStorageRepo.md
 docs/VersionConfig.md
 pyproject.toml
 requirements.txt
@@ -148,6 +149,7 @@ surogate_hub_sdk/api/pulls_api.py
 surogate_hub_sdk/api/refs_api.py
 surogate_hub_sdk/api/repositories_api.py
 surogate_hub_sdk/api/staging_api.py
+surogate_hub_sdk/api/storage_api.py
 surogate_hub_sdk/api/tags_api.py
 surogate_hub_sdk/api_client.py
 surogate_hub_sdk/api_response.py
@@ -214,6 +216,9 @@ surogate_hub_sdk/models/object_stage_creation.py
 surogate_hub_sdk/models/object_stats.py
 surogate_hub_sdk/models/object_stats_list.py
 surogate_hub_sdk/models/object_upload_mode.py
+surogate_hub_sdk/models/owner_quota.py
+surogate_hub_sdk/models/owner_storage.py
+surogate_hub_sdk/models/owner_storage_repo.py
 surogate_hub_sdk/models/pagination.py
 surogate_hub_sdk/models/path_list.py
 surogate_hub_sdk/models/policy.py
@@ -260,9 +265,6 @@ surogate_hub_sdk/models/usage_report.py
 surogate_hub_sdk/models/user.py
 surogate_hub_sdk/models/user_creation.py
 surogate_hub_sdk/models/user_list.py
-surogate_hub_sdk/models/user_quota.py
-surogate_hub_sdk/models/user_storage.py
-surogate_hub_sdk/models/user_storage_repo.py
 surogate_hub_sdk/models/version_config.py
 surogate_hub_sdk/py.typed
 surogate_hub_sdk/rest.py
@@ -339,6 +341,9 @@ test/test_object_stats.py
 test/test_object_stats_list.py
 test/test_object_upload_mode.py
 test/test_objects_api.py
+test/test_owner_quota.py
+test/test_owner_storage.py
+test/test_owner_storage_repo.py
 test/test_pagination.py
 test/test_path_list.py
 test/test_policy.py
@@ -376,6 +381,7 @@ test/test_staging_metadata.py
 test/test_statement.py
 test/test_stats_event.py
 test/test_stats_events_list.py
+test/test_storage_api.py
 test/test_storage_config.py
 test/test_storage_uri.py
 test/test_sts_auth_request.py
@@ -390,8 +396,5 @@ test/test_usage_report.py
 test/test_user.py
 test/test_user_creation.py
 test/test_user_list.py
-test/test_user_quota.py
-test/test_user_storage.py
-test/test_user_storage_repo.py
 test/test_version_config.py
 tox.ini

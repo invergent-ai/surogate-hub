@@ -1,18 +1,24 @@
-# Per-User Storage Reporting and Quotas
+# Per-Owner Storage Reporting and Quotas
 
-Surogate Hub tracks how many bytes each user's repositories occupy in block storage and exposes
-that figure (with an optional admin-set quota) through three HTTP endpoints under `/auth/users`.
+Surogate Hub tracks how many bytes each **owner namespace**'s repositories occupy in block
+storage and exposes that figure (with an optional admin-set quota) through three HTTP endpoints
+under `/storage/owners`.
+
+> **What's an "owner"?** Repository ids in Surogate Hub have the form `{owner}/{name}` — the
+> owner is the first path segment. It is **not** necessarily a hub auth user; it can be any
+> synthetic project / workspace id (e.g. surogate-ops uses `p-39264d5a`-style project ids as the
+> owner of every repo in a project). Storage usage and quotas are scoped to that owner namespace.
 
 This page documents the surface for operators and API consumers. The full design lives in
 [`docs/superpowers/specs/2026-05-16-user-storage-reporting-design.md`](superpowers/specs/2026-05-16-user-storage-reporting-design.md).
 
 ## What gets counted
 
-For each user `U`, `bytes_used(U)` is the sum, over every repository whose ID is `U/<name>`, of
+For each owner `O`, `bytes_used(O)` is the sum, over every repository whose id is `O/<name>`, of
 the bytes allocated to that repository's block-storage namespace.
 
 - Counted on every successful object upload via the REST API
-  (`PUT /repositories/{user}/{repo}/branches/{branch}/objects`), the S3 gateway PUT path, and
+  (`PUT /repositories/{owner}/{repo}/branches/{branch}/objects`), the S3 gateway PUT path, and
   presigned multipart completion. The delta is the actual byte count written to the block store.
 - Counted on `CreateRepository` (counter initialized to 0) and decremented on `DeleteRepository`.
 - Within a single repository, the same physical address is counted once — `CopyEntry` does not
@@ -21,17 +27,17 @@ the bytes allocated to that repository's block-storage namespace.
 - Object-level deletes are **not** hooked through the accountant (the block adapter's `Remove`
   does not report the deleted byte count). The periodic reconciler corrects the resulting drift
   within one interval, default `1h`.
-- Repository IDs that are not in `{owner}/{name}` form are excluded from per-user accounting.
+- Repository ids that are not in `{owner}/{name}` form are excluded from per-owner accounting.
 
 ## API
 
-### `GET /auth/users/{userId}/storage`
+### `GET /storage/owners/{owner}`
 
-Returns the per-user total, per-repository breakdown, and quota (if set).
+Returns the per-owner total, per-repository breakdown, and quota (if set).
 
 ```json
 {
-  "user": "alice",
+  "owner": "p-39264d5a",
   "bytes_used": 1234567890,
   "quota_bytes": 10737418240,
   "bytes_remaining": 9502850350,
@@ -48,16 +54,20 @@ Returns the per-user total, per-repository breakdown, and quota (if set).
 - `bytes_remaining` is clamped at zero when usage exceeds the quota (in-flight overage during the
   soft check, drift the reconciler hasn't corrected yet).
 - `last_reconciled_at` is `null` until the reconciler has completed at least one pass for the
-  user. `is_estimate` is `true` while it is `null`.
+  owner. `is_estimate` is `true` while it is `null`.
+- An owner namespace with no repositories returns `200 OK` with `bytes_used: 0` and
+  `repositories: []`. The endpoint does **not** 404 for unknown owners — owners are not required
+  to be registered hub auth users.
 
-Authorization: callers may always read their own user (`{userId}` equals the authenticated user's
-username); reading another user's record requires `auth:ReadUser`. Authenticated callers without
-that permission receive **401 Unauthorized** (Surogate Hub's `authorize` wrapper returns 401 for
-both unauthenticated and authenticated-but-insufficient-permission cases — there is no 403 path).
+Authorization: callers may always read storage for an owner equal to their own authenticated
+username (self-serve, when a human user owns repos under their own name); reading any other
+owner's record requires `auth:ReadUser`. Authenticated callers without that permission receive
+**401 Unauthorized** (Surogate Hub's `authorize` wrapper returns 401 for both unauthenticated and
+authenticated-but-insufficient-permission cases — there is no 403 path).
 
-### `PUT /auth/users/{userId}/quota`
+### `PUT /storage/owners/{owner}/quota`
 
-Admin-only (`auth:WriteUser`). Sets or replaces the storage quota for the user.
+Admin-only (`auth:WriteUser`). Sets or replaces the storage quota for an owner namespace.
 
 ```json
 { "quota_bytes": 10737418240 }
@@ -65,25 +75,24 @@ Admin-only (`auth:WriteUser`). Sets or replaces the storage quota for the user.
 
 - `204 No Content` on success.
 - `400 Bad Request` when `quota_bytes < 0`.
-- `404 Not Found` when the user does not exist.
 - `503 Service Unavailable` when `storage_usage.enabled = false`.
 
 > **Operator note:** `quota_bytes: 0` is accepted and hard-blocks every subsequent upload by the
-> user (since `used + content_length > 0` for any non-empty upload). Treat 0 as an intentional
-> "lock the user out" value, not as a sensible default. To remove a quota and revert to unlimited,
-> use `DELETE /quota` rather than `PUT { "quota_bytes": 0 }`.
+> owner (since `used + content_length > 0` for any non-empty upload). Treat 0 as an intentional
+> "lock the owner out" value, not as a sensible default. To remove a quota and revert to
+> unlimited, use `DELETE /storage/owners/{owner}/quota` rather than `PUT { "quota_bytes": 0 }`.
 
-### `DELETE /auth/users/{userId}/quota`
+### `DELETE /storage/owners/{owner}/quota`
 
-Admin-only. Removes any existing quota for the user, reverting them to unlimited. Idempotent: a
-user with no quota still returns `204`.
+Admin-only. Removes any existing quota for the owner, reverting it to unlimited. Idempotent: an
+owner with no quota still returns `204`.
 
 ## Quota enforcement
 
 When a quota is set, write paths reject requests that would exceed it before the bytes are streamed
 to the block store:
 
-- `PUT /repositories/{user}/{repo}/branches/{branch}/objects` returns `413 Request Entity Too
+- `PUT /repositories/{owner}/{repo}/branches/{branch}/objects` returns `413 Request Entity Too
   Large` with `{ "error": "storage quota exceeded", "quota_bytes": Q, "bytes_used": U }`.
 - The S3 gateway PUT path returns an `EntityTooLarge` (`HTTP 400` / S3 error code) for the same
   condition.
@@ -91,7 +100,7 @@ to the block store:
   Required`. The S3 gateway returns `MissingContentLength`.
 
 The check is **soft**: it reads the last-flushed counter, so concurrent uploads in flight from the
-same user can momentarily push the total slightly above the quota. The next reconciler pass
+same owner can momentarily push the total slightly above the quota. The next reconciler pass
 corrects the counter, and subsequent uploads see the new value. Operators sizing quotas should
 leave headroom for in-flight overage.
 
@@ -122,7 +131,7 @@ Unavailable` if called.
 The reconciler runs as a goroutine started from `cmd/sghub/cmd/run.go` alongside the existing
 `UsageReporter`. Every interval it walks each repository's storage namespace via
 `block.Adapter.GetWalker`, sums the returned `ObjectStoreEntry.Size`, and overwrites the per-repo
-counter. After each owner's repositories are processed, the per-user denormalized total is
+counter. After each owner's repositories are processed, the per-owner denormalized total is
 rewritten from the sum of repo counters and `storage/meta/{owner}/last_reconciled_at` is updated.
 
 If a pass takes longer than the configured interval, the next pass starts as soon as the previous
@@ -130,11 +139,11 @@ one finishes. A single process never overlaps its own passes.
 
 ## KV layout
 
-All counters and quotas live under the new `storage` partition:
+All counters and quotas live under the `storage` partition:
 
 | Key                                          | Value           | Meaning                                                |
 | -------------------------------------------- | --------------- | ------------------------------------------------------ |
 | `storage/repo/{owner}/{repo}`                | int64 (ASCII)   | Bytes currently allocated in that repo's namespace     |
-| `storage/user/{owner}`                       | int64 (ASCII)   | Sum of `{owner}`'s repo counters (denormalized)        |
+| `storage/user/{owner}`                       | int64 (ASCII)   | Sum of `{owner}`'s repo counters (denormalized; key name kept for backwards-compat with on-disk data, semantically per-owner) |
 | `storage/quota/{owner}`                      | int64 (ASCII)   | Maximum bytes allowed for `{owner}` — absent ⇒ unlimited |
 | `storage/meta/{owner}/last_reconciled_at`    | RFC3339         | Timestamp of last completed reconciler pass            |

@@ -145,16 +145,19 @@ components:
             $ref: "#/components/schemas/Error"
 
   schemas:
-    UserStorage:
+    OwnerStorage:
       type: object
       required:
-        - user
+        - owner
         - bytes_used
         - repositories
         - is_estimate
       properties:
-        user:
+        owner:
           type: string
+          description: |
+            The repository owner namespace — the first path segment of every repo id this
+            payload aggregates over. Not necessarily a registered hub auth user.
         bytes_used:
           type: integer
           format: int64
@@ -169,14 +172,14 @@ components:
         repositories:
           type: array
           items:
-            $ref: "#/components/schemas/UserStorageRepo"
+            $ref: "#/components/schemas/OwnerStorageRepo"
         last_reconciled_at:
           type: string
           format: date-time
           nullable: true
         is_estimate:
           type: boolean
-    UserStorageRepo:
+    OwnerStorageRepo:
       type: object
       required:
         - name
@@ -187,7 +190,7 @@ components:
         bytes_used:
           type: integer
           format: int64
-    UserQuota:
+    OwnerQuota:
       type: object
       required:
         - quota_bytes
@@ -2539,29 +2542,31 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /auth/users/{userId}/storage:
+  /storage/owners/{owner}:
     parameters:
       - in: path
-        name: userId
+        name: owner
         required: true
+        description: |
+          The repository owner namespace — the first path segment of every repo id
+          (e.g. `p-39264d5a` for `p-39264d5a/skill-doc-extract`). Not necessarily a
+          registered hub auth user; can be any synthetic project/workspace id.
         schema:
           type: string
     get:
       tags:
-        - auth
-      operationId: getUserStorage
-      summary: get a user's storage usage and quota
+        - storage
+      operationId: getOwnerStorage
+      summary: get an owner namespace's storage usage and quota
       responses:
         200:
           description: storage usage
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserStorage"
+                $ref: "#/components/schemas/OwnerStorage"
         401:
           $ref: "#/components/responses/Unauthorized"
-        404:
-          $ref: "#/components/responses/NotFound"
         503:
           description: storage usage tracking is disabled
           content:
@@ -2571,24 +2576,26 @@ paths:
         default:
           $ref: "#/components/responses/ServerError"
 
-  /auth/users/{userId}/quota:
+  /storage/owners/{owner}/quota:
     parameters:
       - in: path
-        name: userId
+        name: owner
         required: true
+        description: |
+          The repository owner namespace — same meaning as in /storage/owners/{owner}.
         schema:
           type: string
     put:
       tags:
-        - auth
-      operationId: setUserQuota
-      summary: set a user's storage quota
+        - storage
+      operationId: setOwnerQuota
+      summary: set an owner namespace's storage quota
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UserQuota"
+              $ref: "#/components/schemas/OwnerQuota"
       responses:
         204:
           description: quota set
@@ -2596,8 +2603,6 @@ paths:
           $ref: "#/components/responses/BadRequest"
         401:
           $ref: "#/components/responses/Unauthorized"
-        404:
-          $ref: "#/components/responses/NotFound"
         503:
           description: storage usage tracking is disabled
           content:
@@ -2608,16 +2613,14 @@ paths:
           $ref: "#/components/responses/ServerError"
     delete:
       tags:
-        - auth
-      operationId: deleteUserQuota
-      summary: clear a user's storage quota
+        - storage
+      operationId: deleteOwnerQuota
+      summary: clear an owner namespace's storage quota
       responses:
         204:
           description: quota cleared
         401:
           $ref: "#/components/responses/Unauthorized"
-        404:
-          $ref: "#/components/responses/NotFound"
         503:
           description: storage usage tracking is disabled
           content:

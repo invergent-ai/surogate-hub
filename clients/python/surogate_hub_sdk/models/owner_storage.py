@@ -19,24 +19,24 @@ import re  # noqa: F401
 import json
 
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, StrictBool, StrictInt, StrictStr
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
-from surogate_hub_sdk.models.user_storage_repo import UserStorageRepo
+from surogate_hub_sdk.models.owner_storage_repo import OwnerStorageRepo
 from typing import Optional, Set
 from typing_extensions import Self
 
-class UserStorage(BaseModel):
+class OwnerStorage(BaseModel):
     """
-    UserStorage
+    OwnerStorage
     """ # noqa: E501
-    user: StrictStr
+    owner: StrictStr = Field(description="The repository owner namespace — the first path segment of every repo id this payload aggregates over. Not necessarily a registered hub auth user. ")
     bytes_used: StrictInt
     quota_bytes: Optional[StrictInt] = None
     bytes_remaining: Optional[StrictInt] = None
-    repositories: List[UserStorageRepo]
+    repositories: List[OwnerStorageRepo]
     last_reconciled_at: Optional[datetime] = None
     is_estimate: StrictBool
-    __properties: ClassVar[List[str]] = ["user", "bytes_used", "quota_bytes", "bytes_remaining", "repositories", "last_reconciled_at", "is_estimate"]
+    __properties: ClassVar[List[str]] = ["owner", "bytes_used", "quota_bytes", "bytes_remaining", "repositories", "last_reconciled_at", "is_estimate"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -56,7 +56,7 @@ class UserStorage(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of UserStorage from a JSON string"""
+        """Create an instance of OwnerStorage from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -103,7 +103,7 @@ class UserStorage(BaseModel):
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of UserStorage from a dict"""
+        """Create an instance of OwnerStorage from a dict"""
         if obj is None:
             return None
 
@@ -111,11 +111,11 @@ class UserStorage(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "user": obj.get("user"),
+            "owner": obj.get("owner"),
             "bytes_used": obj.get("bytes_used"),
             "quota_bytes": obj.get("quota_bytes"),
             "bytes_remaining": obj.get("bytes_remaining"),
-            "repositories": [UserStorageRepo.from_dict(_item) for _item in obj["repositories"]] if obj.get("repositories") is not None else None,
+            "repositories": [OwnerStorageRepo.from_dict(_item) for _item in obj["repositories"]] if obj.get("repositories") is not None else None,
             "last_reconciled_at": obj.get("last_reconciled_at"),
             "is_estimate": obj.get("is_estimate")
         })

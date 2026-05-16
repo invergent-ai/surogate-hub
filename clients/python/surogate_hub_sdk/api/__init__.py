@@ -17,5 +17,6 @@ from surogate_hub_sdk.api.pulls_api import PullsApi
 from surogate_hub_sdk.api.refs_api import RefsApi
 from surogate_hub_sdk.api.repositories_api import RepositoriesApi
 from surogate_hub_sdk.api.staging_api import StagingApi
+from surogate_hub_sdk.api.storage_api import StorageApi
 from surogate_hub_sdk.api.tags_api import TagsApi
 

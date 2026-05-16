@@ -18,7 +18,6 @@ Method | HTTP request | Description
 [**delete_policy**](AuthApi.md#delete_policy) | **DELETE** /auth/policies/{policyId} | delete policy
 [**delete_user**](AuthApi.md#delete_user) | **DELETE** /auth/users/{userId} | delete user
 [**delete_user_external_principal**](AuthApi.md#delete_user_external_principal) | **DELETE** /auth/users/{userId}/external/principals | delete external principal from user
-[**delete_user_quota**](AuthApi.md#delete_user_quota) | **DELETE** /auth/users/{userId}/quota | clear a user&#39;s storage quota
 [**detach_policy_from_group**](AuthApi.md#detach_policy_from_group) | **DELETE** /auth/groups/{groupId}/policies/{policyId} | detach policy from group
 [**detach_policy_from_user**](AuthApi.md#detach_policy_from_user) | **DELETE** /auth/users/{userId}/policies/{policyId} | detach policy from user
 [**external_principal_login**](AuthApi.md#external_principal_login) | **POST** /auth/external/principal/login | perform a login using an external authenticator
@@ -29,7 +28,6 @@ Method | HTTP request | Description
 [**get_group_acl**](AuthApi.md#get_group_acl) | **GET** /auth/groups/{groupId}/acl | get ACL of group
 [**get_policy**](AuthApi.md#get_policy) | **GET** /auth/policies/{policyId} | get policy
 [**get_user**](AuthApi.md#get_user) | **GET** /auth/users/{userId} | get user
-[**get_user_storage**](AuthApi.md#get_user_storage) | **GET** /auth/users/{userId}/storage | get a user&#39;s storage usage and quota
 [**list_group_members**](AuthApi.md#list_group_members) | **GET** /auth/groups/{groupId}/members | list group members
 [**list_group_policies**](AuthApi.md#list_group_policies) | **GET** /auth/groups/{groupId}/policies | list group policies
 [**list_groups**](AuthApi.md#list_groups) | **GET** /auth/groups | list groups
@@ -41,7 +39,6 @@ Method | HTTP request | Description
 [**list_users**](AuthApi.md#list_users) | **GET** /auth/users | list users
 [**login**](AuthApi.md#login) | **POST** /auth/login | perform a login
 [**set_group_acl**](AuthApi.md#set_group_acl) | **POST** /auth/groups/{groupId}/acl | set ACL of group
-[**set_user_quota**](AuthApi.md#set_user_quota) | **PUT** /auth/users/{userId}/quota | set a user&#39;s storage quota
 [**update_policy**](AuthApi.md#update_policy) | **PUT** /auth/policies/{policyId} | update policy
 
 
@@ -1549,111 +1546,6 @@ void (empty response body)
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **delete_user_quota**
-> delete_user_quota(user_id)
-
-clear a user's storage quota
-
-### Example
-
-* Basic Authentication (basic_auth):
-* Api Key Authentication (cookie_auth):
-* Api Key Authentication (oidc_auth):
-* Api Key Authentication (saml_auth):
-* Bearer (JWT) Authentication (jwt_token):
-
-```python
-import surogate_hub_sdk
-from surogate_hub_sdk.rest import ApiException
-from pprint import pprint
-
-# Defining the host is optional and defaults to /api/v1
-# See configuration.py for a list of all supported configuration parameters.
-configuration = surogate_hub_sdk.Configuration(
-    host = "/api/v1"
-)
-
-# The client must configure the authentication and authorization parameters
-# in accordance with the API server security policy.
-# Examples for each auth method are provided below, use the example that
-# satisfies your auth use case.
-
-# Configure HTTP basic authorization: basic_auth
-configuration = surogate_hub_sdk.Configuration(
-    username = os.environ["USERNAME"],
-    password = os.environ["PASSWORD"]
-)
-
-# Configure API key authorization: cookie_auth
-configuration.api_key['cookie_auth'] = os.environ["API_KEY"]
-
-# Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-# configuration.api_key_prefix['cookie_auth'] = 'Bearer'
-
-# Configure API key authorization: oidc_auth
-configuration.api_key['oidc_auth'] = os.environ["API_KEY"]
-
-# Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-# configuration.api_key_prefix['oidc_auth'] = 'Bearer'
-
-# Configure API key authorization: saml_auth
-configuration.api_key['saml_auth'] = os.environ["API_KEY"]
-
-# Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-# configuration.api_key_prefix['saml_auth'] = 'Bearer'
-
-# Configure Bearer authorization (JWT): jwt_token
-configuration = surogate_hub_sdk.Configuration(
-    access_token = os.environ["BEARER_TOKEN"]
-)
-
-# Enter a context with an instance of the API client
-with surogate_hub_sdk.ApiClient(configuration) as api_client:
-    # Create an instance of the API class
-    api_instance = surogate_hub_sdk.AuthApi(api_client)
-    user_id = 'user_id_example' # str | 
-
-    try:
-        # clear a user's storage quota
-        api_instance.delete_user_quota(user_id)
-    except Exception as e:
-        print("Exception when calling AuthApi->delete_user_quota: %s\n" % e)
-```
-
-
-
-### Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **user_id** | **str**|  | 
-
-### Return type
-
-void (empty response body)
-
-### Authorization
-
-[basic_auth](../README.md#basic_auth), [cookie_auth](../README.md#cookie_auth), [oidc_auth](../README.md#oidc_auth), [saml_auth](../README.md#saml_auth), [jwt_token](../README.md#jwt_token)
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-### HTTP response details
-
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-**204** | quota cleared |  -  |
-**401** | Unauthorized |  -  |
-**404** | Resource Not Found |  -  |
-**503** | storage usage tracking is disabled |  -  |
-**0** | Internal Server Error |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
 # **detach_policy_from_group**
 > detach_policy_from_group(group_id, policy_id)
 
@@ -2687,114 +2579,6 @@ Name | Type | Description  | Notes
 **401** | Unauthorized |  -  |
 **404** | Resource Not Found |  -  |
 **420** | too many requests |  -  |
-**0** | Internal Server Error |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **get_user_storage**
-> UserStorage get_user_storage(user_id)
-
-get a user's storage usage and quota
-
-### Example
-
-* Basic Authentication (basic_auth):
-* Api Key Authentication (cookie_auth):
-* Api Key Authentication (oidc_auth):
-* Api Key Authentication (saml_auth):
-* Bearer (JWT) Authentication (jwt_token):
-
-```python
-import surogate_hub_sdk
-from surogate_hub_sdk.models.user_storage import UserStorage
-from surogate_hub_sdk.rest import ApiException
-from pprint import pprint
-
-# Defining the host is optional and defaults to /api/v1
-# See configuration.py for a list of all supported configuration parameters.
-configuration = surogate_hub_sdk.Configuration(
-    host = "/api/v1"
-)
-
-# The client must configure the authentication and authorization parameters
-# in accordance with the API server security policy.
-# Examples for each auth method are provided below, use the example that
-# satisfies your auth use case.
-
-# Configure HTTP basic authorization: basic_auth
-configuration = surogate_hub_sdk.Configuration(
-    username = os.environ["USERNAME"],
-    password = os.environ["PASSWORD"]
-)
-
-# Configure API key authorization: cookie_auth
-configuration.api_key['cookie_auth'] = os.environ["API_KEY"]
-
-# Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-# configuration.api_key_prefix['cookie_auth'] = 'Bearer'
-
-# Configure API key authorization: oidc_auth
-configuration.api_key['oidc_auth'] = os.environ["API_KEY"]
-
-# Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-# configuration.api_key_prefix['oidc_auth'] = 'Bearer'
-
-# Configure API key authorization: saml_auth
-configuration.api_key['saml_auth'] = os.environ["API_KEY"]
-
-# Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-# configuration.api_key_prefix['saml_auth'] = 'Bearer'
-
-# Configure Bearer authorization (JWT): jwt_token
-configuration = surogate_hub_sdk.Configuration(
-    access_token = os.environ["BEARER_TOKEN"]
-)
-
-# Enter a context with an instance of the API client
-with surogate_hub_sdk.ApiClient(configuration) as api_client:
-    # Create an instance of the API class
-    api_instance = surogate_hub_sdk.AuthApi(api_client)
-    user_id = 'user_id_example' # str | 
-
-    try:
-        # get a user's storage usage and quota
-        api_response = api_instance.get_user_storage(user_id)
-        print("The response of AuthApi->get_user_storage:\n")
-        pprint(api_response)
-    except Exception as e:
-        print("Exception when calling AuthApi->get_user_storage: %s\n" % e)
-```
-
-
-
-### Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **user_id** | **str**|  | 
-
-### Return type
-
-[**UserStorage**](UserStorage.md)
-
-### Authorization
-
-[basic_auth](../README.md#basic_auth), [cookie_auth](../README.md#cookie_auth), [oidc_auth](../README.md#oidc_auth), [saml_auth](../README.md#saml_auth), [jwt_token](../README.md#jwt_token)
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: application/json
-
-### HTTP response details
-
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-**200** | storage usage |  -  |
-**401** | Unauthorized |  -  |
-**404** | Resource Not Found |  -  |
-**503** | storage usage tracking is disabled |  -  |
 **0** | Internal Server Error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
@@ -3991,115 +3775,6 @@ void (empty response body)
 **401** | Unauthorized |  -  |
 **404** | Resource Not Found |  -  |
 **420** | too many requests |  -  |
-**0** | Internal Server Error |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **set_user_quota**
-> set_user_quota(user_id, user_quota)
-
-set a user's storage quota
-
-### Example
-
-* Basic Authentication (basic_auth):
-* Api Key Authentication (cookie_auth):
-* Api Key Authentication (oidc_auth):
-* Api Key Authentication (saml_auth):
-* Bearer (JWT) Authentication (jwt_token):
-
-```python
-import surogate_hub_sdk
-from surogate_hub_sdk.models.user_quota import UserQuota
-from surogate_hub_sdk.rest import ApiException
-from pprint import pprint
-
-# Defining the host is optional and defaults to /api/v1
-# See configuration.py for a list of all supported configuration parameters.
-configuration = surogate_hub_sdk.Configuration(
-    host = "/api/v1"
-)
-
-# The client must configure the authentication and authorization parameters
-# in accordance with the API server security policy.
-# Examples for each auth method are provided below, use the example that
-# satisfies your auth use case.
-
-# Configure HTTP basic authorization: basic_auth
-configuration = surogate_hub_sdk.Configuration(
-    username = os.environ["USERNAME"],
-    password = os.environ["PASSWORD"]
-)
-
-# Configure API key authorization: cookie_auth
-configuration.api_key['cookie_auth'] = os.environ["API_KEY"]
-
-# Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-# configuration.api_key_prefix['cookie_auth'] = 'Bearer'
-
-# Configure API key authorization: oidc_auth
-configuration.api_key['oidc_auth'] = os.environ["API_KEY"]
-
-# Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-# configuration.api_key_prefix['oidc_auth'] = 'Bearer'
-
-# Configure API key authorization: saml_auth
-configuration.api_key['saml_auth'] = os.environ["API_KEY"]
-
-# Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-# configuration.api_key_prefix['saml_auth'] = 'Bearer'
-
-# Configure Bearer authorization (JWT): jwt_token
-configuration = surogate_hub_sdk.Configuration(
-    access_token = os.environ["BEARER_TOKEN"]
-)
-
-# Enter a context with an instance of the API client
-with surogate_hub_sdk.ApiClient(configuration) as api_client:
-    # Create an instance of the API class
-    api_instance = surogate_hub_sdk.AuthApi(api_client)
-    user_id = 'user_id_example' # str | 
-    user_quota = surogate_hub_sdk.UserQuota() # UserQuota | 
-
-    try:
-        # set a user's storage quota
-        api_instance.set_user_quota(user_id, user_quota)
-    except Exception as e:
-        print("Exception when calling AuthApi->set_user_quota: %s\n" % e)
-```
-
-
-
-### Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **user_id** | **str**|  | 
- **user_quota** | [**UserQuota**](UserQuota.md)|  | 
-
-### Return type
-
-void (empty response body)
-
-### Authorization
-
-[basic_auth](../README.md#basic_auth), [cookie_auth](../README.md#cookie_auth), [oidc_auth](../README.md#oidc_auth), [saml_auth](../README.md#saml_auth), [jwt_token](../README.md#jwt_token)
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-### HTTP response details
-
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-**204** | quota set |  -  |
-**400** | Bad Request |  -  |
-**401** | Unauthorized |  -  |
-**404** | Resource Not Found |  -  |
-**503** | storage usage tracking is disabled |  -  |
 **0** | Internal Server Error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

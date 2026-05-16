@@ -1611,43 +1611,43 @@ func (c *Controller) GetUser(w http.ResponseWriter, r *http.Request, userID stri
 	writeResponse(w, r, http.StatusOK, response)
 }
 
-// GetUserStorage returns the storage-usage figure (and quota, if any) for the named user. Self
-// access is always allowed; reading another user's number requires auth:ReadUser.
+// GetOwnerStorage returns the storage-usage figure (and quota, if any) for a repository owner
+// namespace — the first path segment of every repository id (e.g. a synthetic project workspace
+// id). Not necessarily a registered hub auth user.
+//
+// Authorization: if the authenticated caller's username equals the owner, the read is always
+// allowed (self-serve for users who own repos under their own username). Otherwise the caller
+// needs auth:ReadUser.
+//
 // When storage_usage.enabled=false the endpoint returns 503 Service Unavailable so consumers do
-// not see misleadingly-zero counters that look authoritative.
-func (c *Controller) GetUserStorage(w http.ResponseWriter, r *http.Request, userID string) {
+// not see misleadingly-zero counters that look authoritative. When the owner namespace has no
+// repos under it, the endpoint returns 200 with bytes_used=0 and an empty repositories list.
+func (c *Controller) GetOwnerStorage(w http.ResponseWriter, r *http.Request, owner string) {
 	ctx := r.Context()
 	callerIsSelf := false
-	if u, err := auth.GetUser(ctx); err == nil && u.Username == userID {
+	if u, err := auth.GetUser(ctx); err == nil && u.Username == owner {
 		callerIsSelf = true
 	}
 	if !callerIsSelf {
 		if !c.authorize(w, r, permissions.Node{
 			Permission: permissions.Permission{
 				Action:   permissions.ReadUserAction,
-				Resource: permissions.UserArn(userID),
+				Resource: permissions.UserArn(owner),
 			},
 		}) {
 			return
 		}
 	}
-	c.LogAction(ctx, "get_user_storage", r, "", "", "")
+	c.LogAction(ctx, "get_owner_storage", r, "", "", "")
 
 	if c.StorageAccountant == nil {
 		writeError(w, r, http.StatusServiceUnavailable, "storage usage tracking is not enabled")
 		return
 	}
 
-	if _, err := c.Auth.GetUser(ctx, userID); errors.Is(err, auth.ErrNotFound) {
-		writeError(w, r, http.StatusNotFound, "user not found")
-		return
-	} else if c.handleAPIError(ctx, w, r, err) {
-		return
-	}
-
 	kvStore := c.Catalog.KVStore
 	var bytesUsed int64
-	if got, err := kvStore.Get(ctx, stats.StoragePartition, stats.StorageUserKey(userID)); err == nil {
+	if got, err := kvStore.Get(ctx, stats.StoragePartition, stats.StorageUserKey(owner)); err == nil {
 		if n, perr := strconv.ParseInt(string(got.Value), 10, 64); perr == nil {
 			bytesUsed = n
 		}
@@ -1657,14 +1657,14 @@ func (c *Controller) GetUserStorage(w http.ResponseWriter, r *http.Request, user
 	}
 
 	// Per-repo breakdown.
-	prefix := stats.StorageRepoPrefix(userID)
+	prefix := stats.StorageRepoPrefix(owner)
 	iter, err := kvStore.Scan(ctx, stats.StoragePartition, kv.ScanOptions{KeyStart: prefix})
 	if err != nil {
 		writeError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	defer iter.Close()
-	var repos []apigen.UserStorageRepo
+	var repos []apigen.OwnerStorageRepo
 	for iter.Next() {
 		ent := iter.Entry()
 		if !bytes.HasPrefix(ent.Key, prefix) {
@@ -1675,7 +1675,7 @@ func (c *Controller) GetUserStorage(w http.ResponseWriter, r *http.Request, user
 			continue
 		}
 		n, _ := strconv.ParseInt(string(ent.Value), 10, 64)
-		repos = append(repos, apigen.UserStorageRepo{Name: repoName, BytesUsed: n})
+		repos = append(repos, apigen.OwnerStorageRepo{Name: repoName, BytesUsed: n})
 	}
 	if iterErr := iter.Err(); iterErr != nil {
 		writeError(w, r, http.StatusInternalServerError, iterErr.Error())
@@ -1685,7 +1685,7 @@ func (c *Controller) GetUserStorage(w http.ResponseWriter, r *http.Request, user
 	var quotaBytes *int64
 	var remaining *int64
 	if c.QuotaChecker != nil {
-		if v, ok, qerr := c.QuotaChecker.GetQuota(ctx, userID); qerr == nil && ok {
+		if v, ok, qerr := c.QuotaChecker.GetQuota(ctx, owner); qerr == nil && ok {
 			q := v
 			quotaBytes = &q
 			rem := q - bytesUsed
@@ -1697,17 +1697,17 @@ func (c *Controller) GetUserStorage(w http.ResponseWriter, r *http.Request, user
 	}
 
 	var lastReconciledAt *time.Time
-	if got, err := kvStore.Get(ctx, stats.StoragePartition, stats.StorageMetaLastReconciledAtKey(userID)); err == nil {
+	if got, err := kvStore.Get(ctx, stats.StoragePartition, stats.StorageMetaLastReconciledAtKey(owner)); err == nil {
 		if parsed, perr := time.Parse(time.RFC3339, string(got.Value)); perr == nil {
 			lastReconciledAt = &parsed
 		}
 	}
 
 	if repos == nil {
-		repos = []apigen.UserStorageRepo{}
+		repos = []apigen.OwnerStorageRepo{}
 	}
-	resp := apigen.UserStorage{
-		User:             userID,
+	resp := apigen.OwnerStorage{
+		Owner:            owner,
 		BytesUsed:        bytesUsed,
 		QuotaBytes:       quotaBytes,
 		BytesRemaining:   remaining,
@@ -1718,30 +1718,25 @@ func (c *Controller) GetUserStorage(w http.ResponseWriter, r *http.Request, user
 	writeResponse(w, r, http.StatusOK, resp)
 }
 
-// SetUserQuota sets (creates or replaces) the storage quota for the named user. Admin-only:
-// requires auth:WriteUser. The quota_bytes value must be ≥ 0.
-func (c *Controller) SetUserQuota(w http.ResponseWriter, r *http.Request, body apigen.SetUserQuotaJSONRequestBody, userID string) {
+// SetOwnerQuota sets (creates or replaces) the storage quota for an owner namespace. Admin-only:
+// requires auth:WriteUser. The quota_bytes value must be ≥ 0. The owner does not need to be a
+// registered hub auth user — quotas are budgets on the owner-prefix-keyed KV partition.
+func (c *Controller) SetOwnerQuota(w http.ResponseWriter, r *http.Request, body apigen.SetOwnerQuotaJSONRequestBody, owner string) {
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.WriteUserAction,
-			Resource: permissions.UserArn(userID),
+			Resource: permissions.UserArn(owner),
 		},
 	}) {
 		return
 	}
 	ctx := r.Context()
-	c.LogAction(ctx, "set_user_quota", r, "", "", "")
-	if _, err := c.Auth.GetUser(ctx, userID); errors.Is(err, auth.ErrNotFound) {
-		writeError(w, r, http.StatusNotFound, "user not found")
-		return
-	} else if c.handleAPIError(ctx, w, r, err) {
-		return
-	}
+	c.LogAction(ctx, "set_owner_quota", r, "", "", "")
 	if c.QuotaChecker == nil {
 		writeError(w, r, http.StatusServiceUnavailable, "storage usage tracking is not enabled")
 		return
 	}
-	if err := c.QuotaChecker.SetQuota(ctx, userID, body.QuotaBytes); err != nil {
+	if err := c.QuotaChecker.SetQuota(ctx, owner, body.QuotaBytes); err != nil {
 		if errors.Is(err, stats.ErrInvalidQuota) {
 			writeError(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -1752,30 +1747,24 @@ func (c *Controller) SetUserQuota(w http.ResponseWriter, r *http.Request, body a
 	writeResponse(w, r, http.StatusNoContent, nil)
 }
 
-// DeleteUserQuota clears any existing storage quota for the named user. Admin-only.
+// DeleteOwnerQuota clears any existing storage quota for an owner namespace. Admin-only.
 // Returns 204 whether or not a quota was previously set.
-func (c *Controller) DeleteUserQuota(w http.ResponseWriter, r *http.Request, userID string) {
+func (c *Controller) DeleteOwnerQuota(w http.ResponseWriter, r *http.Request, owner string) {
 	if !c.authorize(w, r, permissions.Node{
 		Permission: permissions.Permission{
 			Action:   permissions.WriteUserAction,
-			Resource: permissions.UserArn(userID),
+			Resource: permissions.UserArn(owner),
 		},
 	}) {
 		return
 	}
 	ctx := r.Context()
-	c.LogAction(ctx, "delete_user_quota", r, "", "", "")
-	if _, err := c.Auth.GetUser(ctx, userID); errors.Is(err, auth.ErrNotFound) {
-		writeError(w, r, http.StatusNotFound, "user not found")
-		return
-	} else if c.handleAPIError(ctx, w, r, err) {
-		return
-	}
+	c.LogAction(ctx, "delete_owner_quota", r, "", "", "")
 	if c.QuotaChecker == nil {
 		writeError(w, r, http.StatusServiceUnavailable, "storage usage tracking is not enabled")
 		return
 	}
-	if err := c.QuotaChecker.ClearQuota(ctx, userID); err != nil {
+	if err := c.QuotaChecker.ClearQuota(ctx, owner); err != nil {
 		writeError(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}

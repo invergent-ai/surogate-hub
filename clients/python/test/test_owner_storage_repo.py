@@ -15,10 +15,10 @@
 
 import unittest
 
-from surogate_hub_sdk.models.user_storage_repo import UserStorageRepo
+from surogate_hub_sdk.models.owner_storage_repo import OwnerStorageRepo
 
-class TestUserStorageRepo(unittest.TestCase):
-    """UserStorageRepo unit test stubs"""
+class TestOwnerStorageRepo(unittest.TestCase):
+    """OwnerStorageRepo unit test stubs"""
 
     def setUp(self):
         pass
@@ -26,28 +26,28 @@ class TestUserStorageRepo(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def make_instance(self, include_optional) -> UserStorageRepo:
-        """Test UserStorageRepo
+    def make_instance(self, include_optional) -> OwnerStorageRepo:
+        """Test OwnerStorageRepo
             include_optional is a boolean, when False only required
             params are included, when True both required and
             optional params are included """
-        # uncomment below to create an instance of `UserStorageRepo`
+        # uncomment below to create an instance of `OwnerStorageRepo`
         """
-        model = UserStorageRepo()
+        model = OwnerStorageRepo()
         if include_optional:
-            return UserStorageRepo(
+            return OwnerStorageRepo(
                 name = '',
                 bytes_used = 56
             )
         else:
-            return UserStorageRepo(
+            return OwnerStorageRepo(
                 name = '',
                 bytes_used = 56,
         )
         """
 
-    def testUserStorageRepo(self):
-        """Test UserStorageRepo"""
+    def testOwnerStorageRepo(self):
+        """Test OwnerStorageRepo"""
         # inst_req_only = self.make_instance(include_optional=False)
         # inst_req_and_optional = self.make_instance(include_optional=True)
 
