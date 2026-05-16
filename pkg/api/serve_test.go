@@ -54,31 +54,48 @@ const (
 )
 
 type dependencies struct {
-	blocks            block.Adapter
-	catalog           *catalog.Catalog
-	authService       auth.Service
-	collector         *memCollector
-	server            *httptest.Server
-	kvStore           kv.Store
-	storageAccountant *stats.StorageAccountant
-	quotaChecker      *stats.QuotaChecker
-	storageReconciler *stats.StorageReconciler
+	blocks                block.Adapter
+	catalog               *catalog.Catalog
+	authService           auth.Service
+	collector             *memCollector
+	server                *httptest.Server
+	kvStore               kv.Store
+	storageAccountant     *stats.StorageAccountant
+	quotaChecker          *stats.QuotaChecker
+	storageReconciler     *stats.StorageReconciler
+	storageNamespaceSizer *fakeNamespaceSizer
 }
 
 // setupOption tweaks the dependencies before api.Serve is constructed.
 type setupOption func(*dependencies)
 
+// fakeNamespaceSizer is a NamespaceSizer that returns a fixed total per namespace, defaulting to
+// zero. Tests that need to simulate "real bytes on disk" can populate `sizes` keyed by
+// storageNamespace. This sidesteps the mem block adapter's lack of a working GetWalker.
+type fakeNamespaceSizer struct {
+	sizes map[string]int64
+}
+
+func (f *fakeNamespaceSizer) NamespaceSize(_ context.Context, _ string, storageNamespace string) (int64, error) {
+	if f.sizes == nil {
+		return 0, nil
+	}
+	return f.sizes[storageNamespace], nil
+}
+
 // withStorageAccountant installs a real StorageAccountant, QuotaChecker, and StorageReconciler on
 // the test dependencies, so the controller will count uploads, enforce quotas, and the test can
-// drive RunOnce to verify drift correction.
+// drive RunOnce to verify drift correction. The reconciler uses a fake namespace sizer (default:
+// always-zero) because the mem block adapter does not support GetWalker.
 func withStorageAccountant() setupOption {
 	return func(d *dependencies) {
 		d.storageAccountant = stats.NewStorageAccountant(d.kvStore)
 		d.quotaChecker = stats.NewQuotaChecker(d.kvStore)
+		d.storageNamespaceSizer = &fakeNamespaceSizer{}
 		d.storageReconciler = stats.NewStorageReconciler(
 			d.kvStore,
 			&storagewiring.CatalogRepoLister{Catalog: d.catalog},
-			&storagewiring.BlockNamespaceSizer{Adapter: d.blocks},
+			d.storageNamespaceSizer,
 			d.storageAccountant,
 		)
 	}
