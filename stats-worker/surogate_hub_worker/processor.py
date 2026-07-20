@@ -156,10 +156,9 @@ class EventProcessor:
                 computers.compute_duplicates(con),
             ]
             if text_column:
-                out.append(computers.compute_pii(con, text_column=text_column))
                 out.append(computers.compute_token_lengths(con, text_column=text_column))
             else:
-                log.info("no text_column set; skipping pii and token_lengths")
+                log.info("no text_column set; skipping token_lengths")
             return out
         finally:
             con.close()

@@ -188,8 +188,11 @@ def test_end_to_end_with_text_column(tmp_path):
 
     result = p.process(Event("r", "main", "COMMIT_ABC", "post-commit", {}))
     paths = sorted(result.written)
-    assert any(p.startswith("pii/") for p in paths)
+    # ``text_column`` gates ONLY token_lengths now. PII detection moved to
+    # surogate-ops (which detects at ingest and can actually scrub), so the
+    # worker must no longer produce a ``pii`` artifact.
     assert any(p.startswith("token_lengths/") for p in paths)
+    assert not any(p.startswith("pii/") for p in paths)
 
 
 def test_parquet_branch_is_cleared_of_inherited_content(tmp_path):
