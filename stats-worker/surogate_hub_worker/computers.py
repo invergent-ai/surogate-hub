@@ -136,53 +136,6 @@ def compute_duplicates(con: duckdb.DuckDBPyConnection) -> Artifact:
     )
 
 
-_PII_PATTERNS: Dict[str, str] = {
-    "email": r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}",
-    "phone_us": r"(?:\+?1[ -]?)?\(?\d{3}\)?[ -]?\d{3}[ -]?\d{4}",
-    "ssn": r"\b\d{3}-\d{2}-\d{4}\b",
-    "credit_card": r"\b(?:\d[ -]*?){13,16}\b",
-    "ipv4": r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
-}
-
-
-def compute_pii(
-    con: duckdb.DuckDBPyConnection, *, text_column: str,
-) -> Artifact:
-    _validate_column(text_column)
-    # Cross-join the dataset against an inline patterns table so we scan
-    # the text column once instead of N_patterns times via UNION ALL.
-    pattern_rows = ", ".join(
-        f"('{name}', '{pat.replace(chr(39), chr(39) * 2)}')"
-        for name, pat in _PII_PATTERNS.items()
-    )
-    sql = f"""
-        WITH numbered AS (
-            SELECT *, row_number() OVER () - 1 AS row_idx FROM {_VIEW_NAME}
-        ),
-        patterns(finding_type, pattern) AS (VALUES {pattern_rows})
-        SELECT
-            p.finding_type,
-            n.{text_column} AS match_text,
-            n.row_idx
-        FROM numbered n, patterns p
-        WHERE regexp_matches(n.{text_column}, p.pattern)
-        ORDER BY p.finding_type, n.row_idx
-    """
-    table = _ensure_table(con.execute(sql).arrow())
-    return Artifact(
-        stat_name="pii",
-        version="v1",
-        data_format=DataFormat.PARQUET,
-        content=_parquet_bytes(table),
-        row_count=table.num_rows,
-        parameters={
-            "text_column": text_column,
-            "patterns": list(_PII_PATTERNS.keys()),
-            "method": "regex",
-        },
-    )
-
-
 def compute_token_lengths(
     con: duckdb.DuckDBPyConnection, *, text_column: str,
 ) -> Artifact:

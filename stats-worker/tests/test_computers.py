@@ -59,22 +59,6 @@ def test_duplicates_detects_full_row_match(make_parquet):
     assert counts == [2]
 
 
-def test_pii_detects_email_ssn_phone(sample_parquet):
-    con = _connect([sample_parquet])
-    artifact = computers.compute_pii(con, text_column="text")
-    table = _read_parquet_bytes(artifact.content)
-    found = sorted(set(table.column("finding_type").to_pylist()))
-    assert "email" in found
-    assert "ssn" in found
-    assert "phone_us" in found
-
-
-def test_pii_rejects_unsafe_column(sample_parquet):
-    con = _connect([sample_parquet])
-    with pytest.raises(ValueError):
-        computers.compute_pii(con, text_column="text; DROP TABLE x")
-
-
 def test_token_lengths_char_approximation(sample_parquet):
     con = _connect([sample_parquet])
     artifact = computers.compute_token_lengths(con, text_column="text")
