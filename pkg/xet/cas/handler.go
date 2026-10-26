@@ -6,7 +6,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,6 +27,15 @@ import (
 	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 )
 
+const (
+	// xorbPrefix is the only CAS prefix hf_xet uses; every read path assumes it.
+	xorbPrefix = "default"
+	// hf_xet cuts xorbs at 64 MiB of chunk data; the rest covers chunk headers and the footer.
+	maxXorbBytes = 80 << 20
+	// hf_xet targets 64 MiB shards.
+	maxShardBytes = 128 << 20
+)
+
 type Handler struct {
 	registry                           *xetstore.Registry
 	xorbs                              *XorbStore
@@ -35,6 +43,7 @@ type Handler struct {
 	verifyXorb                         func(expectedHash string, data []byte) error
 	reconstructionRangeResolverFactory reconstructionRangeResolverFactory
 	reconstructionCapabilityChecker    ReconstructionCapabilityChecker
+	tokenAuthorizer                    TokenAuthorizer
 	proxyGrantKey                      []byte
 	tokenSigningKey                    []byte
 	tokenTTL                           time.Duration
@@ -45,15 +54,28 @@ type HandlerOption func(*Handler)
 
 type reconstructionRangeResolverFactory func(ctx context.Context, fileHash string, terms []reconstruct.Term) (reconstruct.RangeResolver, error)
 
-type ReconstructionLogicalContext struct {
+// TokenGrant is what an xet token allows: reading or writing one object.
+type TokenGrant struct {
+	Mode string
 	Repo string
 	Ref  string
 	Path string
 }
 
-type ReconstructionCapabilityChecker func(ctx context.Context, fileHash string, logical ReconstructionLogicalContext) error
+// TokenAuthorizer decides whether a user may get a token for a grant. It runs
+// when the token is minted.
+type TokenAuthorizer func(ctx context.Context, username string, grant TokenGrant) error
 
-var ErrReconstructionCapabilityNotFound = errors.New("xet reconstruction capability not found")
+// ReconstructionCapabilityChecker decides whether the grant of the token on a
+// reconstruction request covers the file.
+type ReconstructionCapabilityChecker func(ctx context.Context, fileHash string, grant TokenGrant) error
+
+var (
+	ErrReconstructionCapabilityNotFound = errors.New("xet reconstruction capability not found")
+	ErrTokenNotAllowed                  = errors.New("xet token not allowed")
+)
+
+type tokenGrantKey struct{}
 
 func WithXorbStore(store *XorbStore) HandlerOption {
 	return func(h *Handler) {
@@ -91,6 +113,12 @@ func WithTokenAuthRequired() HandlerOption {
 	}
 }
 
+func WithTokenAuthorizer(authorizer TokenAuthorizer) HandlerOption {
+	return func(h *Handler) {
+		h.tokenAuthorizer = authorizer
+	}
+}
+
 func WithReconstructionCapabilityChecker(checker ReconstructionCapabilityChecker) HandlerOption {
 	return func(h *Handler) {
 		h.reconstructionCapabilityChecker = checker
@@ -107,18 +135,6 @@ func withReconstructionRangeResolverFactory(factory reconstructionRangeResolverF
 	return func(h *Handler) {
 		h.reconstructionRangeResolverFactory = factory
 	}
-}
-
-type registerShardRequest struct {
-	FileHash string   `json:"file_hash"`
-	Shard    string   `json:"shard"`
-	ChunkIDs []string `json:"chunk_ids"`
-	XorbIDs  []string `json:"xorb_ids"`
-}
-
-type registerShardResponse struct {
-	FileHash    string `json:"file_hash"`
-	WasInserted bool   `json:"was_inserted"`
 }
 
 type putXorbResponse struct {
@@ -152,8 +168,6 @@ func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler
 		opt(h)
 	}
 	r := chi.NewRouter()
-	r.With(h.requireXETScope("read")).Get("/v1/chunks/{prefix}/{hash}", h.getChunk)
-	r.Get("/v1/token/refresh", h.getTokenRefresh)
 	r.With(h.requireXETScope("read")).Get("/v1/reconstructions/{file_hash}", h.getReconstructionV1)
 	r.Get("/v1/xorbs/{prefix}/{hash}", h.getXorbProxy)
 	r.With(h.requireXETScope("read")).Get("/v2/reconstructions/{file_hash}", h.getReconstruction)
@@ -170,33 +184,39 @@ func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	hash := chi.URLParam(r, "hash")
-	body := r.Body
-	size := r.ContentLength
-	if isXETHash(hash) {
-		data, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err := h.withXorbVerificationSlot(r, func() error {
-			canonical, err := canonicalSerializedXorb(hash, data)
-			if err != nil {
-				return err
-			}
-			if err := h.verifyXorb(hash, canonical); err != nil {
-				return err
-			}
-			data = canonical
-			return nil
-		}); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		body = io.NopCloser(bytes.NewReader(data))
-		size = int64(len(data))
+	if chi.URLParam(r, "prefix") != xorbPrefix || !isXETHash(hash) {
+		http.Error(w, "invalid xorb address", http.StatusBadRequest)
+		return
 	}
-	result, err := h.xorbs.Put(r.Context(), chi.URLParam(r, "prefix"), hash, size, body)
+	data, err := readLimitedBody(w, r, maxXorbBytes)
 	if err != nil {
+		return
+	}
+	if err := h.withXorbVerificationSlot(r, func() error {
+		canonical, err := canonicalSerializedXorb(hash, data)
+		if err != nil {
+			return err
+		}
+		if err := h.verifyXorb(hash, canonical); err != nil {
+			return err
+		}
+		data = canonical
+		return nil
+	}); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	_, footerStart, err := parseXorbInfo(data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	result, err := h.xorbs.Put(r.Context(), hash, int64(len(data)), bytes.NewReader(data))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := h.recordXorbInfo(r.Context(), hash, result.WasInserted, data[footerStart:]); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -205,34 +225,53 @@ func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(putXorbResponse{WasInserted: result.WasInserted})
 }
 
+// recordXorbInfo stores the footer that describes the stored xorb. A re-upload
+// may be compressed differently, so it never replaces the footer of the bytes
+// already stored; that footer is read back from the object only when missing.
+// ponytail: two concurrent first uploads with different layouts can still race
+// (Put is check-then-write); a conditional Put closes it if that ever matters.
+func (h *Handler) recordXorbInfo(ctx context.Context, hash string, inserted bool, footer []byte) error {
+	if !inserted {
+		_, err := h.registry.GetXorbInfo(ctx, hash)
+		if !errors.Is(err, kv.ErrNotFound) {
+			return err
+		}
+		if footer, err = h.xorbs.storedFooter(ctx, hash); err != nil {
+			return err
+		}
+	}
+	return h.registry.PutXorbInfo(ctx, hash, footer)
+}
+
+// postToken mints a token for one object. hf_xet refreshes through the client,
+// which mints again, so every token carries a fresh permission check.
 func (h *Handler) postToken(w http.ResponseWriter, r *http.Request) {
 	user, err := auth.GetUser(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	response, err := h.issueXETToken(user.Username, time.Now())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	query := r.URL.Query()
+	grant := TokenGrant{
+		Mode: query.Get("mode"),
+		Repo: query.Get("repository"),
+		Ref:  query.Get("ref"),
+		Path: query.Get("path"),
+	}
+	if (grant.Mode != "read" && grant.Mode != "write") || grant.Repo == "" || grant.Ref == "" || grant.Path == "" {
+		http.Error(w, "mode (read or write), repository, ref and path are required", http.StatusBadRequest)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(response)
-}
-
-func (h *Handler) getTokenRefresh(w http.ResponseWriter, r *http.Request) {
-	tokenString, ok := bearerToken(r.Header.Get("Authorization"))
-	if !ok {
-		http.Error(w, "missing bearer token", http.StatusUnauthorized)
-		return
+	if h.tokenAuthorizer != nil {
+		if err := h.tokenAuthorizer(r.Context(), user.Username, grant); errors.Is(err, ErrTokenNotAllowed) {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		} else if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
-	subject, err := h.verifyXETToken(tokenString)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-	response, err := h.issueXETToken(subject, time.Now())
+	response, err := h.issueXETToken(user.Username, grant, time.Now())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -264,12 +303,16 @@ func (h *Handler) requireXETScope(scope string) func(http.Handler) http.Handler 
 			}
 			subject, _ := claims["sub"].(string)
 			ctx := auth.WithUser(r.Context(), &model.User{Username: subject})
+			repo, _ := claims["repo"].(string)
+			ref, _ := claims["ref"].(string)
+			path, _ := claims["path"].(string)
+			ctx = context.WithValue(ctx, tokenGrantKey{}, TokenGrant{Mode: scope, Repo: repo, Ref: ref, Path: path})
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
 
-func (h *Handler) issueXETToken(subject string, now time.Time) (tokenResponse, error) {
+func (h *Handler) issueXETToken(subject string, grant TokenGrant, now time.Time) (tokenResponse, error) {
 	if len(h.tokenSigningKey) == 0 {
 		return tokenResponse{}, errors.New("token signing key is not configured")
 	}
@@ -277,7 +320,10 @@ func (h *Handler) issueXETToken(subject string, now time.Time) (tokenResponse, e
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":   subject,
 		"aud":   "xet",
-		"scope": "read write",
+		"scope": grant.Mode,
+		"repo":  grant.Repo,
+		"ref":   grant.Ref,
+		"path":  grant.Path,
 		"iat":   now.Unix(),
 		"exp":   expires.Unix(),
 	})
@@ -289,18 +335,6 @@ func (h *Handler) issueXETToken(subject string, now time.Time) (tokenResponse, e
 		AccessToken: signed,
 		ExpiresAt:   expires.Unix(),
 	}, nil
-}
-
-func (h *Handler) verifyXETToken(tokenString string) (string, error) {
-	claims, err := h.verifyXETTokenClaims(tokenString)
-	if err != nil {
-		return "", err
-	}
-	subject, _ := claims["sub"].(string)
-	if subject == "" {
-		return "", errors.New("invalid token subject")
-	}
-	return subject, nil
 }
 
 func (h *Handler) verifyXETTokenClaims(tokenString string) (jwt.MapClaims, error) {
@@ -349,7 +383,7 @@ func bearerToken(header string) (string, bool) {
 }
 
 func (h *Handler) getXorbProxy(w http.ResponseWriter, r *http.Request) {
-	if h.xorbs == nil {
+	if h.xorbs == nil || chi.URLParam(r, "prefix") != xorbPrefix {
 		http.NotFound(w, r)
 		return
 	}
@@ -370,7 +404,7 @@ func (h *Handler) getXorbProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	reader, err := h.xorbs.adapter.GetRange(
 		r.Context(),
-		xetstore.XorbObjectPointer(h.xorbs.storageNamespace, chi.URLParam(r, "prefix"), hash),
+		h.xorbs.objectPointer(hash),
 		int64(byteRange.Start),
 		int64(byteRange.End),
 	)
@@ -381,7 +415,9 @@ func (h *Handler) getXorbProxy(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = reader.Close() }()
 
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Length", strconv.FormatUint(byteRange.End-byteRange.Start+1, 10))
+	w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/*", byteRange.Start, byteRange.End))
+	w.WriteHeader(http.StatusPartialContent)
 	_, _ = io.Copy(w, reader)
 }
 
@@ -408,12 +444,8 @@ func (h *Handler) getReconstructionV1(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) buildReconstructionManifest(w http.ResponseWriter, r *http.Request) (reconstruct.Manifest, bool) {
 	fileHash := chi.URLParam(r, "file_hash")
 	if h.reconstructionCapabilityChecker != nil {
-		logical := ReconstructionLogicalContext{
-			Repo: r.URL.Query().Get("repo"),
-			Ref:  r.URL.Query().Get("ref"),
-			Path: r.URL.Query().Get("path"),
-		}
-		if err := h.reconstructionCapabilityChecker(r.Context(), fileHash, logical); err != nil {
+		grant, _ := r.Context().Value(tokenGrantKey{}).(TokenGrant)
+		if err := h.reconstructionCapabilityChecker(r.Context(), fileHash, grant); err != nil {
 			if errors.Is(err, ErrReconstructionCapabilityNotFound) {
 				http.NotFound(w, r)
 				return reconstruct.Manifest{}, false
@@ -422,7 +454,7 @@ func (h *Handler) buildReconstructionManifest(w http.ResponseWriter, r *http.Req
 			return reconstruct.Manifest{}, false
 		}
 	}
-	shard, err := h.registry.GetShardByFileHash(r.Context(), fileHash)
+	file, err := h.registry.GetFile(r.Context(), fileHash)
 	if errors.Is(err, kv.ErrNotFound) {
 		http.NotFound(w, r)
 		return reconstruct.Manifest{}, false
@@ -431,32 +463,26 @@ func (h *Handler) buildReconstructionManifest(w http.ResponseWriter, r *http.Req
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return reconstruct.Manifest{}, false
 	}
-	info, err := xetstore.ParseShardInfo(shard)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return reconstruct.Manifest{}, false
-	}
-	file, ok := shardFileByHash(info, fileHash)
-	if !ok {
-		http.NotFound(w, r)
-		return reconstruct.Manifest{}, false
-	}
 	byteRange, err := reconstructionByteRange(r.Header.Get("Range"), file.SizeBytes)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusRequestedRangeNotSatisfiable)
 		return reconstruct.Manifest{}, false
 	}
-	terms, err := reconstruct.MapRange(info, fileHash, byteRange)
+	infos, err := xorbInfos(r.Context(), h.registry, file.Segments)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return reconstruct.Manifest{}, false
 	}
-	resolverFactory := h.reconstructionRangeResolverFactory
+	terms, err := reconstruct.MapRange(file, xorbChunks(infos), byteRange)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return reconstruct.Manifest{}, false
+	}
 	var resolver reconstruct.RangeResolver
-	if resolverFactory == nil {
-		resolver, err = h.presignedReconstructionRangeResolverFactory(r, fileHash, terms)
+	if h.reconstructionRangeResolverFactory == nil {
+		resolver, err = h.presignedReconstructionRangeResolver(r, fileHash, terms, infos)
 	} else {
-		resolver, err = resolverFactory(r.Context(), fileHash, terms)
+		resolver, err = h.reconstructionRangeResolverFactory(r.Context(), fileHash, terms)
 	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -470,92 +496,53 @@ func (h *Handler) buildReconstructionManifest(w http.ResponseWriter, r *http.Req
 	return manifest, true
 }
 
+// postShard registers the files a shard describes. Each file is checked against
+// the stored metadata of the xorbs it references; the shard's own xorb section is
+// ignored, because hf_xet leaves out xorbs uploaded in earlier sessions and a
+// client could put anything there.
 func (h *Handler) postShard(w http.ResponseWriter, r *http.Request) {
-	if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
-		h.postBinaryShard(w, r)
-		return
-	}
-
-	var req registerShardRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if req.FileHash == "" || req.Shard == "" {
-		http.Error(w, "file_hash and shard are required", http.StatusBadRequest)
-		return
-	}
-	if req.FileHash != computedShimFileHash(req.Shard) {
-		http.Error(w, "file_hash does not match shard", http.StatusBadRequest)
-		return
-	}
-	if err := h.validateXorbs(r, req.XorbIDs); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	result, err := h.registry.RegisterShard(r.Context(), xetstore.RegisterShardParams{
-		FileHash: req.FileHash,
-		Shard:    []byte(req.Shard),
-		ChunkIDs: req.ChunkIDs,
-	})
+	shard, err := readLimitedBody(w, r, maxShardBytes)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(registerShardResponse{
-		FileHash:    req.FileHash,
-		WasInserted: result.WasInserted,
-	})
-}
-
-func (h *Handler) postBinaryShard(w http.ResponseWriter, r *http.Request) {
-	shard, err := io.ReadAll(r.Body)
+	files, err := xetstore.ParseShardFiles(shard)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	canonicalShard, info, err := xetstore.CanonicalShard(shard)
-	if err != nil {
-		if h.acceptExistingAbbreviatedShard(r.Context(), shard) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(uploadShardResponse{Result: 0})
-			return
-		}
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if len(info.Files) == 0 {
+	if len(files) == 0 {
 		http.Error(w, "shard contains no file entries", http.StatusBadRequest)
 		return
 	}
-	if err := h.validateXorbs(r, info.XorbHashes); err != nil {
+	var segments []xetstore.ShardFileSegment
+	for _, file := range files {
+		segments = append(segments, file.Segments...)
+	}
+	infos, err := xorbInfos(r.Context(), h.registry, segments)
+	if errors.Is(err, kv.ErrNotFound) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	summary, err := json.Marshal(info.Summary)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	chunks := xorbChunks(infos)
+	for i := range files {
+		if files[i], err = xetstore.VerifyFile(files[i], chunks); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
 
 	wasInserted := false
-	for _, file := range info.Files {
-		result, err := h.registry.RegisterShard(r.Context(), xetstore.RegisterShardParams{
-			FileHash: file.FileHash,
-			Shard:    canonicalShard,
-			Summary:  summary,
-			ChunkIDs: info.ChunkHashes,
-		})
+	for _, file := range files {
+		inserted, err := h.registry.RegisterFile(r.Context(), file)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		wasInserted = wasInserted || result.WasInserted
+		wasInserted = wasInserted || inserted
 	}
 
 	responseResult := 0
@@ -567,37 +554,18 @@ func (h *Handler) postBinaryShard(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(uploadShardResponse{Result: responseResult})
 }
 
-func (h *Handler) acceptExistingAbbreviatedShard(ctx context.Context, shard []byte) bool {
-	files, err := xetstore.ParseShardFiles(shard)
-	if err != nil || len(files) == 0 {
-		return false
-	}
-	for _, file := range files {
-		exists, err := h.registry.HasShard(ctx, file.FileHash)
-		if err != nil || !exists {
-			return false
+// readLimitedBody reads at most limit bytes and writes the error response itself.
+func readLimitedBody(w http.ResponseWriter, r *http.Request, limit int64) ([]byte, error) {
+	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, limit))
+	if err != nil {
+		status := http.StatusBadRequest
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			status = http.StatusRequestEntityTooLarge
 		}
+		http.Error(w, err.Error(), status)
 	}
-	return true
-}
-
-func (h *Handler) validateXorbs(r *http.Request, xorbIDs []string) error {
-	if len(xorbIDs) == 0 {
-		return nil
-	}
-	if h.xorbs == nil {
-		return fmt.Errorf("xorb store is not configured")
-	}
-	for _, xorbID := range xorbIDs {
-		exists, err := h.xorbs.Exists(r.Context(), "default", xorbID)
-		if err != nil {
-			return err
-		}
-		if !exists {
-			return fmt.Errorf("xorb %s not found", xorbID)
-		}
-	}
-	return nil
+	return data, err
 }
 
 func (h *Handler) withXorbVerificationSlot(r *http.Request, verify func() error) error {
@@ -617,45 +585,27 @@ func normalizeVerifyMaxConcurrent(maxConcurrent int) int {
 	return runtime.NumCPU()
 }
 
-func (h *Handler) presignedReconstructionRangeResolverFactory(r *http.Request, fileHash string, terms []reconstruct.Term) (reconstruct.RangeResolver, error) {
+func (h *Handler) presignedReconstructionRangeResolver(r *http.Request, fileHash string, terms []reconstruct.Term, infos map[string]parsedXorbInfo) (reconstruct.RangeResolver, error) {
 	if h.xorbs == nil {
 		return nil, fmt.Errorf("xorb store is not configured")
 	}
 	ctx := r.Context()
 	proxyBaseURL := reconstructionProxyBaseURL(r)
-	parsed := make(map[string]parsedXorbInfo)
-	urls := make(map[string]string)
-	grantedRanges, err := h.reconstructionGrantedRanges(ctx, terms, parsed)
+	grantedRanges, err := reconstructionGrantedRanges(terms, infos)
 	if err != nil {
 		return nil, err
 	}
+	urls := make(map[string]string)
 	return func(xorbHash string, chunks reconstruct.IndexRange) (reconstruct.ResolvedRange, error) {
-		info, ok := parsed[xorbHash]
-		if !ok {
-			reader, err := h.xorbs.Get(ctx, "default", xorbHash)
-			if err != nil {
-				return reconstruct.ResolvedRange{}, err
-			}
-			data, err := io.ReadAll(reader)
-			_ = reader.Close()
-			if err != nil {
-				return reconstruct.ResolvedRange{}, err
-			}
-			info, _, err = parseXorbInfo(data)
-			if err != nil {
-				return reconstruct.ResolvedRange{}, err
-			}
-			parsed[xorbHash] = info
-		}
-		byteRange, err := xorbByteRange(info, chunks)
+		byteRange, err := xorbByteRange(infos[xorbHash], chunks)
 		if err != nil {
 			return reconstruct.ResolvedRange{}, err
 		}
 		url, ok := urls[xorbHash]
 		if !ok {
-			url, _, err = h.xorbs.adapter.GetPreSignedURL(ctx, xetstore.XorbObjectPointer(h.xorbs.storageNamespace, "default", xorbHash), block.PreSignModeRead)
+			url, _, err = h.xorbs.adapter.GetPreSignedURL(ctx, h.xorbs.objectPointer(xorbHash), block.PreSignModeRead)
 			if errors.Is(err, block.ErrOperationNotSupported) {
-				url, err = h.proxyXorbURL(proxyBaseURL, fileHash, "default", xorbHash, grantedRanges[xorbHash])
+				url, err = h.proxyXorbURL(proxyBaseURL, fileHash, xorbHash, grantedRanges[xorbHash])
 				if err != nil {
 					return reconstruct.ResolvedRange{}, err
 				}
@@ -668,31 +618,14 @@ func (h *Handler) presignedReconstructionRangeResolverFactory(r *http.Request, f
 	}, nil
 }
 
-func (h *Handler) reconstructionGrantedRanges(ctx context.Context, terms []reconstruct.Term, parsed map[string]parsedXorbInfo) (map[string][]reconstruct.HTTPRange, error) {
+func reconstructionGrantedRanges(terms []reconstruct.Term, infos map[string]parsedXorbInfo) (map[string][]reconstruct.HTTPRange, error) {
 	groupedTerms, err := reconstruct.GroupTerms(terms)
 	if err != nil {
 		return nil, err
 	}
 	grants := make(map[string][]reconstruct.HTTPRange)
 	for _, term := range groupedTerms {
-		info, ok := parsed[term.Hash]
-		if !ok {
-			reader, err := h.xorbs.Get(ctx, "default", term.Hash)
-			if err != nil {
-				return nil, err
-			}
-			data, err := io.ReadAll(reader)
-			_ = reader.Close()
-			if err != nil {
-				return nil, err
-			}
-			info, _, err = parseXorbInfo(data)
-			if err != nil {
-				return nil, err
-			}
-			parsed[term.Hash] = info
-		}
-		byteRange, err := xorbByteRange(info, term.Range)
+		byteRange, err := xorbByteRange(infos[term.Hash], term.Range)
 		if err != nil {
 			return nil, err
 		}
@@ -712,7 +645,7 @@ func appendGrantedRange(ranges []reconstruct.HTTPRange, next reconstruct.HTTPRan
 	return ranges
 }
 
-func (h *Handler) proxyXorbURL(baseURL, fileHash, prefix, xorbHash string, ranges []reconstruct.HTTPRange) (string, error) {
+func (h *Handler) proxyXorbURL(baseURL, fileHash, xorbHash string, ranges []reconstruct.HTTPRange) (string, error) {
 	grant, err := h.signProxyGrant(proxyGrant{
 		FileHash: fileHash,
 		XorbHash: xorbHash,
@@ -722,7 +655,7 @@ func (h *Handler) proxyXorbURL(baseURL, fileHash, prefix, xorbHash string, range
 	if err != nil {
 		return "", err
 	}
-	return baseURL + "/v1/xorbs/" + url.PathEscape(prefix) + "/" + url.PathEscape(xorbHash) + "?grant=" + url.QueryEscape(grant), nil
+	return baseURL + "/v1/xorbs/" + xorbPrefix + "/" + url.PathEscape(xorbHash) + "?grant=" + url.QueryEscape(grant), nil
 }
 
 func reconstructionProxyBaseURL(r *http.Request) string {
@@ -771,15 +704,6 @@ func xorbByteRange(info parsedXorbInfo, chunks reconstruct.IndexRange) (reconstr
 		return reconstruct.HTTPRange{}, fmt.Errorf("invalid xorb byte range")
 	}
 	return reconstruct.HTTPRange{Start: start, End: end - 1}, nil
-}
-
-func shardFileByHash(info xetstore.ShardInfo, fileHash string) (xetstore.ShardFileInfo, bool) {
-	for _, file := range info.Files {
-		if file.FileHash == fileHash {
-			return file, true
-		}
-	}
-	return xetstore.ShardFileInfo{}, false
 }
 
 func reconstructionByteRange(header string, fileSize uint64) (reconstruct.ByteRange, error) {
@@ -895,24 +819,4 @@ func rangeGranted(requested reconstruct.HTTPRange, grants []reconstruct.HTTPRang
 		}
 	}
 	return false
-}
-
-func computedShimFileHash(shard string) string {
-	sum := sha256.Sum256([]byte(shard))
-	return hex.EncodeToString(sum[:])
-}
-
-func (h *Handler) getChunk(w http.ResponseWriter, r *http.Request) {
-	shard, err := h.registry.GetDedupShardByChunk(r.Context(), chi.URLParam(r, "hash"))
-	if errors.Is(err, kv.ErrNotFound) {
-		http.NotFound(w, r)
-		return
-	}
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/octet-stream")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(shard)
 }

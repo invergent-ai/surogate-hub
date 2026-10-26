@@ -9,17 +9,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseShardInfoExtractsFilesXorbsAndChunks(t *testing.T) {
+func TestParseShardFilesExtractsSegments(t *testing.T) {
 	xorbHash := "111122223333444455556666777788889999aaaabbbbccccddddeeeeffff0000"
 	chunkA := "aaaaaaaaaaaaaaaa000000000000000000000000000000000000000000000000"
 	chunkB := "bbbbbbbbbbbbbbbb000000000000000000000000000000000000000000000000"
-	fileHash, err := ComputeFileMerkleHash([]ShardChunkInfo{
-		{Hash: chunkA, SizeBytes: 10},
-		{Hash: chunkB, SizeBytes: 20},
-	})
-	require.NoError(t, err)
+	fileHash := "00112233445566778899aabbccddeeff0123456789abcdeffedcba9876543210"
 
-	info, err := ParseShardInfo(testBinaryShard(t, fileHash, xorbHash, chunkA, chunkB))
+	files, err := ParseShardFiles(testBinaryShard(t, fileHash, xorbHash, chunkA, chunkB))
 	require.NoError(t, err)
 
 	require.Equal(t, []ShardFileInfo{{
@@ -31,57 +27,30 @@ func TestParseShardInfoExtractsFilesXorbsAndChunks(t *testing.T) {
 			ChunkIndexStart: 0,
 			ChunkIndexEnd:   2,
 		}},
-	}}, info.Files)
-	require.Equal(t, []string{xorbHash}, info.XorbHashes)
-	require.Equal(t, []ShardXorbInfo{{
-		Hash: xorbHash,
-		Chunks: []ShardChunkInfo{
-			{Hash: chunkA, SizeBytes: 10},
-			{Hash: chunkB, SizeBytes: 20},
-		},
-	}}, info.Xorbs)
-	require.Equal(t, []string{chunkA, chunkB}, info.ChunkHashes)
+	}}, files)
 }
 
-func TestParseShardInfoRejectsMismatchedFileHash(t *testing.T) {
-	fileHash := "00112233445566778899aabbccddeeff0123456789abcdeffedcba9876543210"
-	xorbHash := "111122223333444455556666777788889999aaaabbbbccccddddeeeeffff0000"
-	chunkA := "aaaaaaaaaaaaaaaa000000000000000000000000000000000000000000000000"
-	chunkB := "bbbbbbbbbbbbbbbb000000000000000000000000000000000000000000000000"
+func TestParseShardFilesReadsHFShardWithVerificationEntries(t *testing.T) {
+	files, err := ParseShardFiles(testFooterlessHFShard(t))
 
-	_, err := ParseShardInfo(testBinaryShard(t, fileHash, xorbHash, chunkA, chunkB))
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "file hash mismatch")
+	require.NoError(t, err)
+	require.Len(t, files, 1)
+	require.Equal(t, uint64(98308), files[0].SizeBytes)
 }
 
-func TestParseShardInfoAcceptsFooterlessHFShard(t *testing.T) {
-	raw := testFooterlessHFShard(t)
+func TestParseShardFilesRejectsEntryCountBeyondData(t *testing.T) {
+	var b bytes.Buffer
+	b.Write(mdbShardHeaderTag[:])
+	writeU64(&b, mdbShardHeaderVersion)
+	writeU64(&b, 0)
+	writeHash(t, &b, "00112233445566778899aabbccddeeff0123456789abcdeffedcba9876543210")
+	writeU32(&b, 0)
+	writeU32(&b, ^uint32(0))
+	writeU64(&b, 0)
 
-	info, err := ParseShardInfo(raw)
+	_, err := ParseShardFiles(b.Bytes())
 
-	require.NoError(t, err)
-	require.Len(t, info.Files, 1)
-	require.Len(t, info.Xorbs, 1)
-	require.Len(t, info.ChunkHashes, 1)
-	require.Equal(t, uint64(98308), info.Summary.SizeBytes)
-	require.Equal(t, 1, info.Summary.NumXorbs)
-	require.Equal(t, 1, info.Summary.NumChunks)
-}
-
-func TestCanonicalShardAppendsFooterToFooterlessHFShard(t *testing.T) {
-	raw := testFooterlessHFShard(t)
-	require.Equal(t, uint64(0), binary.LittleEndian.Uint64(raw[40:48]))
-
-	canonical, info, err := CanonicalShard(raw)
-
-	require.NoError(t, err)
-	require.Len(t, canonical, len(raw)+int(mdbShardFooterSize))
-	require.Equal(t, uint64(mdbShardFooterSize), binary.LittleEndian.Uint64(canonical[40:48]))
-	require.Equal(t, uint64(98308), info.Summary.SizeBytes)
-	parsed, err := ParseShardInfo(canonical)
-	require.NoError(t, err)
-	require.Equal(t, info.Summary, parsed.Summary)
-	require.Equal(t, info.Files, parsed.Files)
+	require.ErrorContains(t, err, "read shard file xorb hash")
 }
 
 func testFooterlessHFShard(t *testing.T) []byte {

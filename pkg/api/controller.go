@@ -816,19 +816,23 @@ func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request,
 		writeTime = time.Unix(*mtime, 0)
 	}
 	fullPhysicalAddress := swag.StringValue(body.Staging.PhysicalAddress)
-	xetFileHash, isXETAddress := parseXETPhysicalAddress(fullPhysicalAddress)
+	xetFileHash, isXETAddress := xetstore.ParsePhysicalAddress(fullPhysicalAddress)
 	if isXETAddress {
 		if xetFileHash == "" {
 			writeError(w, r, http.StatusBadRequest, "xet physical address is missing file hash")
 			return
 		}
-		exists, err := xetstore.NewRegistry(c.Catalog.KVStore).HasShard(ctx, xetFileHash)
+		file, err := xetstore.NewRegistry(c.Catalog.KVStore).GetFile(ctx, xetFileHash)
+		if errors.Is(err, kv.ErrNotFound) {
+			writeError(w, r, http.StatusNotFound, "xet file not found")
+			return
+		}
 		if err != nil {
 			writeError(w, r, http.StatusInternalServerError, err)
 			return
 		}
-		if !exists {
-			writeError(w, r, http.StatusNotFound, "xet shard not found")
+		if body.SizeBytes != int64(file.SizeBytes) {
+			writeError(w, r, http.StatusBadRequest, fmt.Sprintf("size_bytes %d does not match xet file size %d", body.SizeBytes, file.SizeBytes))
 			return
 		}
 	}
@@ -865,21 +869,18 @@ func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request,
 		entryBuilder.Metadata(body.UserMetadata.AdditionalProperties)
 	}
 	entry := entryBuilder.Build()
-	err = c.Catalog.CreateEntry(ctx, repo.Name, branch, entry, graveler.WithForce(swag.BoolValue(body.Force)), graveler.WithIfAbsent(ifAbsent))
-	if c.handleAPIError(ctx, w, r, err) {
-		return
-	}
+	// The ref goes first: if the entry write then fails, xet GC only keeps the
+	// file longer, while an entry without a ref would look like garbage.
 	if isXETAddress {
-		err = xetstore.NewRegistry(c.Catalog.KVStore).PutFileRef(ctx, xetstore.FileRef{
-			FileHash: xetFileHash,
-			Repo:     repo.Name,
-			Ref:      branch,
-			Path:     params.Path,
-		})
+		err = xetstore.NewRegistry(c.Catalog.KVStore).PutFileRef(ctx, xetstore.FileRef{FileHash: xetFileHash, Repo: repo.Name})
 		if err != nil {
 			writeError(w, r, http.StatusInternalServerError, err)
 			return
 		}
+	}
+	err = c.Catalog.CreateEntry(ctx, repo.Name, branch, entry, graveler.WithForce(swag.BoolValue(body.Force)), graveler.WithIfAbsent(ifAbsent))
+	if c.handleAPIError(ctx, w, r, err) {
+		return
 	}
 
 	metadata := apigen.ObjectUserMetadata{AdditionalProperties: entry.Metadata}
@@ -895,10 +896,6 @@ func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request,
 	}
 
 	writeResponse(w, r, http.StatusOK, response)
-}
-
-func parseXETPhysicalAddress(address string) (string, bool) {
-	return strings.TrimPrefix(address, "xet://"), strings.HasPrefix(address, "xet://")
 }
 
 // normalizePhysicalAddress return relative address based on storage namespace if possible. If address doesn't match
@@ -3509,7 +3506,7 @@ func (c *Controller) objectUploadMode(sizeBytes *int64) string {
 		return "regular"
 	}
 	minSize := c.Config.GetBaseConfig().XET.Upload.MinSizeBytes
-	if minSize <= 0 {
+	if minSize <= 0 || xetstore.StorageNamespace(c.Config) == "" {
 		return "regular"
 	}
 	if *sizeBytes >= minSize {
@@ -3831,7 +3828,7 @@ func (c *Controller) CopyObject(w http.ResponseWriter, r *http.Request, body api
 
 	var entry *catalog.DBEntry
 	physicalAddress := ""
-	xetFileHash, isXETAddress := parseXETPhysicalAddress(srcEntry.PhysicalAddress)
+	xetFileHash, isXETAddress := xetstore.ParsePhysicalAddress(srcEntry.PhysicalAddress)
 	if isXETAddress {
 		if xetFileHash == "" {
 			writeError(w, r, http.StatusBadRequest, "xet physical address is missing file hash")
@@ -3840,18 +3837,9 @@ func (c *Controller) CopyObject(w http.ResponseWriter, r *http.Request, body api
 		dstEntry := *srcEntry
 		dstEntry.Path = destPath
 		dstEntry.CreationDate = time.Now()
+		// The copy stays in the same repository, which already holds a ref to the file.
 		err = c.Catalog.CreateEntry(ctx, repository, branch, dstEntry, graveler.WithForce(swag.BoolValue(body.Force)))
 		if c.handleAPIError(ctx, w, r, err) {
-			return
-		}
-		err = xetstore.NewRegistry(c.Catalog.KVStore).PutFileRef(ctx, xetstore.FileRef{
-			FileHash: xetFileHash,
-			Repo:     repo.Name,
-			Ref:      branch,
-			Path:     destPath,
-		})
-		if err != nil {
-			writeError(w, r, http.StatusInternalServerError, err)
 			return
 		}
 		entry = &dstEntry
@@ -4941,7 +4929,7 @@ func (c *Controller) GetObject(w http.ResponseWriter, r *http.Request, owner, re
 		return
 	}
 
-	if fileHash, isXETAddress := parseXETPhysicalAddress(entry.PhysicalAddress); isXETAddress {
+	if fileHash, isXETAddress := xetstore.ParsePhysicalAddress(entry.PhysicalAddress); isXETAddress {
 		c.getXETObject(w, r, entry, fileHash, params, requestStart)
 		return
 	}
@@ -5045,7 +5033,7 @@ func (c *Controller) getXETObject(w http.ResponseWriter, r *http.Request, entry 
 	reader, err := xetcas.ReconstructFileRange(
 		r.Context(),
 		xetstore.NewRegistry(c.Catalog.KVStore),
-		xetcas.NewXorbStore(c.BlockAdapter, xetStorageNamespace(c.Config, c.BlockAdapter)),
+		xetcas.NewXorbStore(c.BlockAdapter, xetstore.StorageNamespace(c.Config)),
 		fileHash,
 		byteRange,
 	)
@@ -5079,7 +5067,7 @@ func (c *Controller) getXETObject(w http.ResponseWriter, r *http.Request, entry 
 		c.Logger.
 			WithError(err).
 			WithField("physical_address", entry.PhysicalAddress).
-			Debug("GetObject copy xet content")
+			Error("GetObject: xet reconstruction failed after the response started")
 	}
 }
 
@@ -5124,7 +5112,7 @@ func (c *Controller) ListObjects(w http.ResponseWriter, r *http.Request, owner, 
 			})
 		} else {
 			physicalAddress := entry.PhysicalAddress
-			_, isXETAddress := parseXETPhysicalAddress(entry.PhysicalAddress)
+			_, isXETAddress := xetstore.ParsePhysicalAddress(entry.PhysicalAddress)
 			if !isXETAddress {
 				qk, err := c.BlockAdapter.ResolveNamespace(repo.StorageID, repo.StorageNamespace, entry.PhysicalAddress, entry.AddressType.ToIdentifierType())
 				if err != nil {
@@ -5225,7 +5213,7 @@ func (c *Controller) StatObject(w http.ResponseWriter, r *http.Request, owner, r
 	}
 
 	physicalAddress := entry.PhysicalAddress
-	_, isXETAddress := parseXETPhysicalAddress(entry.PhysicalAddress)
+	_, isXETAddress := xetstore.ParsePhysicalAddress(entry.PhysicalAddress)
 	if !isXETAddress {
 		qk, err := c.BlockAdapter.ResolveNamespace(repo.StorageID, repo.StorageNamespace, entry.PhysicalAddress, entry.AddressType.ToIdentifierType())
 		if c.handleAPIError(ctx, w, r, err) {
@@ -5324,7 +5312,7 @@ func (c *Controller) GetUnderlyingProperties(w http.ResponseWriter, r *http.Requ
 	if c.handleAPIError(ctx, w, r, err) {
 		return
 	}
-	if _, isXETAddress := parseXETPhysicalAddress(entry.PhysicalAddress); isXETAddress {
+	if _, isXETAddress := xetstore.ParsePhysicalAddress(entry.PhysicalAddress); isXETAddress {
 		writeError(w, r, http.StatusBadRequest, "xet object has no underlying storage properties")
 		return
 	}

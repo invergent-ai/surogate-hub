@@ -90,7 +90,7 @@ func GetBasicHandler(t *testing.T, authService *FakeAuthService, repoName string
 		opt(deps)
 	}
 
-	handler := gateway.NewHandler(authService.Region, c, multipartTracker, blockAdapter, authService, []string{authService.BareDomain}, &stats.NullCollector{}, upload.DefaultPathProvider, nil, config.DefaultLoggingAuditLogLevel, true, false, false, deps.StorageAccountant, deps.QuotaChecker)
+	handler := gateway.NewHandler(authService.Region, c, multipartTracker, blockAdapter, authService, []string{authService.BareDomain}, &stats.NullCollector{}, upload.DefaultPathProvider, nil, config.DefaultLoggingAuditLogLevel, true, false, false, deps.StorageAccountant, deps.QuotaChecker, "")
 
 	return handler, deps
 }

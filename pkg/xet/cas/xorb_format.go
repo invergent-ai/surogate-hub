@@ -116,15 +116,7 @@ func parseFooterlessXorbInfo(data []byte) (parsedXorbInfo, error) {
 	var compressedOffset uint32
 	var unpackedOffset uint32
 	for reader.Len() > 0 {
-		header, err := readXorbChunkHeader(reader)
-		if err != nil {
-			return parsedXorbInfo{}, err
-		}
-		serializedChunk := make([]byte, header.compressedLength)
-		if _, err := io.ReadFull(reader, serializedChunk); err != nil {
-			return parsedXorbInfo{}, fmt.Errorf("read xorb chunk data: %w", err)
-		}
-		chunk, err := decompressXorbChunk(header, serializedChunk)
+		header, chunk, err := readXorbChunk(reader)
 		if err != nil {
 			return parsedXorbInfo{}, err
 		}
@@ -194,6 +186,10 @@ func parseXorbInfo(data []byte) (parsedXorbInfo, int, error) {
 	numChunks, err := readXorbU32(reader)
 	if err != nil {
 		return parsedXorbInfo{}, 0, fmt.Errorf("read xorb hash count: %w", err)
+	}
+	// The count is untrusted: check it fits the footer before allocating for it.
+	if uint64(numChunks)*32 > uint64(reader.Len()) {
+		return parsedXorbInfo{}, 0, fmt.Errorf("xorb chunk count %d exceeds footer", numChunks)
 	}
 	chunkHashes := make([]string, 0, numChunks)
 	for i := uint32(0); i < numChunks; i++ {
@@ -284,15 +280,7 @@ func decodeXorbChunks(data []byte, info parsedXorbInfo) ([][]byte, error) {
 	var compressedOffset uint32
 	var unpackedOffset uint32
 	for i, expectedHash := range info.ChunkHashes {
-		header, err := readXorbChunkHeader(reader)
-		if err != nil {
-			return nil, err
-		}
-		serializedChunk := make([]byte, header.compressedLength)
-		if _, err := io.ReadFull(reader, serializedChunk); err != nil {
-			return nil, fmt.Errorf("read xorb chunk data: %w", err)
-		}
-		chunk, err := decompressXorbChunk(header, serializedChunk)
+		header, chunk, err := readXorbChunk(reader)
 		if err != nil {
 			return nil, err
 		}
@@ -314,6 +302,20 @@ func decodeXorbChunks(data []byte, info parsedXorbInfo) ([][]byte, error) {
 	return chunks, nil
 }
 
+// readXorbChunk reads one serialized chunk and returns its header and data.
+func readXorbChunk(reader io.Reader) (xorbChunkHeader, []byte, error) {
+	header, err := readXorbChunkHeader(reader)
+	if err != nil {
+		return xorbChunkHeader{}, nil, err
+	}
+	serializedChunk := make([]byte, header.compressedLength)
+	if _, err := io.ReadFull(reader, serializedChunk); err != nil {
+		return xorbChunkHeader{}, nil, fmt.Errorf("read xorb chunk data: %w", err)
+	}
+	chunk, err := decompressXorbChunk(header, serializedChunk)
+	return header, chunk, err
+}
+
 func decompressXorbChunk(header xorbChunkHeader, serializedChunk []byte) ([]byte, error) {
 	switch header.compressionScheme {
 	case 0:
@@ -322,13 +324,13 @@ func decompressXorbChunk(header xorbChunkHeader, serializedChunk []byte) ([]byte
 		}
 		return serializedChunk, nil
 	case 1:
-		decompressed, err := decompressLZ4XorbChunk(serializedChunk)
+		decompressed, err := decompressLZ4XorbChunk(serializedChunk, header.uncompressedLength)
 		if err != nil {
 			return nil, err
 		}
 		return validateXorbChunkLength("lz4", decompressed, header.uncompressedLength)
 	case 2:
-		decompressed, err := decompressLZ4XorbChunk(serializedChunk)
+		decompressed, err := decompressLZ4XorbChunk(serializedChunk, header.uncompressedLength)
 		if err != nil {
 			return nil, err
 		}
@@ -338,9 +340,12 @@ func decompressXorbChunk(header xorbChunkHeader, serializedChunk []byte) ([]byte
 	}
 }
 
-func decompressLZ4XorbChunk(serializedChunk []byte) ([]byte, error) {
+// decompressLZ4XorbChunk stops one byte past the declared length, so a small
+// chunk cannot expand without bound before the length check rejects it.
+func decompressLZ4XorbChunk(serializedChunk []byte, uncompressedLength uint32) ([]byte, error) {
 	var decompressed bytes.Buffer
-	if _, err := io.Copy(&decompressed, lz4.NewReader(bytes.NewReader(serializedChunk))); err != nil {
+	reader := io.LimitReader(lz4.NewReader(bytes.NewReader(serializedChunk)), int64(uncompressedLength)+1)
+	if _, err := io.Copy(&decompressed, reader); err != nil {
 		return nil, fmt.Errorf("decompress xorb lz4 chunk: %w", err)
 	}
 	return decompressed.Bytes(), nil

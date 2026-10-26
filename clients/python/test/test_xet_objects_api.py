@@ -8,7 +8,7 @@ from unittest.mock import patch
 from surogate_hub_sdk.configuration import Configuration
 from surogate_hub_sdk.models.object_stats import ObjectStats
 
-from test_xet_client import FakeHfXet, FakeStagingApi
+from test_xet_client import FakeHfXet, FakeStagingApi, record_token_mints
 
 
 class FakeInternalApi:
@@ -40,12 +40,8 @@ class TestXetObjectsApi(unittest.TestCase):
             password="secret",
         )
         api_client = SimpleNamespace(configuration=configuration)
-        api = XetObjectsApi(
-            api_client,
-            hf_xet_module=hf_xet or FakeHfXet(),
-            token_info=("token", 4102444800),
-            token_refresher=lambda: ("token", 4102444800),
-        )
+        api = XetObjectsApi(api_client, hf_xet_module=hf_xet or FakeHfXet())
+        api.minted = record_token_mints(api)
         api._staging_api = FakeStagingApi()
         api._internal_api = FakeInternalApi(upload_mode=upload_mode)
         return api
@@ -124,6 +120,7 @@ class TestXetObjectsApi(unittest.TestCase):
 
         result = api.upload_object("alice", "repo", "main", "models/model.bin", content=local_path)
 
+        self.assertEqual(api.minted, [("alice", "repo", "main", "models/model.bin", "write")])
         self.assertEqual(hf_xet.upload_calls[0]["file_paths"], [local_path])
         self.assertEqual(hf_xet.upload_calls[0]["endpoint"], "http://sghub.example/xet")
         link = api._staging_api.calls[0]
@@ -185,9 +182,10 @@ class TestXetObjectsApi(unittest.TestCase):
             mtime=0,
         )
 
-        data = api.get_object("alice", "repo", "main", "models/model.bin")
+        data = api.get_object("alice", "repo", "v1.0", "models/model.bin")
 
         self.assertEqual(data, b"downloaded model")
+        self.assertEqual(api.minted, [("alice", "repo", "v1.0", "models/model.bin", "read")])
         call = hf_xet.download_calls[0]
         self.assertEqual(call["endpoint"], "http://sghub.example/xet")
         self.assertEqual(call["files"][0].hash, "file-hash")
@@ -261,6 +259,38 @@ class TestXetObjectsApi(unittest.TestCase):
         self.assertEqual(regular_download.call_args.kwargs["repository"], "repo")
         self.assertEqual(stat_calls, [])
         self.assertEqual(hf_xet.download_calls, [])
+
+    def test_mint_token_asks_for_one_object(self):
+        import io
+        import json
+        from urllib.parse import parse_qs, urlsplit
+
+        from surogate_hub_sdk.xet_objects_api import XetObjectsApi
+
+        api = XetObjectsApi(SimpleNamespace(configuration=Configuration(
+            host="http://sghub.example/api/v1",
+            username="access",
+            password="secret",
+        )))
+        requests = []
+
+        def urlopen(request):
+            requests.append(request)
+            return io.BytesIO(json.dumps({"access_token": "token", "exp": 42}).encode())
+
+        with patch("urllib.request.urlopen", urlopen):
+            token = api._mint_token("alice", "repo", "main", "models/a b.bin", "write")
+
+        self.assertEqual(token, ("token", 42))
+        url = urlsplit(requests[0].full_url)
+        self.assertEqual(url.path, "/xet/v1/token")
+        self.assertEqual(parse_qs(url.query), {
+            "mode": ["write"],
+            "repository": ["alice/repo"],
+            "ref": ["main"],
+            "path": ["models/a b.bin"],
+        })
+        self.assertEqual(requests[0].get_method(), "POST")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,6 @@
 import json
 import os
 import tempfile
-import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any, Dict, Optional, Tuple
@@ -22,8 +21,6 @@ class XetObjectsApi(ObjectsApi):
         api_client=None,
         xet_endpoint: Optional[str] = None,
         hf_xet_module=None,
-        token_info: Optional[TokenInfo] = None,
-        token_refresher=None,
         request_headers: Optional[Dict[str, str]] = None,
     ) -> None:
         super().__init__(api_client)
@@ -32,8 +29,6 @@ class XetObjectsApi(ObjectsApi):
         self.configuration = self.api_client.configuration
         self.xet_endpoint = (xet_endpoint or self._derive_xet_endpoint(self.configuration.host)).rstrip("/")
         self.hf_xet = hf_xet_module
-        self._token_info = token_info
-        self._token_refresher = token_refresher
         self.request_headers = request_headers
 
     def upload_object(
@@ -100,11 +95,12 @@ class XetObjectsApi(ObjectsApi):
                 )
 
             hf_xet = self._hf_xet()
+            token_info, refresh_token = self._xet_token(user, repository, branch, path, "write")
             upload_info = hf_xet.upload_files(
                 [local_path],
                 self.xet_endpoint,
-                self._get_token_info(),
-                self._refresh_token,
+                token_info,
+                refresh_token,
                 None,
                 None,
                 _headers or self.request_headers,
@@ -191,6 +187,7 @@ class XetObjectsApi(ObjectsApi):
             )
 
         file_hash = physical_address[len("xet://"):]
+        token_info, refresh_token = self._xet_token(user, repository, ref, path, "read")
         tmp = tempfile.NamedTemporaryFile(delete=False)
         tmp_path = tmp.name
         tmp.close()
@@ -205,8 +202,8 @@ class XetObjectsApi(ObjectsApi):
             self._hf_xet().download_files(
                 downloads,
                 self.xet_endpoint,
-                self._get_token_info(),
-                self._refresh_token,
+                token_info,
+                refresh_token,
                 None,
                 _headers or self.request_headers,
             )
@@ -281,32 +278,23 @@ class XetObjectsApi(ObjectsApi):
             self.hf_xet = self._load_hf_xet()
         return self.hf_xet
 
-    def _get_token_info(self) -> TokenInfo:
-        if self._token_info is None:
-            self._token_info = self._mint_token()
-        return self._token_info
+    def _xet_token(self, user, repository, ref, path, mode):
+        """Mint a token for one object. hf_xet refreshes by calling the returned
+        function, which mints again, so the server re-checks permissions."""
+        return (
+            self._mint_token(user, repository, ref, path, mode),
+            lambda: self._mint_token(user, repository, ref, path, mode),
+        )
 
-    def _refresh_token(self) -> TokenInfo:
-        if self._token_refresher is not None:
-            self._token_info = self._token_refresher()
-            return self._token_info
-
-        token, _ = self._get_token_info()
-        request = urllib.request.Request(self.xet_endpoint + "/v1/token/refresh", method="GET")
-        request.add_header("Authorization", "Bearer " + token)
-        try:
-            self._token_info = self._read_token_response(request)
-        except urllib.error.HTTPError:
-            self._token_info = self._mint_token()
-        return self._token_info
-
-    def _mint_token(self) -> TokenInfo:
-        request = urllib.request.Request(self.xet_endpoint + "/v1/token", method="POST")
+    def _mint_token(self, user, repository, ref, path, mode) -> TokenInfo:
+        query = urllib.parse.urlencode({
+            "mode": mode,
+            "repository": user + "/" + repository,
+            "ref": ref,
+            "path": path,
+        })
+        request = urllib.request.Request(self.xet_endpoint + "/v1/token?" + query, method="POST")
         request.add_header("Authorization", self._hub_auth_header())
-        return self._read_token_response(request)
-
-    @staticmethod
-    def _read_token_response(request: urllib.request.Request) -> TokenInfo:
         with urllib.request.urlopen(request) as response:
             data = json.loads(response.read().decode("utf-8"))
         return data["access_token"], int(data["exp"])

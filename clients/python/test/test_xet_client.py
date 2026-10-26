@@ -124,6 +124,17 @@ class FakeHubClient:
         self.objects_api = FakeObjectsApi()
 
 
+def record_token_mints(objects_api):
+    minted = []
+
+    def mint(*args):
+        minted.append(args)
+        return "token", 4102444800
+
+    objects_api._mint_token = mint
+    return minted
+
+
 class TestXETClient(unittest.TestCase):
     def test_hub_client_accepts_default_pool_threads_argument(self):
         from surogate_hub_sdk.client import HubClient
@@ -143,12 +154,8 @@ class TestXETClient(unittest.TestCase):
 
         hf_xet = FakeHfXet()
         sghub = FakeHubClient()
-        client = XETClient(
-            sghub,
-            hf_xet_module=hf_xet,
-            token_info=("token", 4102444800),
-            token_refresher=lambda: ("token", 4102444800),
-        )
+        client = XETClient(sghub, hf_xet_module=hf_xet)
+        minted = record_token_mints(client._objects)
 
         result = client.upload_file(
             "owner/repo",
@@ -161,6 +168,9 @@ class TestXETClient(unittest.TestCase):
         )
 
         self.assertEqual(result.file_hash, "file-hash")
+        self.assertEqual(minted, [("owner", "repo", "main", "models/model.bin", "write")])
+        hf_xet.upload_calls[0]["token_refresher"]()
+        self.assertEqual(len(minted), 2)
         self.assertEqual(hf_xet.upload_calls[0]["endpoint"], "http://sghub.example/xet")
         self.assertEqual(hf_xet.upload_calls[0]["file_paths"], ["/tmp/model.bin"])
         link = sghub.staging_api.calls[0]
@@ -180,16 +190,13 @@ class TestXETClient(unittest.TestCase):
 
         hf_xet = FakeHfXet()
         sghub = FakeHubClient()
-        client = XETClient(
-            sghub,
-            hf_xet_module=hf_xet,
-            token_info=("token", 4102444800),
-            token_refresher=lambda: ("token", 4102444800),
-        )
+        client = XETClient(sghub, hf_xet_module=hf_xet)
+        minted = record_token_mints(client._objects)
 
         result = client.download_file("owner/repo", "main", "models/model.bin", "/tmp/out.bin")
 
         self.assertEqual(result, "/tmp/out.bin")
+        self.assertEqual(minted, [("owner", "repo", "main", "models/model.bin", "read")])
         self.assertEqual(sghub.objects_api.calls[0], {
             "user": "owner",
             "repository": "repo",

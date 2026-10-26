@@ -3,10 +3,7 @@ package cas
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,31 +20,38 @@ import (
 	"github.com/invergent-ai/surogate-hub/pkg/auth"
 	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
 	"github.com/invergent-ai/surogate-hub/pkg/block/mem"
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
 	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
 	"github.com/invergent-ai/surogate-hub/pkg/xet/reconstruct"
 	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
+	"github.com/invergent-ai/surogate-hub/pkg/xet/xettest"
 	"github.com/pierrec/lz4/v4"
 	"github.com/stretchr/testify/require"
 )
 
-func TestPostTokenIssuesScopedJWT(t *testing.T) {
+func TestPostTokenIssuesGrantScopedJWT(t *testing.T) {
 	ctx := auth.WithUser(context.Background(), &model.User{Username: "user-a"})
+	var authorized TokenGrant
 	handler := NewHandler(
 		xetstore.NewRegistry(kvtest.GetStore(ctx, t)),
 		WithTokenSigningKey([]byte("test-token-key")),
 		WithTokenTTL(time.Hour),
+		WithTokenAuthorizer(func(ctx context.Context, username string, grant TokenGrant) error {
+			require.Equal(t, "user-a", username)
+			authorized = grant
+			return nil
+		}),
 	)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/token", nil).WithContext(ctx)
+	req := httptest.NewRequest(http.MethodPost, "/v1/token?mode=read&repository=owner%2Frepo&ref=main&path=models%2Fa.bin", nil).WithContext(ctx)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, TokenGrant{Mode: "read", Repo: "owner/repo", Ref: "main", Path: "models/a.bin"}, authorized)
 	var body tokenResponse
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
-	require.NotEmpty(t, body.AccessToken)
 	require.Greater(t, body.ExpiresAt, time.Now().Unix())
-
 	claims := jwt.MapClaims{}
 	token, err := jwt.ParseWithClaims(body.AccessToken, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte("test-token-key"), nil
@@ -56,59 +60,44 @@ func TestPostTokenIssuesScopedJWT(t *testing.T) {
 	require.True(t, token.Valid)
 	require.Equal(t, "user-a", claims["sub"])
 	require.Equal(t, "xet", claims["aud"])
-	require.Equal(t, "read write", claims["scope"])
+	require.Equal(t, "read", claims["scope"])
+	require.Equal(t, "owner/repo", claims["repo"])
+	require.Equal(t, "main", claims["ref"])
+	require.Equal(t, "models/a.bin", claims["path"])
 }
 
-func TestRefreshTokenIssuesNewScopedJWT(t *testing.T) {
+func TestPostTokenRejectsIncompleteOrDeniedGrant(t *testing.T) {
 	ctx := auth.WithUser(context.Background(), &model.User{Username: "user-a"})
 	handler := NewHandler(
 		xetstore.NewRegistry(kvtest.GetStore(ctx, t)),
 		WithTokenSigningKey([]byte("test-token-key")),
-		WithTokenTTL(time.Hour),
+		WithTokenAuthorizer(func(ctx context.Context, username string, grant TokenGrant) error {
+			return ErrTokenNotAllowed
+		}),
 	)
-	req := httptest.NewRequest(http.MethodPost, "/v1/token", nil).WithContext(ctx)
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-	require.Equal(t, http.StatusOK, rec.Code)
-	var issued tokenResponse
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &issued))
 
-	refreshReq := httptest.NewRequest(http.MethodGet, "/v1/token/refresh", nil)
-	refreshReq.Header.Set("Authorization", "Bearer "+issued.AccessToken)
-	refreshRec := httptest.NewRecorder()
-	handler.ServeHTTP(refreshRec, refreshReq)
+	for query, code := range map[string]int{
+		"mode=read&repository=owner%2Frepo&ref=main":             http.StatusBadRequest,
+		"mode=admin&repository=owner%2Frepo&ref=main&path=a.bin": http.StatusBadRequest,
+		"mode=write&repository=owner%2Frepo&ref=main&path=a.bin": http.StatusForbidden,
+	} {
+		req := httptest.NewRequest(http.MethodPost, "/v1/token?"+query, nil).WithContext(ctx)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
 
-	require.Equal(t, http.StatusOK, refreshRec.Code)
-	var refreshed tokenResponse
-	require.NoError(t, json.Unmarshal(refreshRec.Body.Bytes(), &refreshed))
-	require.NotEmpty(t, refreshed.AccessToken)
-	claims := jwt.MapClaims{}
-	token, err := jwt.ParseWithClaims(refreshed.AccessToken, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte("test-token-key"), nil
-	})
-	require.NoError(t, err)
-	require.True(t, token.Valid)
-	require.Equal(t, "user-a", claims["sub"])
-	require.Equal(t, "read write", claims["scope"])
+		require.Equal(t, code, rec.Code, query)
+	}
 }
 
 func TestScopedAuthRejectsMissingToken(t *testing.T) {
 	ctx := context.Background()
-	kvStore := kvtest.GetStore(ctx, t)
-	registry := xetstore.NewRegistry(kvStore)
-	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: "file-a",
-		Shard:    []byte("raw-shard"),
-		ChunkIDs: []string{"chunk-a"},
-	})
-	require.NoError(t, err)
 	handler := NewHandler(
-		registry,
+		xetstore.NewRegistry(kvtest.GetStore(ctx, t)),
 		WithTokenSigningKey([]byte("test-token-key")),
 		WithTokenAuthRequired(),
 	)
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/chunks/default/chunk-a", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v2/reconstructions/file-a", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -123,7 +112,7 @@ func TestScopedAuthRejectsInsufficientScope(t *testing.T) {
 		WithTokenSigningKey([]byte("test-token-key")),
 		WithTokenAuthRequired(),
 	)
-	token := testXETToken(t, "user-a", "read", time.Now().Add(time.Hour))
+	token := testXETToken(t, "user-a", TokenGrant{Mode: "read"}, time.Now().Add(time.Hour))
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/xorb-a", strings.NewReader("xorb-bytes"))
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -133,61 +122,104 @@ func TestScopedAuthRejectsInsufficientScope(t *testing.T) {
 	require.Equal(t, http.StatusForbidden, rec.Code)
 }
 
-func TestGetChunkReturnsDedupShardBytes(t *testing.T) {
-	ctx := context.Background()
-	kvStore := kvtest.GetStore(ctx, t)
-	registry := xetstore.NewRegistry(kvStore)
-	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: "file-a",
-		Shard:    []byte("raw-shard"),
-		ChunkIDs: []string{"chunk-a"},
-	})
-	require.NoError(t, err)
-
-	req := httptest.NewRequest(http.MethodGet, "/v1/chunks/default/chunk-a", nil)
-	rec := httptest.NewRecorder()
-
-	NewHandler(registry).ServeHTTP(rec, req)
-
-	require.Equal(t, http.StatusOK, rec.Code)
-	require.Equal(t, "application/octet-stream", rec.Header().Get("Content-Type"))
-	body, err := io.ReadAll(rec.Result().Body)
-	require.NoError(t, err)
-	require.Equal(t, []byte("raw-shard"), body)
-}
-
 func TestPostXorbStoresBytesAndReportsIdempotency(t *testing.T) {
 	ctx := context.Background()
 	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
 	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
+	xorbHash, xorbBytes := xettest.SerializedXorb(t, []byte("chunk-data"))
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/xorb-a", bytes.NewReader([]byte("xorb-bytes")))
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
+	for _, inserted := range []bool{true, false} {
+		req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/"+xorbHash, bytes.NewReader(xorbBytes))
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
 
-	require.Equal(t, http.StatusOK, rec.Code)
-	require.JSONEq(t, `{"was_inserted":true}`, rec.Body.String())
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.JSONEq(t, fmt.Sprintf(`{"was_inserted":%t}`, inserted), rec.Body.String())
+	}
 
-	secondReq := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/xorb-a", bytes.NewReader([]byte("different")))
-	secondRec := httptest.NewRecorder()
-	handler.ServeHTTP(secondRec, secondReq)
-
-	require.Equal(t, http.StatusOK, secondRec.Code)
-	require.JSONEq(t, `{"was_inserted":false}`, secondRec.Body.String())
-
-	reader, err := xorbStore.Get(ctx, "default", "xorb-a")
+	reader, err := xorbStore.Get(ctx, xorbHash)
 	require.NoError(t, err)
 	defer reader.Close()
 	body, err := io.ReadAll(reader)
 	require.NoError(t, err)
-	require.Equal(t, []byte("xorb-bytes"), body)
+	require.Equal(t, xorbBytes, body)
+}
+
+func TestPostXorbKeepsTheStoredLayoutWhenReuploadedCompressedDifferently(t *testing.T) {
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
+	handler := NewHandler(registry, WithXorbStore(xorbStore))
+	chunks := [][]byte{bytes.Repeat([]byte("a"), 2048), bytes.Repeat([]byte("b"), 2048)}
+	xorbHash, plain := xettest.SerializedXorb(t, chunks...)
+	lz4Hash, compressed := xettest.SerializedXorbWithScheme(t, xettest.SchemeLZ4, chunks...)
+	require.Equal(t, xorbHash, lz4Hash)
+	postTestXorb(t, handler, xorbHash, plain)
+	postTestXorb(t, handler, xorbHash, compressed)
+
+	fileHash := xettest.FileHash(t, chunks...)
+	_, err := registry.RegisterFile(ctx, xetstore.ShardFileInfo{
+		FileHash:  fileHash,
+		SizeBytes: 4096,
+		Segments:  []xetstore.ShardFileSegment{{XorbHash: xorbHash, SizeBytes: 4096, ChunkIndexEnd: 2}},
+	})
+	require.NoError(t, err)
+	reader, err := ReconstructFileRange(ctx, registry, xorbStore, fileHash, reconstruct.ByteRange{Start: 0, End: 4096})
+	require.NoError(t, err)
+	defer func() { _ = reader.Close() }()
+	got, err := io.ReadAll(reader)
+	require.NoError(t, err)
+
+	require.Equal(t, bytes.Join(chunks, nil), got)
+}
+
+func TestPostXorbRejectsUnverifiableAddress(t *testing.T) {
+	ctx := context.Background()
+	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(NewXorbStore(mem.New(ctx), "mem://xet-cas")))
+	xorbHash, xorbBytes := xettest.SerializedXorb(t, []byte("chunk-data"))
+
+	for _, path := range []string{"/v1/xorbs/default/xorb-a", "/v1/xorbs/other/" + xorbHash} {
+		req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(xorbBytes))
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusBadRequest, rec.Code, path)
+	}
+}
+
+func TestParseXorbInfoRejectsChunkCountBeyondFooter(t *testing.T) {
+	var footer bytes.Buffer
+	footer.WriteString(xorbInfoIdent)
+	footer.WriteByte(1)
+	footer.Write(make([]byte, 32))
+	footer.WriteString(xorbHashSectionIdent)
+	footer.WriteByte(0)
+	writeXorbU32(&footer, ^uint32(0))
+	writeXorbU32(&footer, uint32(footer.Len()))
+
+	_, _, err := parseXorbInfo(footer.Bytes())
+
+	require.ErrorContains(t, err, "exceeds footer")
+}
+
+func TestDecompressLZ4XorbChunkStopsPastDeclaredLength(t *testing.T) {
+	var compressed bytes.Buffer
+	writer := lz4.NewWriter(&compressed)
+	_, err := writer.Write(make([]byte, 1<<20))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	decompressed, err := decompressLZ4XorbChunk(compressed.Bytes(), 16)
+
+	require.NoError(t, err)
+	require.Len(t, decompressed, 17)
 }
 
 func TestPostXorbRejectsMismatchedSerializedHash(t *testing.T) {
 	ctx := context.Background()
 	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
 	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
-	xorbHash, xorbBytes := testSerializedXorb(t, []byte("chunk-data"))
+	xorbHash, xorbBytes := xettest.SerializedXorb(t, []byte("chunk-data"))
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/0000000000000000000000000000000000000000000000000000000000000000", bytes.NewReader(xorbBytes))
 	rec := httptest.NewRecorder()
@@ -202,7 +234,7 @@ func TestPostXorbAcceptsMatchingSerializedHash(t *testing.T) {
 	ctx := context.Background()
 	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
 	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
-	xorbHash, xorbBytes := testSerializedXorb(t, []byte("chunk-data"))
+	xorbHash, xorbBytes := xettest.SerializedXorb(t, []byte("chunk-data"))
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/"+xorbHash, bytes.NewReader(xorbBytes))
 	rec := httptest.NewRecorder()
@@ -210,7 +242,7 @@ func TestPostXorbAcceptsMatchingSerializedHash(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.JSONEq(t, `{"was_inserted":true}`, rec.Body.String())
-	reader, err := xorbStore.Get(ctx, "default", xorbHash)
+	reader, err := xorbStore.Get(ctx, xorbHash)
 	require.NoError(t, err)
 	defer reader.Close()
 	body, err := io.ReadAll(reader)
@@ -222,8 +254,8 @@ func TestPostXorbAcceptsNoFooterSerializedHash(t *testing.T) {
 	ctx := context.Background()
 	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
 	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
-	xorbHash, xorbBytes := testSerializedXorb(t, []byte("chunk-data"))
-	noFooter := stripXorbFooter(t, xorbBytes)
+	xorbHash, xorbBytes := xettest.SerializedXorb(t, []byte("chunk-data"))
+	noFooter := xettest.StripFooter(t, xorbBytes)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/"+xorbHash, bytes.NewReader(noFooter))
 	rec := httptest.NewRecorder()
@@ -231,7 +263,7 @@ func TestPostXorbAcceptsNoFooterSerializedHash(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code)
-	reader, err := xorbStore.Get(ctx, "default", xorbHash)
+	reader, err := xorbStore.Get(ctx, xorbHash)
 	require.NoError(t, err)
 	body, err := io.ReadAll(reader)
 	require.NoError(t, err)
@@ -242,7 +274,7 @@ func TestPostXorbAcceptsLZ4SerializedHash(t *testing.T) {
 	ctx := context.Background()
 	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
 	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
-	xorbHash, xorbBytes := testSerializedXorbWithScheme(t, bytes.Repeat([]byte("a"), 2048), 1)
+	xorbHash, xorbBytes := xettest.SerializedXorbWithScheme(t, xettest.SchemeLZ4, bytes.Repeat([]byte("a"), 2048))
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/"+xorbHash, bytes.NewReader(xorbBytes))
 	rec := httptest.NewRecorder()
@@ -256,7 +288,7 @@ func TestPostXorbAcceptsBG4LZ4SerializedHash(t *testing.T) {
 	ctx := context.Background()
 	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
 	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
-	xorbHash, xorbBytes := testSerializedXorbWithScheme(t, bytes.Repeat([]byte{0x01, 0x02, 0x03, 0x04}, 512), 2)
+	xorbHash, xorbBytes := xettest.SerializedXorbWithScheme(t, xettest.SchemeBG4LZ4, bytes.Repeat([]byte{0x01, 0x02, 0x03, 0x04}, 512))
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/"+xorbHash, bytes.NewReader(xorbBytes))
 	rec := httptest.NewRecorder()
@@ -290,7 +322,7 @@ func TestPostXorbVerificationHonorsMaxConcurrency(t *testing.T) {
 		withXorbVerifier(verify),
 	)
 
-	xorbHash, xorbBytes := testSerializedXorb(t, []byte("chunk-data"))
+	xorbHash, xorbBytes := xettest.SerializedXorb(t, []byte("chunk-data"))
 	var wg sync.WaitGroup
 	codes := make(chan int, 3)
 	for i := 0; i < 3; i++ {
@@ -312,12 +344,15 @@ func TestPostXorbVerificationHonorsMaxConcurrency(t *testing.T) {
 	require.Equal(t, int32(1), maxSeen)
 }
 
-func testXETToken(t *testing.T, subject string, scope string, expires time.Time) string {
+func testXETToken(t *testing.T, subject string, grant TokenGrant, expires time.Time) string {
 	t.Helper()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":   subject,
 		"aud":   "xet",
-		"scope": scope,
+		"scope": grant.Mode,
+		"repo":  grant.Repo,
+		"ref":   grant.Ref,
+		"path":  grant.Path,
 		"iat":   time.Now().Unix(),
 		"exp":   expires.Unix(),
 	})
@@ -326,223 +361,79 @@ func testXETToken(t *testing.T, subject string, scope string, expires time.Time)
 	return signed
 }
 
-func TestPostShardRegistersChunkDedupIndex(t *testing.T) {
-	ctx := context.Background()
-	kvStore := kvtest.GetStore(ctx, t)
-	registry := xetstore.NewRegistry(kvStore)
-	handler := NewHandler(registry)
-	fileHash := testShimFileHash("raw-shard")
-
-	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewBufferString(fmt.Sprintf(`{
-		"file_hash": %q,
-		"shard": "raw-shard",
-		"chunk_ids": ["chunk-a"]
-	}`, fileHash)))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-
-	handler.ServeHTTP(rec, req)
-
-	require.Equal(t, http.StatusOK, rec.Code)
-	require.JSONEq(t, fmt.Sprintf(`{"file_hash":%q,"was_inserted":true}`, fileHash), rec.Body.String())
-
-	getReq := httptest.NewRequest(http.MethodGet, "/v1/chunks/default/chunk-a", nil)
-	getRec := httptest.NewRecorder()
-	handler.ServeHTTP(getRec, getReq)
-
-	require.Equal(t, http.StatusOK, getRec.Code)
-	body, err := io.ReadAll(getRec.Result().Body)
-	require.NoError(t, err)
-	require.Equal(t, []byte("raw-shard"), body)
-}
-
-func TestPostShardRejectsMismatchedComputedFileHash(t *testing.T) {
-	ctx := context.Background()
-	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)))
-
-	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewBufferString(`{
-		"file_hash": "wrong-hash",
-		"shard": "raw-shard",
-		"chunk_ids": ["chunk-a"]
-	}`))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-
-	handler.ServeHTTP(rec, req)
-
-	require.Equal(t, http.StatusBadRequest, rec.Code)
-	require.Contains(t, rec.Body.String(), "file_hash does not match shard")
-}
-
-func TestPostShardRejectsMissingReferencedXorb(t *testing.T) {
-	ctx := context.Background()
-	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
-	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
-	fileHash := testShimFileHash("raw-shard")
-
-	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewBufferString(fmt.Sprintf(`{
-		"file_hash": %q,
-		"shard": "raw-shard",
-		"chunk_ids": ["chunk-a"],
-		"xorb_ids": ["missing-xorb"]
-	}`, fileHash)))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-
-	handler.ServeHTTP(rec, req)
-
-	require.Equal(t, http.StatusBadRequest, rec.Code)
-	require.Contains(t, rec.Body.String(), "xorb missing-xorb not found")
-}
-
-func TestPostShardAcceptsExistingReferencedXorb(t *testing.T) {
-	ctx := context.Background()
-	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
-	_, err := xorbStore.Put(ctx, "default", "xorb-a", int64(len("xorb-bytes")), bytes.NewReader([]byte("xorb-bytes")))
-	require.NoError(t, err)
-	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
-	fileHash := testShimFileHash("raw-shard")
-
-	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewBufferString(fmt.Sprintf(`{
-		"file_hash": %q,
-		"shard": "raw-shard",
-		"chunk_ids": ["chunk-a"],
-		"xorb_ids": ["xorb-a"]
-	}`, fileHash)))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-
-	handler.ServeHTTP(rec, req)
-
-	require.Equal(t, http.StatusOK, rec.Code)
-	require.JSONEq(t, fmt.Sprintf(`{"file_hash":%q,"was_inserted":true}`, fileHash), rec.Body.String())
-}
-
-func TestPostBinaryShardRegistersFileAndChunks(t *testing.T) {
-	ctx := context.Background()
-	kvStore := kvtest.GetStore(ctx, t)
-	registry := xetstore.NewRegistry(kvStore)
-	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
-	handler := NewHandler(registry, WithXorbStore(xorbStore))
-
-	xorbHash := "111122223333444455556666777788889999aaaabbbbccccddddeeeeffff0000"
-	chunkHash := "aaaaaaaaaaaaaaaa000000000000000000000000000000000000000000000000"
-	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
-		Hash:      chunkHash,
-		SizeBytes: 12,
-	}})
-	require.NoError(t, err)
-	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len("xorb-bytes")), bytes.NewReader([]byte("xorb-bytes")))
-	require.NoError(t, err)
-	shard := testXETBinaryShard(t, fileHash, xorbHash, chunkHash)
-
-	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewReader(shard))
-	req.Header.Set("Content-Type", "application/octet-stream")
-	rec := httptest.NewRecorder()
-
-	handler.ServeHTTP(rec, req)
-
-	require.Equal(t, http.StatusOK, rec.Code)
-	require.JSONEq(t, `{"result":1}`, rec.Body.String())
-
-	getReq := httptest.NewRequest(http.MethodGet, "/v1/chunks/default/"+chunkHash, nil)
-	getRec := httptest.NewRecorder()
-	handler.ServeHTTP(getRec, getReq)
-
-	require.Equal(t, http.StatusOK, getRec.Code)
-	body, err := io.ReadAll(getRec.Result().Body)
-	require.NoError(t, err)
-	require.Equal(t, shard, body)
-	hasShard, err := registry.HasShard(ctx, fileHash)
-	require.NoError(t, err)
-	require.True(t, hasShard)
-	meta, err := kvStore.Get(ctx, []byte(xetstore.Partition), []byte("xet/shard_meta/"+fileHash))
-	require.NoError(t, err)
-	require.JSONEq(t, `{"created_at":0,"size":12,"num_xorbs":1,"num_chunks":1}`, string(meta.Value))
-}
-
-func TestPostRootShardRegistersFileAndChunks(t *testing.T) {
-	ctx := context.Background()
-	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
-	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
-	handler := NewHandler(registry, WithXorbStore(xorbStore))
-
-	xorbHash := "111122223333444455556666777788889999aaaabbbbccccddddeeeeffff0000"
-	chunkHash := "aaaaaaaaaaaaaaaa000000000000000000000000000000000000000000000000"
-	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
-		Hash:      chunkHash,
-		SizeBytes: 12,
-	}})
-	require.NoError(t, err)
-	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len("xorb-bytes")), bytes.NewReader([]byte("xorb-bytes")))
-	require.NoError(t, err)
-	shard := testXETBinaryShard(t, fileHash, xorbHash, chunkHash)
-
-	req := httptest.NewRequest(http.MethodPost, "/shards", bytes.NewReader(shard))
-	req.Header.Set("Content-Type", "application/octet-stream")
-	rec := httptest.NewRecorder()
-
-	handler.ServeHTTP(rec, req)
-
-	require.Equal(t, http.StatusOK, rec.Code)
-	require.JSONEq(t, `{"result":1}`, rec.Body.String())
-	hasShard, err := registry.HasShard(ctx, fileHash)
-	require.NoError(t, err)
-	require.True(t, hasShard)
-}
-
-func TestPostDuplicateAbbreviatedShardIsIdempotent(t *testing.T) {
+func TestPostShardRegistersFileBuiltFromUploadedXorb(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
 	handler := NewHandler(registry, WithXorbStore(NewXorbStore(mem.New(ctx), "mem://xet-cas")))
-	abbreviatedShard := testHFAbbreviatedShard(t)
-	fileHash := "42226dec0f0a21fe4e9404480ecdc7714b963c61c37c7870b2c8b18dea5b274c"
-	chunkHash := "9b23a87215b2aaf3f91275d77f3aafce3079a83de4d13523d010c51eb11489a3"
-	canonicalShard := testXETBinaryShard(
-		t,
-		fileHash,
-		"3a6082dc9d95bdb717b5d799bdbbb71ec4b3b3502847e0d50f536113e143f0c8",
-		chunkHash,
-	)
-	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: fileHash,
-		Shard:    canonicalShard,
-		ChunkIDs: []string{chunkHash},
-	})
+	chunk := []byte("hello world!")
+	xorbHash, xorbBytes := xettest.SerializedXorb(t, chunk)
+	fileHash := xettest.FileHash(t, chunk)
+	postTestXorb(t, handler, xorbHash, xorbBytes)
+
+	// The claimed segment size is ignored in favour of the xorb's chunk sizes.
+	shard := xettest.Shard(t, fileHash, xorbHash, 0, 1, 999)
+	for _, post := range []struct {
+		path   string
+		result int
+	}{{"/v1/shards", 1}, {"/shards", 0}} {
+		req := httptest.NewRequest(http.MethodPost, post.path, bytes.NewReader(shard))
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		require.Equalf(t, http.StatusOK, rec.Code, "body: %s", rec.Body.String())
+		require.JSONEq(t, fmt.Sprintf(`{"result":%d}`, post.result), rec.Body.String())
+	}
+
+	file, err := registry.GetFile(ctx, fileHash)
 	require.NoError(t, err)
+	require.Equal(t, uint64(len(chunk)), file.SizeBytes)
+	require.Equal(t, uint64(len(chunk)), file.Segments[0].SizeBytes)
+}
 
-	req := httptest.NewRequest(http.MethodPost, "/shards", bytes.NewReader(abbreviatedShard))
-	req.Header.Set("Content-Type", "application/octet-stream")
+func TestPostShardRejectsUnknownXorb(t *testing.T) {
+	ctx := context.Background()
+	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)))
+	chunk := []byte("hello world!")
+	xorbHash, _ := xettest.SerializedXorb(t, chunk)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewReader(xettest.Shard(t, xettest.FileHash(t, chunk), xorbHash, 0, 1, 12)))
 	rec := httptest.NewRecorder()
-
 	handler.ServeHTTP(rec, req)
 
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Contains(t, rec.Body.String(), xorbHash)
+}
+
+func TestPostShardRejectsFileHashNotMatchingXorbChunks(t *testing.T) {
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	handler := NewHandler(registry, WithXorbStore(NewXorbStore(mem.New(ctx), "mem://xet-cas")))
+	xorbHash, xorbBytes := xettest.SerializedXorb(t, []byte("hello world!"))
+	postTestXorb(t, handler, xorbHash, xorbBytes)
+	otherFileHash := xettest.FileHash(t, []byte("other bytes!"))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewReader(xettest.Shard(t, otherFileHash, xorbHash, 0, 1, 12)))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Contains(t, rec.Body.String(), "file hash mismatch")
+	_, err := registry.GetFile(ctx, otherFileHash)
+	require.ErrorIs(t, err, kv.ErrNotFound)
+}
+
+func postTestXorb(t *testing.T, handler http.Handler, xorbHash string, xorbBytes []byte) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/"+xorbHash, bytes.NewReader(xorbBytes))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
 	require.Equalf(t, http.StatusOK, rec.Code, "body: %s", rec.Body.String())
-	require.JSONEq(t, `{"result":0}`, rec.Body.String())
-	stored, err := registry.GetShardByFileHash(ctx, fileHash)
-	require.NoError(t, err)
-	require.Equal(t, canonicalShard, stored)
 }
 
 func TestGetReconstructionReturnsV2Manifest(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
-	chunkHash := xetstore.ComputeDataHash([]byte("hello world!"))
-	xorbHash, err := xetstore.ComputeXorbMerkleHash([]xetstore.ShardChunkInfo{{
-		Hash:      chunkHash,
-		SizeBytes: 12,
-	}})
-	require.NoError(t, err)
-	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
-		Hash:      chunkHash,
-		SizeBytes: 12,
-	}})
-	require.NoError(t, err)
-	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: fileHash,
-		Shard:    testXETBinaryShard(t, fileHash, xorbHash, chunkHash),
-	})
-	require.NoError(t, err)
+	fileHash, xorbHash, _ := xettest.SeedFile(t, ctx, registry, mem.New(ctx), "mem://xet-cas", []byte("hello world!"))
 	handler := NewHandler(registry, withReconstructionRangeResolverFactory(func(ctx context.Context, fileHash string, terms []reconstruct.Term) (reconstruct.RangeResolver, error) {
 		return func(xorbHash string, chunks reconstruct.IndexRange) (reconstruct.ResolvedRange, error) {
 			return reconstruct.ResolvedRange{
@@ -579,22 +470,7 @@ func TestGetReconstructionReturnsV2Manifest(t *testing.T) {
 func TestGetReconstructionReturnsV1Manifest(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
-	chunkHash := xetstore.ComputeDataHash([]byte("hello world!"))
-	xorbHash, err := xetstore.ComputeXorbMerkleHash([]xetstore.ShardChunkInfo{{
-		Hash:      chunkHash,
-		SizeBytes: 12,
-	}})
-	require.NoError(t, err)
-	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
-		Hash:      chunkHash,
-		SizeBytes: 12,
-	}})
-	require.NoError(t, err)
-	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: fileHash,
-		Shard:    testXETBinaryShard(t, fileHash, xorbHash, chunkHash),
-	})
-	require.NoError(t, err)
+	fileHash, xorbHash, _ := xettest.SeedFile(t, ctx, registry, mem.New(ctx), "mem://xet-cas", []byte("hello world!"))
 	handler := NewHandler(registry, withReconstructionRangeResolverFactory(func(ctx context.Context, fileHash string, terms []reconstruct.Term) (reconstruct.RangeResolver, error) {
 		return func(xorbHash string, chunks reconstruct.IndexRange) (reconstruct.ResolvedRange, error) {
 			return reconstruct.ResolvedRange{
@@ -626,35 +502,18 @@ func TestGetReconstructionReturnsV1Manifest(t *testing.T) {
 	}`, rec.Body.String())
 }
 
-func TestGetReconstructionRequiresDirectCapabilityWhenConfigured(t *testing.T) {
+func TestGetReconstructionChecksTheTokenGrant(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
-	chunkHash := xetstore.ComputeDataHash([]byte("hello world!"))
-	xorbHash, err := xetstore.ComputeXorbMerkleHash([]xetstore.ShardChunkInfo{{
-		Hash:      chunkHash,
-		SizeBytes: 12,
-	}})
-	require.NoError(t, err)
-	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
-		Hash:      chunkHash,
-		SizeBytes: 12,
-	}})
-	require.NoError(t, err)
-	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: fileHash,
-		Shard:    testXETBinaryShard(t, fileHash, xorbHash, chunkHash),
-	})
-	require.NoError(t, err)
+	fileHash, _, _ := xettest.SeedFile(t, ctx, registry, mem.New(ctx), "mem://xet-cas", []byte("hello world!"))
 	called := false
 	handler := NewHandler(
 		registry,
 		WithTokenSigningKey([]byte("test-token-key")),
 		WithTokenAuthRequired(),
-		WithReconstructionCapabilityChecker(func(ctx context.Context, fileHash string, logical ReconstructionLogicalContext) error {
+		WithReconstructionCapabilityChecker(func(ctx context.Context, fileHash string, grant TokenGrant) error {
 			called = true
-			require.Equal(t, "repo-a", logical.Repo)
-			require.Equal(t, "main", logical.Ref)
-			require.Equal(t, "models/checkpoint.bin", logical.Path)
+			require.Equal(t, TokenGrant{Mode: "read", Repo: "repo-a", Ref: "main", Path: "models/checkpoint.bin"}, grant)
 			return nil
 		}),
 		withReconstructionRangeResolverFactory(func(ctx context.Context, fileHash string, terms []reconstruct.Term) (reconstruct.RangeResolver, error) {
@@ -667,8 +526,8 @@ func TestGetReconstructionRequiresDirectCapabilityWhenConfigured(t *testing.T) {
 		}),
 	)
 
-	req := httptest.NewRequest(http.MethodGet, "/v2/reconstructions/"+fileHash+"?repo=repo-a&ref=main&path=models/checkpoint.bin", nil)
-	req.Header.Set("Authorization", "Bearer "+testXETToken(t, "user-a", "read", time.Now().Add(time.Hour)))
+	req := httptest.NewRequest(http.MethodGet, "/v2/reconstructions/"+fileHash, nil)
+	req.Header.Set("Authorization", "Bearer "+testXETToken(t, "user-a", TokenGrant{Mode: "read", Repo: "repo-a", Ref: "main", Path: "models/checkpoint.bin"}, time.Now().Add(time.Hour)))
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -676,39 +535,21 @@ func TestGetReconstructionRequiresDirectCapabilityWhenConfigured(t *testing.T) {
 	require.True(t, called)
 }
 
-func TestGetReconstructionRejectsMissingDirectCapabilityContext(t *testing.T) {
+func TestGetReconstructionReturnsNotFoundWhenGrantDoesNotCoverFile(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
-	chunkHash := xetstore.ComputeDataHash([]byte("hello world!"))
-	xorbHash, err := xetstore.ComputeXorbMerkleHash([]xetstore.ShardChunkInfo{{
-		Hash:      chunkHash,
-		SizeBytes: 12,
-	}})
-	require.NoError(t, err)
-	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
-		Hash:      chunkHash,
-		SizeBytes: 12,
-	}})
-	require.NoError(t, err)
-	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: fileHash,
-		Shard:    testXETBinaryShard(t, fileHash, xorbHash, chunkHash),
-	})
-	require.NoError(t, err)
+	fileHash, _, _ := xettest.SeedFile(t, ctx, registry, mem.New(ctx), "mem://xet-cas", []byte("hello world!"))
 	handler := NewHandler(
 		registry,
 		WithTokenSigningKey([]byte("test-token-key")),
 		WithTokenAuthRequired(),
-		WithReconstructionCapabilityChecker(func(ctx context.Context, fileHash string, logical ReconstructionLogicalContext) error {
-			require.Empty(t, logical.Repo)
-			require.Empty(t, logical.Ref)
-			require.Empty(t, logical.Path)
+		WithReconstructionCapabilityChecker(func(ctx context.Context, fileHash string, grant TokenGrant) error {
 			return ErrReconstructionCapabilityNotFound
 		}),
 	)
 
 	req := httptest.NewRequest(http.MethodGet, "/v2/reconstructions/"+fileHash, nil)
-	req.Header.Set("Authorization", "Bearer "+testXETToken(t, "user-a", "read", time.Now().Add(time.Hour)))
+	req.Header.Set("Authorization", "Bearer "+testXETToken(t, "user-a", TokenGrant{Mode: "read"}, time.Now().Add(time.Hour)))
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -718,22 +559,7 @@ func TestGetReconstructionRejectsMissingDirectCapabilityContext(t *testing.T) {
 func TestGetReconstructionHonorsRangeHeader(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
-	chunkHash := xetstore.ComputeDataHash([]byte("hello world!"))
-	xorbHash, err := xetstore.ComputeXorbMerkleHash([]xetstore.ShardChunkInfo{{
-		Hash:      chunkHash,
-		SizeBytes: 12,
-	}})
-	require.NoError(t, err)
-	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
-		Hash:      chunkHash,
-		SizeBytes: 12,
-	}})
-	require.NoError(t, err)
-	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: fileHash,
-		Shard:    testXETBinaryShard(t, fileHash, xorbHash, chunkHash),
-	})
-	require.NoError(t, err)
+	fileHash, xorbHash, _ := xettest.SeedFile(t, ctx, registry, mem.New(ctx), "mem://xet-cas", []byte("hello world!"))
 	handler := NewHandler(registry, withReconstructionRangeResolverFactory(func(ctx context.Context, fileHash string, terms []reconstruct.Term) (reconstruct.RangeResolver, error) {
 		return func(xorbHash string, chunks reconstruct.IndexRange) (reconstruct.ResolvedRange, error) {
 			return reconstruct.ResolvedRange{
@@ -771,22 +597,9 @@ func TestGetReconstructionHonorsRangeHeader(t *testing.T) {
 func TestGetReconstructionFallsBackToGrantedProxyURL(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
-	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
-	chunk := []byte("hello world!")
-	xorbHash, xorbBytes := testSerializedXorb(t, chunk)
-	chunkHash := xetstore.ComputeDataHash(chunk)
-	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
-		Hash:      chunkHash,
-		SizeBytes: uint64(len(chunk)),
-	}})
-	require.NoError(t, err)
-	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
-	require.NoError(t, err)
-	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: fileHash,
-		Shard:    testXETBinaryShard(t, fileHash, xorbHash, chunkHash),
-	})
-	require.NoError(t, err)
+	adapter := mem.New(ctx)
+	xorbStore := NewXorbStore(adapter, "mem://xet-cas")
+	fileHash, xorbHash, xorbBytes := xettest.SeedFile(t, ctx, registry, adapter, "mem://xet-cas", []byte("hello world!"))
 	handler := NewHandler(
 		registry,
 		WithXorbStore(xorbStore),
@@ -820,12 +633,11 @@ func TestGetReconstructionFallsBackToGrantedProxyURL(t *testing.T) {
 	proxyRec := httptest.NewRecorder()
 	handler.ServeHTTP(proxyRec, proxyReq)
 
-	require.Equal(t, http.StatusOK, proxyRec.Code)
+	require.Equal(t, http.StatusPartialContent, proxyRec.Code)
 	require.Equal(t, xorbBytes[byteRange.Start:byteRange.End+1], proxyRec.Body.Bytes())
 }
 
 func TestReconstructionGrantedRangesMatchGroupedManifestTerms(t *testing.T) {
-	handler := &Handler{}
 	parsed := map[string]parsedXorbInfo{
 		"xorb-a": {ChunkBoundaries: []uint32{10, 20, 30}},
 		"xorb-b": {ChunkBoundaries: []uint32{40}},
@@ -837,7 +649,7 @@ func TestReconstructionGrantedRangesMatchGroupedManifestTerms(t *testing.T) {
 		{XorbHash: "xorb-a", ChunkIndex: 2, ChunkSizeBytes: 10},
 	}
 
-	grants, err := handler.reconstructionGrantedRanges(context.Background(), terms, parsed)
+	grants, err := reconstructionGrantedRanges(terms, parsed)
 	require.NoError(t, err)
 
 	require.Equal(t, []reconstruct.HTTPRange{
@@ -848,22 +660,9 @@ func TestReconstructionGrantedRangesMatchGroupedManifestTerms(t *testing.T) {
 func TestReconstructFileRangeReadsXorbBytes(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
-	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
-	chunk := []byte("hello world!")
-	xorbHash, xorbBytes := testSerializedXorb(t, chunk)
-	chunkHash := xetstore.ComputeDataHash(chunk)
-	fileHash, err := xetstore.ComputeFileMerkleHash([]xetstore.ShardChunkInfo{{
-		Hash:      chunkHash,
-		SizeBytes: uint64(len(chunk)),
-	}})
-	require.NoError(t, err)
-	_, err = xorbStore.Put(ctx, "default", xorbHash, int64(len(xorbBytes)), bytes.NewReader(xorbBytes))
-	require.NoError(t, err)
-	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: fileHash,
-		Shard:    testXETBinaryShard(t, fileHash, xorbHash, chunkHash),
-	})
-	require.NoError(t, err)
+	adapter := mem.New(ctx)
+	xorbStore := NewXorbStore(adapter, "mem://xet-cas")
+	fileHash, _, _ := xettest.SeedFile(t, ctx, registry, adapter, "mem://xet-cas", []byte("hello world!"))
 
 	reader, err := ReconstructFileRange(ctx, registry, xorbStore, fileHash, reconstruct.ByteRange{Start: 3, End: 9})
 	require.NoError(t, err)
@@ -874,200 +673,30 @@ func TestReconstructFileRangeReadsXorbBytes(t *testing.T) {
 	require.Equal(t, []byte("lo wor"), got)
 }
 
-func testShimFileHash(shard string) string {
-	sum := sha256.Sum256([]byte(shard))
-	return hex.EncodeToString(sum[:])
-}
-
-func testHFAbbreviatedShard(t *testing.T) []byte {
-	t.Helper()
-	shard, err := base64.StdEncoding.DecodeString("SEZSZXBvTWV0YURhdGEAVWlnRWp7gVeDpb3ZXM3RSqkCAAAAAAAAAAAAAAAAAAAA/iEKD+xtIkJxx80OSASUTnB4fMNhPJZLTCdb6o2xyLIAAADAAQAAAAAAAAAAAAAAt72VndyCYDoet7u9mde1F9XgRyhQs7PEyPBD4RNhUw8AAAAABBADAAAAAAACAAAASjM7S0fdp35JEFNeZGUvD497UZdxStR3ZflLrOyaGVMAAAAAAAAAAAAAAAAAAAAAye/Q1kDccACMFyFz8/1cV7h0QlzKd10VNm2G5UuZoeYAAAAAAAAAAAAAAAAAAAAA//////////////////////////////////////////8AAAAAAAAAAAAAAAAAAAAA//////////////////////////////////////////8AAAAAAAAAAAAAAAAAAAAA")
-	require.NoError(t, err)
-	return shard
-}
-
-func testXETBinaryShard(t *testing.T, fileHash, xorbHash, chunkHash string) []byte {
-	t.Helper()
-	var b bytes.Buffer
-	b.Write([]byte{'H', 'F', 'R', 'e', 'p', 'o', 'M', 'e', 't', 'a', 'D', 'a', 't', 'a', 0, 85,
-		105, 103, 69, 106, 123, 129, 87, 131, 165, 189, 217, 92, 205, 209, 74, 169})
-	testWriteU64(&b, 2)
-	testWriteU64(&b, 200)
-
-	testWriteHash(t, &b, fileHash)
-	testWriteU32(&b, 0)
-	testWriteU32(&b, 1)
-	testWriteU64(&b, 0)
-
-	testWriteHash(t, &b, xorbHash)
-	testWriteU32(&b, 0)
-	testWriteU32(&b, 12)
-	testWriteU32(&b, 0)
-	testWriteU32(&b, 1)
-
-	b.Write(bytes.Repeat([]byte{0xff}, 32))
-	testWriteU32(&b, 0)
-	testWriteU32(&b, 0)
-	testWriteU64(&b, 0)
-
-	testWriteHash(t, &b, xorbHash)
-	testWriteU32(&b, 0)
-	testWriteU32(&b, 1)
-	testWriteU32(&b, 12)
-	testWriteU32(&b, 10)
-
-	testWriteHash(t, &b, chunkHash)
-	testWriteU32(&b, 0)
-	testWriteU32(&b, 12)
-	testWriteU32(&b, 0)
-	testWriteU32(&b, 0)
-
-	b.Write(bytes.Repeat([]byte{0xff}, 32))
-	testWriteU32(&b, 0)
-	testWriteU32(&b, 0)
-	testWriteU32(&b, 0)
-	testWriteU32(&b, 0)
-
-	footerOffset := uint64(b.Len())
-	testWriteU64(&b, 1)
-	testWriteU64(&b, 48)
-	testWriteU64(&b, 192)
-	testWriteU64(&b, footerOffset)
-	testWriteU64(&b, 0)
-	testWriteU64(&b, footerOffset)
-	testWriteU64(&b, 0)
-	testWriteU64(&b, footerOffset)
-	testWriteU64(&b, 0)
-	b.Write(make([]byte, 32))
-	testWriteU64(&b, 0)
-	testWriteU64(&b, ^uint64(0))
-	for i := 0; i < 6; i++ {
-		testWriteU64(&b, 0)
-	}
-	testWriteU64(&b, 10)
-	testWriteU64(&b, 12)
-	testWriteU64(&b, 12)
-	testWriteU64(&b, footerOffset)
-
-	return b.Bytes()
-}
-
-func testWriteHash(t *testing.T, b *bytes.Buffer, value string) {
-	t.Helper()
-	raw, err := hex.DecodeString(value)
-	require.NoError(t, err)
-	require.Len(t, raw, 32)
-	for i := 0; i < 4; i++ {
-		for j := 7; j >= 0; j-- {
-			b.WriteByte(raw[i*8+j])
-		}
-	}
-}
-
-func testWriteU32(b *bytes.Buffer, value uint32) {
-	_ = binary.Write(b, binary.LittleEndian, value)
-}
-
-func testWriteU64(b *bytes.Buffer, value uint64) {
-	_ = binary.Write(b, binary.LittleEndian, value)
-}
-
-func testSerializedXorb(t *testing.T, chunk []byte) (string, []byte) {
-	return testSerializedXorbWithScheme(t, chunk, 0)
-}
-
-func stripXorbFooter(t *testing.T, xorbBytes []byte) []byte {
-	t.Helper()
-	require.GreaterOrEqual(t, len(xorbBytes), 4)
-	infoLength := int(binary.LittleEndian.Uint32(xorbBytes[len(xorbBytes)-4:]))
-	footerStart := len(xorbBytes) - 4 - infoLength
-	require.GreaterOrEqual(t, footerStart, 0)
-	return xorbBytes[:footerStart]
-}
-
-func testSerializedXorbWithScheme(t *testing.T, chunk []byte, scheme byte) (string, []byte) {
-	t.Helper()
-	chunkHash := xetstore.ComputeDataHash(chunk)
-	xorbHash, err := xetstore.ComputeXorbMerkleHash([]xetstore.ShardChunkInfo{{
-		Hash:      chunkHash,
-		SizeBytes: uint64(len(chunk)),
-	}})
+func TestReconstructFileRangeStreamsChunkRunsAcrossXorbs(t *testing.T) {
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	adapter := mem.New(ctx)
+	xorbA, xorbABytes := xettest.SerializedXorbWithScheme(t, xettest.SchemeLZ4, []byte("hello "), []byte("world"), []byte("!!"))
+	xorbB, xorbBBytes := xettest.SerializedXorb(t, []byte("tail"))
+	xettest.PutXorb(t, ctx, registry, adapter, "mem://xet-cas", xorbA, xorbABytes)
+	xettest.PutXorb(t, ctx, registry, adapter, "mem://xet-cas", xorbB, xorbBBytes)
+	fileHash := xettest.FileHash(t, []byte("world"), []byte("!!"), []byte("tail"))
+	_, err := registry.RegisterFile(ctx, xetstore.ShardFileInfo{
+		FileHash:  fileHash,
+		SizeBytes: 11,
+		Segments: []xetstore.ShardFileSegment{
+			{XorbHash: xorbA, SizeBytes: 7, ChunkIndexStart: 1, ChunkIndexEnd: 3},
+			{XorbHash: xorbB, SizeBytes: 4, ChunkIndexEnd: 1},
+		},
+	})
 	require.NoError(t, err)
 
-	var b bytes.Buffer
-	serializedChunk := chunk
-	if scheme == 2 {
-		chunk = bg4Split(chunk)
-	}
-	if scheme == 1 || scheme == 2 {
-		var compressed bytes.Buffer
-		writer := lz4.NewWriter(&compressed)
-		_, err := writer.Write(chunk)
-		require.NoError(t, err)
-		require.NoError(t, writer.Close())
-		serializedChunk = compressed.Bytes()
-	}
-	b.WriteByte(0)
-	writeThreeByteLE(&b, uint32(len(serializedChunk)))
-	b.WriteByte(scheme)
-	writeThreeByteLE(&b, uint32(len(chunk)))
-	b.Write(serializedChunk)
+	reader, err := ReconstructFileRange(ctx, registry, NewXorbStore(adapter, "mem://xet-cas"), fileHash, reconstruct.ByteRange{Start: 3, End: 9})
+	require.NoError(t, err)
+	defer func() { _ = reader.Close() }()
+	got, err := io.ReadAll(reader)
+	require.NoError(t, err)
 
-	chunkBoundary := uint32(b.Len())
-	b.WriteString("XETBLOB")
-	b.WriteByte(1)
-	testWriteHash(t, &b, xorbHash)
-
-	b.WriteString("XBLBHSH")
-	b.WriteByte(0)
-	testWriteU32(&b, 1)
-	testWriteHash(t, &b, chunkHash)
-
-	b.WriteString("XBLBBND")
-	b.WriteByte(1)
-	testWriteU32(&b, 1)
-	testWriteU32(&b, chunkBoundary)
-	testWriteU32(&b, uint32(len(chunk)))
-	testWriteU32(&b, 1)
-	testWriteU32(&b, 92)
-	testWriteU32(&b, 48)
-	b.Write(make([]byte, 16))
-	testWriteU32(&b, 132)
-
-	return xorbHash, b.Bytes()
-}
-
-func writeThreeByteLE(b *bytes.Buffer, value uint32) {
-	b.WriteByte(byte(value))
-	b.WriteByte(byte(value >> 8))
-	b.WriteByte(byte(value >> 16))
-}
-
-func bg4Split(data []byte) []byte {
-	n := len(data)
-	split := n / 4
-	rem := n % 4
-	grouped := make([]byte, n)
-	g0 := 0
-	g1 := g0 + split + min(1, rem)
-	g2 := g1 + split + min(1, max(0, rem-1))
-	g3 := g2 + split + min(1, max(0, rem-2))
-	for i := 0; i < split; i++ {
-		grouped[g0+i] = data[4*i]
-		grouped[g1+i] = data[4*i+1]
-		grouped[g2+i] = data[4*i+2]
-		grouped[g3+i] = data[4*i+3]
-	}
-	switch rem {
-	case 1:
-		grouped[g0+split] = data[4*split]
-	case 2:
-		grouped[g0+split] = data[4*split]
-		grouped[g1+split] = data[4*split+1]
-	case 3:
-		grouped[g0+split] = data[4*split]
-		grouped[g1+split] = data[4*split+1]
-		grouped[g2+split] = data[4*split+2]
-	}
-	return grouped
+	require.Equal(t, "ld!!ta", string(got))
 }

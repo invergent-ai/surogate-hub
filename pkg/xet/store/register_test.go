@@ -10,133 +10,60 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRegisterShardWritesCanonicalShardAndIndexesChunks(t *testing.T) {
+func TestRegisterFileKeepsFirstRecord(t *testing.T) {
 	ctx := context.Background()
-	kvStore := kvtest.GetStore(ctx, t)
-	registry := NewRegistry(kvStore)
+	registry := NewRegistry(kvtest.GetStore(ctx, t))
+	first := ShardFileInfo{FileHash: "file-a", SizeBytes: 12, Segments: []ShardFileSegment{{XorbHash: "xorb-a", SizeBytes: 12, ChunkIndexEnd: 1}}}
 
-	res, err := registry.RegisterShard(ctx, RegisterShardParams{
-		FileHash: "file-a",
-		Shard:    []byte("raw-shard"),
-		Summary:  []byte(`{"size":9}`),
-		ChunkIDs: []string{"chunk-a", "chunk-b"},
-	})
+	inserted, err := registry.RegisterFile(ctx, first)
 	require.NoError(t, err)
-	require.True(t, res.WasInserted)
+	require.True(t, inserted)
+	inserted, err = registry.RegisterFile(ctx, ShardFileInfo{FileHash: "file-a", SizeBytes: 99})
+	require.NoError(t, err)
+	require.False(t, inserted)
 
-	requireKVValue(t, ctx, kvStore, "xet/shard/file-a", []byte("raw-shard"))
-	requireKVValue(t, ctx, kvStore, "xet/shard_meta/file-a", []byte(`{"size":9}`))
-	requireKVValue(t, ctx, kvStore, "xet/chunk/chunk-a", []byte("file-a"))
-	requireKVValue(t, ctx, kvStore, "xet/chunk/chunk-b", []byte("file-a"))
+	got, err := registry.GetFile(ctx, "file-a")
+	require.NoError(t, err)
+	require.Equal(t, first, got)
+	hashes, err := registry.ListFileHashes(ctx, 32)
+	require.NoError(t, err)
+	require.Equal(t, []string{"file-a"}, hashes)
 }
 
-func TestGetDedupShardByChunkReturnsShardBytes(t *testing.T) {
+func TestGetFileReportsMissingFile(t *testing.T) {
 	ctx := context.Background()
-	kvStore := kvtest.GetStore(ctx, t)
-	registry := NewRegistry(kvStore)
-	_, err := registry.RegisterShard(ctx, RegisterShardParams{
-		FileHash: "file-a",
-		Shard:    []byte("raw-shard"),
-		ChunkIDs: []string{"chunk-a"},
-	})
-	require.NoError(t, err)
-
-	shard, err := registry.GetDedupShardByChunk(ctx, "chunk-a")
-	require.NoError(t, err)
-	require.Equal(t, []byte("raw-shard"), shard)
+	_, err := NewRegistry(kvtest.GetStore(ctx, t)).GetFile(ctx, "file-a")
+	require.True(t, errors.Is(err, kv.ErrNotFound), "got %v", err)
 }
 
-func TestGetShardByFileHashReturnsCanonicalShardBytes(t *testing.T) {
+func TestXorbInfoRoundTrips(t *testing.T) {
 	ctx := context.Background()
-	kvStore := kvtest.GetStore(ctx, t)
-	registry := NewRegistry(kvStore)
-	_, err := registry.RegisterShard(ctx, RegisterShardParams{
-		FileHash: "file-a",
-		Shard:    []byte("raw-shard"),
-	})
-	require.NoError(t, err)
+	registry := NewRegistry(kvtest.GetStore(ctx, t))
+	require.NoError(t, registry.PutXorbInfo(ctx, "xorb-a", []byte("footer")))
 
-	shard, err := registry.GetShardByFileHash(ctx, "file-a")
+	footer, err := registry.GetXorbInfo(ctx, "xorb-a")
 	require.NoError(t, err)
-	require.Equal(t, []byte("raw-shard"), shard)
+	require.Equal(t, []byte("footer"), footer)
 }
 
-func TestGetDedupShardByChunkReturnsNotFoundWhenIndexedShardIsMissing(t *testing.T) {
+func TestFileRefsRoundTripRepositoriesWithSlashes(t *testing.T) {
 	ctx := context.Background()
 	kvStore := kvtest.GetStore(ctx, t)
 	registry := NewRegistry(kvStore)
-	require.NoError(t, kvStore.Set(ctx, []byte(Partition), []byte("xet/chunk/chunk-a"), []byte("missing-file")))
+	refs := []FileRef{
+		{FileHash: "file-a", Repo: "test-user/repo-a"},
+		{FileHash: "file-a", Repo: "test-user/repo-b"},
+		{FileHash: "file-b", Repo: "repo-c"},
+	}
+	for _, ref := range refs {
+		require.NoError(t, registry.PutFileRef(ctx, ref))
+	}
 
-	_, err := registry.GetDedupShardByChunk(ctx, "chunk-a")
-	require.True(t, errors.Is(err, kv.ErrNotFound), "expected missing shard to look like a dedup miss, got %v", err)
-}
-
-func TestHasShardReportsCanonicalShardVisibility(t *testing.T) {
-	ctx := context.Background()
-	kvStore := kvtest.GetStore(ctx, t)
-	registry := NewRegistry(kvStore)
-
-	exists, err := registry.HasShard(ctx, "file-a")
-	require.NoError(t, err)
-	require.False(t, exists)
-
-	_, err = registry.RegisterShard(ctx, RegisterShardParams{
-		FileHash: "file-a",
-		Shard:    []byte("raw-shard"),
-	})
-	require.NoError(t, err)
-
-	exists, err = registry.HasShard(ctx, "file-a")
-	require.NoError(t, err)
-	require.True(t, exists)
-}
-
-func TestPutFileRefWritesOneKeyPerTuple(t *testing.T) {
-	ctx := context.Background()
-	kvStore := kvtest.GetStore(ctx, t)
-	registry := NewRegistry(kvStore)
-
-	err := registry.PutFileRef(ctx, FileRef{
-		FileHash: "file-a",
-		Repo:     "test-user/repo-a",
-		Ref:      "feature/xet",
-		Path:     "models/checkpoint.bin",
-	})
-	require.NoError(t, err)
-
-	requireKVValue(t, ctx, kvStore, "xet/file_refs/file-a/test-user%2Frepo-a/feature%2Fxet/models%2Fcheckpoint.bin", []byte{})
-}
-
-func TestListFileRefsScansOneFileHashPrefix(t *testing.T) {
-	ctx := context.Background()
-	kvStore := kvtest.GetStore(ctx, t)
-	registry := NewRegistry(kvStore)
-	require.NoError(t, registry.PutFileRef(ctx, FileRef{
-		FileHash: "file-a",
-		Repo:     "test-user/repo-a",
-		Ref:      "main",
-		Path:     "models/a.bin",
-	}))
-	require.NoError(t, registry.PutFileRef(ctx, FileRef{
-		FileHash: "file-a",
-		Repo:     "test-user/repo-b",
-		Ref:      "dev",
-		Path:     "models/b.bin",
-	}))
-	require.NoError(t, registry.PutFileRef(ctx, FileRef{
-		FileHash: "file-b",
-		Repo:     "repo-c",
-		Ref:      "main",
-		Path:     "models/c.bin",
-	}))
-
-	refs, err := registry.ListFileRefs(ctx, "file-a", 32)
+	got, err := registry.ListAllFileRefs(ctx, 32)
 
 	require.NoError(t, err)
-	require.ElementsMatch(t, []FileRef{
-		{FileHash: "file-a", Repo: "test-user/repo-a", Ref: "main", Path: "models/a.bin"},
-		{FileHash: "file-a", Repo: "test-user/repo-b", Ref: "dev", Path: "models/b.bin"},
-	}, refs)
+	require.ElementsMatch(t, refs, got)
+	requireKVValue(t, ctx, kvStore, "xet/file_refs/file-a/test-user%2Frepo-a", []byte{})
 }
 
 func requireKVValue(t *testing.T, ctx context.Context, kvStore kv.Store, key string, expected []byte) {
@@ -144,10 +71,4 @@ func requireKVValue(t *testing.T, ctx context.Context, kvStore kv.Store, key str
 	res, err := kvStore.Get(ctx, []byte(Partition), []byte(key))
 	require.NoError(t, err)
 	require.Equal(t, expected, res.Value)
-}
-
-func requireKVNotFound(t *testing.T, ctx context.Context, kvStore kv.Store, key string) {
-	t.Helper()
-	_, err := kvStore.Get(ctx, []byte(Partition), []byte(key))
-	require.True(t, errors.Is(err, kv.ErrNotFound), "expected %s to be missing, got %v", key, err)
 }

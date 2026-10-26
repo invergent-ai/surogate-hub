@@ -24,8 +24,8 @@ func NewXorbStore(adapter block.Adapter, storageNamespace string) *XorbStore {
 	}
 }
 
-func (s *XorbStore) Put(ctx context.Context, prefix, hash string, sizeBytes int64, reader io.Reader) (PutXorbResult, error) {
-	obj := s.objectPointer(prefix, hash)
+func (s *XorbStore) Put(ctx context.Context, hash string, sizeBytes int64, reader io.Reader) (PutXorbResult, error) {
+	obj := s.objectPointer(hash)
 	exists, err := s.adapter.Exists(ctx, obj)
 	if err != nil {
 		return PutXorbResult{}, err
@@ -39,14 +39,28 @@ func (s *XorbStore) Put(ctx context.Context, prefix, hash string, sizeBytes int6
 	return PutXorbResult{WasInserted: true}, nil
 }
 
-func (s *XorbStore) Get(ctx context.Context, prefix, hash string) (io.ReadCloser, error) {
-	return s.adapter.Get(ctx, s.objectPointer(prefix, hash))
+func (s *XorbStore) Get(ctx context.Context, hash string) (io.ReadCloser, error) {
+	return s.adapter.Get(ctx, s.objectPointer(hash))
 }
 
-func (s *XorbStore) Exists(ctx context.Context, prefix, hash string) (bool, error) {
-	return s.adapter.Exists(ctx, s.objectPointer(prefix, hash))
+// storedFooter returns the footer of the stored xorb.
+func (s *XorbStore) storedFooter(ctx context.Context, hash string) ([]byte, error) {
+	reader, err := s.Get(ctx, hash)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = reader.Close() }()
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	_, footerStart, err := parseXorbInfo(data)
+	if err != nil {
+		return nil, err
+	}
+	return data[footerStart:], nil
 }
 
-func (s *XorbStore) objectPointer(prefix, hash string) block.ObjectPointer {
-	return xetstore.XorbObjectPointer(s.storageNamespace, prefix, hash)
+func (s *XorbStore) objectPointer(hash string) block.ObjectPointer {
+	return xetstore.XorbObjectPointer(s.storageNamespace, xorbPrefix, hash)
 }

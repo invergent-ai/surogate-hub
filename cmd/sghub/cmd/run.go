@@ -45,6 +45,7 @@ import (
 	"github.com/invergent-ai/surogate-hub/pkg/stats/storagewiring"
 	"github.com/invergent-ai/surogate-hub/pkg/upload"
 	"github.com/invergent-ai/surogate-hub/pkg/version"
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -303,6 +304,7 @@ var runCmd = &cobra.Command{
 			false,
 			storageAccountant,
 			quotaChecker,
+			xetstore.StorageNamespace(cfg),
 		)
 		s3gatewayHandler = api.CORSMiddleware(s3gatewayHandler, cfg)
 		s3gatewayHandler = apiAuthenticator(s3gatewayHandler)

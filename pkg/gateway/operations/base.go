@@ -60,6 +60,7 @@ type Operation struct {
 	VerifyUnsupported bool
 	StorageAccountant *stats.StorageAccountant
 	QuotaChecker      *stats.QuotaChecker
+	XETNamespace      string
 }
 
 func StorageClassFromHeader(header http.Header) *string {
