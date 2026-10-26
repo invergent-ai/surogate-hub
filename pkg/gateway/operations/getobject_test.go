@@ -61,10 +61,11 @@ func TestGetObjectXETPhysicalAddressRange(t *testing.T) {
 			RepoOperation: &RepoOperation{
 				AuthorizedOperation: &AuthorizedOperation{
 					Operation: &Operation{
-						Region:     "us-east-1",
-						Catalog:    c,
-						BlockStore: c.BlockAdapter,
-						Incr:       func(action, userID, repository, ref string) {},
+						XETNamespace: "mem://_hub_xet",
+						Region:       "us-east-1",
+						Catalog:      c,
+						BlockStore:   c.BlockAdapter,
+						Incr:         func(action, userID, repository, ref string) {},
 					},
 					Principal: "user-a",
 				},

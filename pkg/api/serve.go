@@ -102,36 +102,29 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 	r.Mount("/metrics", promhttp.Handler())
 	r.Mount("/_pprof/", httputil.ServePPROF("/_pprof/"))
 	r.Mount("/openapi.json", http.HandlerFunc(swaggerSpecHandler))
-	xetRegistry := xetstore.NewRegistry(catalog.KVStore)
-	r.Mount("/xet", xetTokenIssuerAuthMiddleware(xetcas.NewHandler(
-		xetRegistry,
-		xetcas.WithXorbStore(xetcas.NewXorbStore(blockAdapter, xetStorageNamespace(cfg, blockAdapter))),
-		xetcas.WithVerifyMaxConcurrent(cfg.GetBaseConfig().XET.Verify.MaxConcurrent),
-		xetcas.WithProxyGrantKey([]byte(cfg.GetBaseConfig().Auth.Encrypt.SecretKey.SecureValue())),
-		xetcas.WithTokenSigningKey([]byte(cfg.GetBaseConfig().Auth.Encrypt.SecretKey.SecureValue())),
-		xetcas.WithTokenAuthRequired(),
-		xetcas.WithReconstructionCapabilityChecker(xetReconstructionCapabilityChecker(
-			catalog,
-			authService,
+	if xetNamespace := xetstore.StorageNamespace(cfg); xetNamespace != "" {
+		xetRegistry := xetstore.NewRegistry(catalog.KVStore)
+		r.Mount("/xet", xetTokenIssuerAuthMiddleware(xetcas.NewHandler(
 			xetRegistry,
-			cfg.GetBaseConfig().XET.Read.CapabilityScanBatchSize,
-		)),
-	)))
+			xetcas.WithXorbStore(xetcas.NewXorbStore(blockAdapter, xetNamespace)),
+			xetcas.WithVerifyMaxConcurrent(cfg.GetBaseConfig().XET.Verify.MaxConcurrent),
+			xetcas.WithProxyGrantKey([]byte(cfg.GetBaseConfig().Auth.Encrypt.SecretKey.SecureValue())),
+			xetcas.WithTokenSigningKey([]byte(cfg.GetBaseConfig().Auth.Encrypt.SecretKey.SecureValue())),
+			xetcas.WithTokenAuthRequired(),
+			xetcas.WithReconstructionCapabilityChecker(xetReconstructionCapabilityChecker(
+				catalog,
+				authService,
+				xetRegistry,
+				cfg.GetBaseConfig().XET.Read.CapabilityScanBatchSize,
+			)),
+		)))
+	}
 	r.Mount(apiutil.BaseURL, http.HandlerFunc(InvalidAPIEndpointHandler))
 	r.Mount("/logout", NewLogoutHandler(sessionStore, logger, cfg.GetBaseConfig().Auth.LogoutRedirectURL))
 
 	r.Mount("/", NewS3GatewayEndpointErrorHandler(gatewayDomains))
 
 	return r
-}
-
-func xetStorageNamespace(cfg config.Config, blockAdapter block.Adapter) string {
-	if storage := cfg.StorageConfig().GetStorageByID(config.SingleBlockstoreID); storage != nil {
-		if prefix := storage.GetDefaultNamespacePrefix(); prefix != nil && *prefix != "" {
-			return strings.TrimRight(*prefix, "/") + "/_hub_xet"
-		}
-	}
-	return blockAdapter.BlockstoreType() + "://_hub_xet"
 }
 
 func xetReconstructionCapabilityChecker(cat *catalog.Catalog, authService auth.Service, registry *xetstore.Registry, scanBatchSize int) xetcas.ReconstructionCapabilityChecker {

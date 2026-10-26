@@ -70,7 +70,10 @@ func runXETGCDryRun(ctx context.Context, cfg config.Config) (xetgc.Report, error
 	defer func() { _ = cat.Close() }()
 
 	registry := xetstore.NewRegistry(kvStore)
-	storageNamespace := xetGCStorageNamespace(cfg, blockAdapter)
+	storageNamespace := xetstore.StorageNamespace(cfg)
+	if storageNamespace == "" {
+		return xetgc.Report{}, fmt.Errorf("xet storage is not configured: set blockstore.default_namespace_prefix")
+	}
 	return xetgc.DryRun(ctx, xetgc.Params{
 		Registry:      registry,
 		ScanBatchSize: baseCfg.XET.Read.CapabilityScanBatchSize,
@@ -100,15 +103,6 @@ func runXETGCDryRun(ctx context.Context, cfg config.Config) (xetgc.Report, error
 			return xetgc.ListXorbsFromWalker(ctx, walker, storageURI)
 		},
 	})
-}
-
-func xetGCStorageNamespace(cfg config.Config, blockAdapter block.Adapter) string {
-	if storage := cfg.StorageConfig().GetStorageByID(config.SingleBlockstoreID); storage != nil {
-		if prefix := storage.GetDefaultNamespacePrefix(); prefix != nil && *prefix != "" {
-			return strings.TrimRight(*prefix, "/") + "/_hub_xet"
-		}
-	}
-	return blockAdapter.BlockstoreType() + "://_hub_xet"
 }
 
 //nolint:gochecknoinits

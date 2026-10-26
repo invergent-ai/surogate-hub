@@ -130,7 +130,7 @@ func (controller *GetObject) Handle(w http.ResponseWriter, req *http.Request, o 
 		data, err = xetcas.ReconstructFileRange(
 			ctx,
 			xetstore.NewRegistry(o.Catalog.KVStore),
-			xetcas.NewXorbStore(o.BlockStore, gatewayXETStorageNamespace(o.BlockStore)),
+			xetcas.NewXorbStore(o.BlockStore, o.XETNamespace),
 			fileHash,
 			byteRange,
 		)
@@ -275,8 +275,4 @@ func handleListParts(w http.ResponseWriter, req *http.Request, o *PathOperation)
 
 func parseXETPhysicalAddress(address string) (string, bool) {
 	return strings.TrimPrefix(address, "xet://"), strings.HasPrefix(address, "xet://")
-}
-
-func gatewayXETStorageNamespace(adapter block.Adapter) string {
-	return adapter.BlockstoreType() + "://_hub_xet"
 }

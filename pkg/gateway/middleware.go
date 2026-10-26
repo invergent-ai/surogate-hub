@@ -121,6 +121,7 @@ func EnrichWithOperation(sc *ServerContext, next http.Handler) http.Handler {
 			BlockStore:        sc.blockStore,
 			Auth:              sc.authService,
 			VerifyUnsupported: sc.verifyUnsupported,
+			XETNamespace:      sc.xetNamespace,
 			Incr: func(action, userID, repository, ref string) {
 				logging.FromContext(ctx).
 					WithFields(logging.Fields{

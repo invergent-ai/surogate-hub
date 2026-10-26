@@ -3513,7 +3513,7 @@ func (c *Controller) objectUploadMode(sizeBytes *int64) string {
 		return "regular"
 	}
 	minSize := c.Config.GetBaseConfig().XET.Upload.MinSizeBytes
-	if minSize <= 0 {
+	if minSize <= 0 || xetstore.StorageNamespace(c.Config) == "" {
 		return "regular"
 	}
 	if *sizeBytes >= minSize {
@@ -5049,7 +5049,7 @@ func (c *Controller) getXETObject(w http.ResponseWriter, r *http.Request, entry 
 	reader, err := xetcas.ReconstructFileRange(
 		r.Context(),
 		xetstore.NewRegistry(c.Catalog.KVStore),
-		xetcas.NewXorbStore(c.BlockAdapter, xetStorageNamespace(c.Config, c.BlockAdapter)),
+		xetcas.NewXorbStore(c.BlockAdapter, xetstore.StorageNamespace(c.Config)),
 		fileHash,
 		byteRange,
 	)
