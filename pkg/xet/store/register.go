@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/invergent-ai/surogate-hub/pkg/kv"
@@ -18,10 +19,12 @@ type Registry struct {
 }
 
 // FileRef records that a repository holds a file. xet GC keeps a file while
-// any repository that holds it exists.
+// any repository that holds it exists, and the repository's storage usage
+// counts the file's SizeBytes once.
 type FileRef struct {
-	FileHash string
-	Repo     string
+	FileHash  string
+	Repo      string
+	SizeBytes uint64
 }
 
 func NewRegistry(store kv.Store) *Registry {
@@ -98,12 +101,59 @@ func (r *Registry) GetXorbInfo(ctx context.Context, xorbHash string) ([]byte, er
 	return res.Value, nil
 }
 
-func (r *Registry) PutFileRef(ctx context.Context, ref FileRef) error {
-	return r.store.Set(ctx, []byte(Partition), fileRefKey(ref), []byte{})
+// AddFileRef records that a repository holds a file, only if it does not
+// already. It reports whether the ref was created.
+func (r *Registry) AddFileRef(ctx context.Context, ref FileRef) (bool, error) {
+	err := r.store.SetIf(ctx, []byte(Partition), fileRefKey(ref.Repo, ref.FileHash), []byte(strconv.FormatUint(ref.SizeBytes, 10)), nil)
+	if errors.Is(err, kv.ErrPredicateFailed) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (r *Registry) HasFileRef(ctx context.Context, repo, fileHash string) (bool, error) {
+	_, err := r.store.Get(ctx, []byte(Partition), fileRefKey(repo, fileHash))
+	if errors.Is(err, kv.ErrNotFound) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+// RepoXetBytes returns the total size of the files the repository holds.
+func (r *Registry) RepoXetBytes(ctx context.Context, repo string) (int64, error) {
+	refs, err := r.scanFileRefs(ctx, repoFileRefPrefix(repo), 0)
+	if err != nil {
+		return 0, err
+	}
+	var total int64
+	for _, ref := range refs {
+		total += int64(ref.SizeBytes)
+	}
+	return total, nil
+}
+
+// DeleteRepoFileRefs drops every file ref of a deleted repository.
+func (r *Registry) DeleteRepoFileRefs(ctx context.Context, repo string) error {
+	refs, err := r.scanFileRefs(ctx, repoFileRefPrefix(repo), 0)
+	if err != nil {
+		return err
+	}
+	for _, ref := range refs {
+		if err := r.store.Delete(ctx, []byte(Partition), fileRefKey(ref.Repo, ref.FileHash)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *Registry) ListAllFileRefs(ctx context.Context, batchSize int) ([]FileRef, error) {
-	prefix := "xet/file_refs/"
+	return r.scanFileRefs(ctx, fileRefsPrefix, batchSize)
+}
+
+func (r *Registry) scanFileRefs(ctx context.Context, prefix string, batchSize int) ([]FileRef, error) {
 	iter, err := r.store.Scan(ctx, []byte(Partition), kv.ScanOptions{
 		KeyStart:  []byte(prefix),
 		BatchSize: batchSize,
@@ -124,6 +174,10 @@ func (r *Registry) ListAllFileRefs(ctx context.Context, batchSize int) ([]FileRe
 		if !ok {
 			continue
 		}
+		ref.SizeBytes, err = strconv.ParseUint(string(entry.Value), 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("decode xet file ref %s: %w", key, err)
+		}
 		refs = append(refs, ref)
 	}
 	if err := iter.Err(); err != nil && !errors.Is(err, kv.ErrClosedEntries) {
@@ -140,16 +194,23 @@ func xorbKey(xorbHash string) []byte {
 	return []byte("xet/xorb/" + xorbHash)
 }
 
-func fileRefKey(ref FileRef) []byte {
-	return []byte("xet/file_refs/" + ref.FileHash + "/" + url.PathEscape(ref.Repo))
+const fileRefsPrefix = "xet/file_refs/"
+
+// repoFileRefPrefix ends in "/" so that repository "o/a" does not match "o/ab".
+func repoFileRefPrefix(repo string) string {
+	return fileRefsPrefix + url.PathEscape(repo) + "/"
+}
+
+func fileRefKey(repo, fileHash string) []byte {
+	return []byte(repoFileRefPrefix(repo) + fileHash)
 }
 
 func parseFileRefKey(key string) (FileRef, bool) {
-	rest, ok := strings.CutPrefix(key, "xet/file_refs/")
+	rest, ok := strings.CutPrefix(key, fileRefsPrefix)
 	if !ok {
 		return FileRef{}, false
 	}
-	fileHash, escapedRepo, ok := strings.Cut(rest, "/")
+	escapedRepo, fileHash, ok := strings.Cut(rest, "/")
 	if !ok || fileHash == "" || escapedRepo == "" {
 		return FileRef{}, false
 	}

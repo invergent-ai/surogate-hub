@@ -113,10 +113,10 @@ func TestController_LinkXETPhysicalAddressWritesFileRef(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, physicalAddress, entry.PhysicalAddress)
 
-	fileRefKey := "xet/file_refs/" + fileHash + "/" + url.PathEscape(repo)
+	fileRefKey := "xet/file_refs/" + url.PathEscape(repo) + "/" + fileHash
 	fileRef, err := deps.catalog.KVStore.Get(ctx, []byte(xetstore.Partition), []byte(fileRefKey))
 	require.NoError(t, err)
-	require.Equal(t, []byte{}, fileRef.Value)
+	require.Equal(t, []byte("12"), fileRef.Value)
 }
 
 func TestController_CopyObjectXETPhysicalAddress(t *testing.T) {
@@ -401,12 +401,12 @@ type failOnceFileRefSetStore struct {
 	failed bool
 }
 
-func (s *failOnceFileRefSetStore) Set(ctx context.Context, partitionKey, key, value []byte) error {
+func (s *failOnceFileRefSetStore) SetIf(ctx context.Context, partitionKey, key, value []byte, valuePredicate kv.Predicate) error {
 	if string(partitionKey) == xetstore.Partition && strings.HasPrefix(string(key), "xet/file_refs/") && !s.failed {
 		s.failed = true
 		return errors.New("injected file_refs failure")
 	}
-	return s.Store.Set(ctx, partitionKey, key, value)
+	return s.Store.SetIf(ctx, partitionKey, key, value, valuePredicate)
 }
 
 func signedXETTokenForTest(t testing.TB, subject, repo, ref, path string) string {

@@ -170,7 +170,7 @@ var runCmd = &cobra.Command{
 			reconciler := stats.NewStorageReconciler(
 				kvStore,
 				&storagewiring.CatalogRepoLister{Catalog: c},
-				&storagewiring.BlockNamespaceSizer{Adapter: blockStore},
+				&storagewiring.RepoSizer{Adapter: blockStore, XET: xetstore.NewRegistry(kvStore)},
 				storageAccountant,
 			).WithConcurrency(baseCfg.StorageUsage.StorageReconciler.Concurrency)
 			reconciler.Start(ctx, baseCfg.StorageUsage.StorageReconciler.Interval, logger.WithField("service", "storage_reconciler"))

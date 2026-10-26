@@ -26,18 +26,19 @@ type RepoLister interface {
 	ListRepos(ctx context.Context, fn func(ReconcilerRepo) error) error
 }
 
-// NamespaceSizer reports the total bytes allocated in a repo's storage namespace.
-type NamespaceSizer interface {
-	NamespaceSize(ctx context.Context, storageID, storageNamespace string) (int64, error)
+// RepoSizer reports the total bytes a repo occupies: its storage namespace plus any content
+// stored outside it that the repo holds.
+type RepoSizer interface {
+	RepoSize(ctx context.Context, repo ReconcilerRepo) (int64, error)
 }
 
-// StorageReconciler walks every repo, asks the block adapter how many bytes are allocated, and
+// StorageReconciler walks every repo, asks the sizer how many bytes it occupies, and
 // overwrites the per-repo counter accordingly. After all of an owner's repos are processed, the
 // per-user denormalized total is rewritten from the sum of repo counters.
 type StorageReconciler struct {
 	storage     kv.Store
 	lister      RepoLister
-	sizer       NamespaceSizer
+	sizer       RepoSizer
 	accountant  *StorageAccountant
 	concurrency int
 
@@ -47,7 +48,7 @@ type StorageReconciler struct {
 
 // NewStorageReconciler constructs a reconciler. Defaults to single-threaded; set Concurrency to
 // fan out across repos.
-func NewStorageReconciler(storage kv.Store, lister RepoLister, sizer NamespaceSizer, accountant *StorageAccountant) *StorageReconciler {
+func NewStorageReconciler(storage kv.Store, lister RepoLister, sizer RepoSizer, accountant *StorageAccountant) *StorageReconciler {
 	return &StorageReconciler{
 		storage:     storage,
 		lister:      lister,
@@ -194,7 +195,7 @@ func (r *StorageReconciler) reconcileRepo(ctx context.Context, repo ReconcilerRe
 	lock.Lock()
 	defer lock.Unlock()
 
-	size, err := r.sizer.NamespaceSize(ctx, repo.StorageID, repo.StorageNamespace)
+	size, err := r.sizer.RepoSize(ctx, repo)
 	if err != nil {
 		return err
 	}

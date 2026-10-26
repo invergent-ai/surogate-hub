@@ -6,10 +6,14 @@ import (
 	"net/http"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/invergent-ai/surogate-hub/pkg/api/apigen"
+	"github.com/invergent-ai/surogate-hub/pkg/catalog"
 	"github.com/invergent-ai/surogate-hub/pkg/kv"
 	"github.com/invergent-ai/surogate-hub/pkg/stats"
+	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
+	"github.com/invergent-ai/surogate-hub/pkg/xet/xettest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -167,6 +171,198 @@ func TestStorageUsage_AfterReconcilerIsEstimateFalse(t *testing.T) {
 	require.Equal(t, http.StatusOK, resp.StatusCode())
 	require.False(t, resp.JSON200.IsEstimate)
 	require.NotNil(t, resp.JSON200.LastReconciledAt)
+}
+
+// seedXETFile stores a xet file of len(content) bytes outside every repository and returns its hash.
+func seedXETFile(t *testing.T, ctx context.Context, deps *dependencies, content string) string {
+	t.Helper()
+	fileHash, _, _ := xettest.SeedFile(t, ctx, xetstore.NewRegistry(deps.kvStore), deps.blocks, "mem://_hub_xet", []byte(content))
+	return fileHash
+}
+
+func linkXETFile(t *testing.T, ctx context.Context, clt apigen.ClientWithResponsesInterface, repoID, branch, path, fileHash string, size int64) int {
+	t.Helper()
+	physicalAddress := "xet://" + fileHash
+	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repoID), apigen.RepositoryName(repoID), branch, &apigen.LinkPhysicalAddressParams{Path: path}, apigen.LinkPhysicalAddressJSONRequestBody{
+		Checksum:  "checksum-" + path,
+		SizeBytes: size,
+		Staging:   apigen.StagingLocation{PhysicalAddress: &physicalAddress},
+	})
+	require.NoError(t, err)
+	return resp.StatusCode()
+}
+
+// TestStorageUsage_LinkXETOverQuotaLeavesNoState verifies that linking a xet file larger than the
+// owner's remaining quota is rejected before anything is written.
+func TestStorageUsage_LinkXETOverQuotaLeavesNoState(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	const owner, repoName, branch = "alice", "training", "main"
+	repoID := owner + "/" + repoName
+	_, err := deps.catalog.CreateRepository(ctx, repoID, "", onBlock(deps, repoID), branch, false)
+	require.NoError(t, err)
+	content := "twelve bytes"
+	fileHash := seedXETFile(t, ctx, deps, content)
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey(owner), []byte("10")))
+
+	status := linkXETFile(t, ctx, clt, repoID, branch, "model.bin", fileHash, int64(len(content)))
+	require.Equal(t, http.StatusRequestEntityTooLarge, status)
+
+	_, getErr := deps.catalog.GetEntry(ctx, repoID, branch, "model.bin", catalog.GetEntryParams{})
+	require.Error(t, getErr, "rejected link must not produce a catalog entry")
+	held, err := xetstore.NewRegistry(deps.kvStore).HasFileRef(ctx, repoID, fileHash)
+	require.NoError(t, err)
+	require.False(t, held, "rejected link must not leave a file ref")
+	require.NoError(t, deps.storageAccountant.Flush(ctx))
+	require.Equal(t, int64(0), readInt64KV(t, deps.kvStore, stats.StorageRepoKey(owner, repoName)))
+}
+
+// TestStorageUsage_LinkXETChargesEachRepositoryOnce verifies that a repository is charged a xet
+// file's size once however many paths point at it, that a held file needs no quota headroom to
+// link again, and that a second repository holding the same file is charged too.
+func TestStorageUsage_LinkXETChargesEachRepositoryOnce(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	const owner, repoA, repoB, branch = "alice", "training", "evals", "main"
+	content := "twelve bytes"
+	size := int64(len(content))
+	fileHash := seedXETFile(t, ctx, deps, content)
+	for _, repoName := range []string{repoA, repoB} {
+		repoID := owner + "/" + repoName
+		_, err := deps.catalog.CreateRepository(ctx, repoID, "", onBlock(deps, repoID), branch, false)
+		require.NoError(t, err)
+	}
+	// Room for exactly one copy of the file, so a second charge would be rejected.
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey(owner), []byte(strconv.FormatInt(size, 10))))
+
+	repoAID := owner + "/" + repoA
+	require.Equal(t, http.StatusOK, linkXETFile(t, ctx, clt, repoAID, branch, "one.bin", fileHash, size))
+	require.NoError(t, deps.storageAccountant.Flush(ctx))
+	require.Equal(t, http.StatusOK, linkXETFile(t, ctx, clt, repoAID, branch, "two.bin", fileHash, size))
+	require.NoError(t, deps.storageAccountant.Flush(ctx))
+
+	require.Equal(t, size, readInt64KV(t, deps.kvStore, stats.StorageRepoKey(owner, repoA)))
+	require.Equal(t, size, readInt64KV(t, deps.kvStore, stats.StorageUserKey(owner)))
+
+	// The second repository is charged for its own copy, so lift the quota first.
+	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey(owner), []byte(strconv.FormatInt(2*size, 10))))
+	require.Equal(t, http.StatusOK, linkXETFile(t, ctx, clt, owner+"/"+repoB, branch, "one.bin", fileHash, size))
+	require.NoError(t, deps.storageAccountant.Flush(ctx))
+
+	require.Equal(t, size, readInt64KV(t, deps.kvStore, stats.StorageRepoKey(owner, repoB)))
+	require.Equal(t, 2*size, readInt64KV(t, deps.kvStore, stats.StorageUserKey(owner)))
+}
+
+// TestStorageUsage_LinkXETFailedEntryWriteStaysChargedOnce verifies that a link whose entry write
+// fails keeps its file ref and charge, and that linking the same file again adds nothing.
+func TestStorageUsage_LinkXETFailedEntryWriteStaysChargedOnce(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	const owner, repoName, branch = "alice", "training", "main"
+	repoID := owner + "/" + repoName
+	_, err := deps.catalog.CreateRepository(ctx, repoID, "", onBlock(deps, repoID), branch, false)
+	require.NoError(t, err)
+	content := "twelve bytes"
+	size := int64(len(content))
+	fileHash := seedXETFile(t, ctx, deps, content)
+	require.NoError(t, deps.catalog.CreateEntry(ctx, repoID, branch, catalog.DBEntry{Path: "model.bin", PhysicalAddress: onBlock(deps, "existing"), CreationDate: time.Now(), Size: 1, Checksum: "existing"}))
+
+	physicalAddress := "xet://" + fileHash
+	ifNoneMatch := apigen.IfNoneMatch("*")
+	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repoID), apigen.RepositoryName(repoID), branch, &apigen.LinkPhysicalAddressParams{Path: "model.bin", IfNoneMatch: &ifNoneMatch}, apigen.LinkPhysicalAddressJSONRequestBody{
+		Checksum:  "checksum-model.bin",
+		SizeBytes: size,
+		Staging:   apigen.StagingLocation{PhysicalAddress: &physicalAddress},
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusPreconditionFailed, resp.StatusCode())
+	require.NoError(t, deps.storageAccountant.Flush(ctx))
+	require.Equal(t, size, readInt64KV(t, deps.kvStore, stats.StorageRepoKey(owner, repoName)))
+
+	require.Equal(t, http.StatusOK, linkXETFile(t, ctx, clt, repoID, branch, "other.bin", fileHash, size))
+	require.NoError(t, deps.storageAccountant.Flush(ctx))
+	require.Equal(t, size, readInt64KV(t, deps.kvStore, stats.StorageRepoKey(owner, repoName)))
+	require.Equal(t, size, readInt64KV(t, deps.kvStore, stats.StorageUserKey(owner)))
+}
+
+// TestStorageUsage_ReconcilerCountsXETFiles verifies that the reconciler, which rewrites each
+// repo counter from scratch, still includes the xet files the repo holds.
+func TestStorageUsage_ReconcilerCountsXETFiles(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	const owner, repoName, branch = "alice", "training", "main"
+	repoID := owner + "/" + repoName
+	_, err := deps.catalog.CreateRepository(ctx, repoID, "", onBlock(deps, repoID), branch, false)
+	require.NoError(t, err)
+	content := "twelve bytes"
+	fileHash := seedXETFile(t, ctx, deps, content)
+	require.Equal(t, http.StatusOK, linkXETFile(t, ctx, clt, repoID, branch, "model.bin", fileHash, int64(len(content))))
+
+	require.NoError(t, deps.storageReconciler.RunOnce(ctx))
+
+	require.Equal(t, int64(len(content)), readInt64KV(t, deps.kvStore, stats.StorageRepoKey(owner, repoName)))
+	require.Equal(t, int64(len(content)), readInt64KV(t, deps.kvStore, stats.StorageUserKey(owner)))
+}
+
+// TestDeleteRepository_RemovesXETFileRefs verifies that deleting a repository drops the file refs
+// it held, so a repository recreated under the same name starts without them.
+func TestDeleteRepository_RemovesXETFileRefs(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	const owner, repoName, branch = "alice", "training", "main"
+	repoID := owner + "/" + repoName
+	_, err := deps.catalog.CreateRepository(ctx, repoID, "", onBlock(deps, repoID), branch, false)
+	require.NoError(t, err)
+	content := "twelve bytes"
+	fileHash := seedXETFile(t, ctx, deps, content)
+	require.Equal(t, http.StatusOK, linkXETFile(t, ctx, clt, repoID, branch, "model.bin", fileHash, int64(len(content))))
+	registry := xetstore.NewRegistry(deps.kvStore)
+	held, err := registry.HasFileRef(ctx, repoID, fileHash)
+	require.NoError(t, err)
+	require.True(t, held)
+
+	resp, err := clt.DeleteRepositoryWithResponse(ctx, apigen.RepositoryOwner(repoID), apigen.RepositoryName(repoID), &apigen.DeleteRepositoryParams{})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNoContent, resp.StatusCode())
+
+	held, err = registry.HasFileRef(ctx, repoID, fileHash)
+	require.NoError(t, err)
+	require.False(t, held)
+	xetBytes, err := registry.RepoXetBytes(ctx, repoID)
+	require.NoError(t, err)
+	require.Equal(t, int64(0), xetBytes)
+}
+
+// TestCreateRepository_DropsStaleXETFileRefs verifies that a repository created under the name of
+// a deleted one starts without file refs the delete failed to remove.
+func TestCreateRepository_DropsStaleXETFileRefs(t *testing.T) {
+	ctx := context.Background()
+	clt, deps := setupClientWithAdmin(t, withStorageAccountant())
+	registry := xetstore.NewRegistry(deps.kvStore)
+	for _, bare := range []bool{false, true} {
+		repoID := "alice/training"
+		if bare {
+			repoID = "alice/training-bare"
+		}
+		t.Run("bare="+strconv.FormatBool(bare), func(t *testing.T) {
+			created, err := registry.AddFileRef(ctx, xetstore.FileRef{FileHash: "stale-file", Repo: repoID, SizeBytes: 12})
+			require.NoError(t, err)
+			require.True(t, created)
+
+			resp, err := clt.CreateRepositoryWithResponse(ctx, &apigen.CreateRepositoryParams{Bare: &bare}, apigen.CreateRepositoryJSONRequestBody{
+				Name:             repoID,
+				StorageNamespace: onBlock(deps, repoID),
+			})
+			verifyResponseOK(t, resp, err)
+
+			held, err := registry.HasFileRef(ctx, repoID, "stale-file")
+			require.NoError(t, err)
+			require.False(t, held)
+			xetBytes, err := registry.RepoXetBytes(ctx, repoID)
+			require.NoError(t, err)
+			require.Equal(t, int64(0), xetBytes)
+		})
+	}
 }
 
 // Sentinel to keep the imports honest if a future edit drops one.

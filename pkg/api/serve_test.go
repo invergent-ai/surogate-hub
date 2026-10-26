@@ -53,48 +53,52 @@ const (
 )
 
 type dependencies struct {
-	blocks                block.Adapter
-	catalog               *catalog.Catalog
-	authService           auth.Service
-	collector             *memCollector
-	server                *httptest.Server
-	kvStore               kv.Store
-	storageAccountant     *stats.StorageAccountant
-	quotaChecker          *stats.QuotaChecker
-	storageReconciler     *stats.StorageReconciler
-	storageNamespaceSizer *fakeNamespaceSizer
+	blocks            block.Adapter
+	catalog           *catalog.Catalog
+	authService       auth.Service
+	collector         *memCollector
+	server            *httptest.Server
+	kvStore           kv.Store
+	storageAccountant *stats.StorageAccountant
+	quotaChecker      *stats.QuotaChecker
+	storageReconciler *stats.StorageReconciler
 }
 
 // setupOption tweaks the dependencies before api.Serve is constructed.
 type setupOption func(*dependencies)
 
-// fakeNamespaceSizer is a NamespaceSizer that returns a fixed total per namespace, defaulting to
-// zero. Tests that need to simulate "real bytes on disk" can populate `sizes` keyed by
-// storageNamespace. This sidesteps the mem block adapter's lack of a working GetWalker.
-type fakeNamespaceSizer struct {
-	sizes map[string]int64
+// emptyNamespaceAdapter reports every storage namespace as empty. It stands in for a walkable
+// block adapter, because the mem block adapter does not support GetWalker.
+type emptyNamespaceAdapter struct {
+	block.Adapter
 }
 
-func (f *fakeNamespaceSizer) NamespaceSize(_ context.Context, _ string, storageNamespace string) (int64, error) {
-	if f.sizes == nil {
-		return 0, nil
-	}
-	return f.sizes[storageNamespace], nil
+func (emptyNamespaceAdapter) GetWalker(string, block.WalkerOptions) (block.Walker, error) {
+	return emptyWalker{}, nil
 }
+
+type emptyWalker struct{}
+
+func (emptyWalker) Walk(context.Context, *url.URL, block.WalkOptions, func(block.ObjectStoreEntry) error) error {
+	return nil
+}
+
+func (emptyWalker) Marker() block.Mark { return block.Mark{} }
+
+func (emptyWalker) GetSkippedEntries() []block.ObjectStoreEntry { return nil }
 
 // withStorageAccountant installs a real StorageAccountant, QuotaChecker, and StorageReconciler on
 // the test dependencies, so the controller will count uploads, enforce quotas, and the test can
-// drive RunOnce to verify drift correction. The reconciler uses a fake namespace sizer (default:
-// always-zero) because the mem block adapter does not support GetWalker.
+// drive RunOnce to verify drift correction. The reconciler sees every storage namespace as empty,
+// so the only bytes it counts are the xet files the repositories hold.
 func withStorageAccountant() setupOption {
 	return func(d *dependencies) {
 		d.storageAccountant = stats.NewStorageAccountant(d.kvStore)
 		d.quotaChecker = stats.NewQuotaChecker(d.kvStore)
-		d.storageNamespaceSizer = &fakeNamespaceSizer{}
 		d.storageReconciler = stats.NewStorageReconciler(
 			d.kvStore,
 			&storagewiring.CatalogRepoLister{Catalog: d.catalog},
-			d.storageNamespaceSizer,
+			&storagewiring.RepoSizer{Adapter: emptyNamespaceAdapter{d.blocks}, XET: xetstore.NewRegistry(d.kvStore)},
 			d.storageAccountant,
 		)
 	}

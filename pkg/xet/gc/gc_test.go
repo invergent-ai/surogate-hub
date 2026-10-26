@@ -22,7 +22,8 @@ func TestDryRunReportsDataOnlyDeletedRepositoriesHold(t *testing.T) {
 		{FileHash: "file-live", Repo: "owner/deleted"},
 		{FileHash: "file-gone", Repo: "owner/deleted"},
 	} {
-		require.NoError(t, registry.PutFileRef(ctx, ref))
+		_, err := registry.AddFileRef(ctx, ref)
+		require.NoError(t, err)
 	}
 
 	report, err := DryRun(ctx, Params{
