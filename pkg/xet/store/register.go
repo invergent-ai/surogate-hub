@@ -101,8 +101,17 @@ func (r *Registry) GetXorbInfo(ctx context.Context, xorbHash string) ([]byte, er
 	return res.Value, nil
 }
 
-func (r *Registry) PutFileRef(ctx context.Context, ref FileRef) error {
-	return r.store.Set(ctx, []byte(Partition), fileRefKey(ref.Repo, ref.FileHash), []byte(strconv.FormatUint(ref.SizeBytes, 10)))
+// AddFileRef records that a repository holds a file, only if it does not
+// already. It reports whether the ref was created.
+func (r *Registry) AddFileRef(ctx context.Context, ref FileRef) (bool, error) {
+	err := r.store.SetIf(ctx, []byte(Partition), fileRefKey(ref.Repo, ref.FileHash), []byte(strconv.FormatUint(ref.SizeBytes, 10)), nil)
+	if errors.Is(err, kv.ErrPredicateFailed) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (r *Registry) HasFileRef(ctx context.Context, repo, fileHash string) (bool, error) {

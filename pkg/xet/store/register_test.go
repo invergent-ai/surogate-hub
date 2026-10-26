@@ -56,7 +56,8 @@ func TestFileRefsRoundTripRepositoriesWithSlashes(t *testing.T) {
 		{FileHash: "file-b", Repo: "repo-c", SizeBytes: 7},
 	}
 	for _, ref := range refs {
-		require.NoError(t, registry.PutFileRef(ctx, ref))
+		_, err := registry.AddFileRef(ctx, ref)
+		require.NoError(t, err)
 	}
 
 	got, err := registry.ListAllFileRefs(ctx, 32)
@@ -66,10 +67,27 @@ func TestFileRefsRoundTripRepositoriesWithSlashes(t *testing.T) {
 	requireKVValue(t, ctx, kvStore, "xet/file_refs/test-user%2Frepo-a/file-a", []byte("12"))
 }
 
+func TestAddFileRefCreatesOnlyWhenAbsent(t *testing.T) {
+	ctx := context.Background()
+	registry := NewRegistry(kvtest.GetStore(ctx, t))
+
+	created, err := registry.AddFileRef(ctx, FileRef{FileHash: "file-a", Repo: "o/a", SizeBytes: 12})
+	require.NoError(t, err)
+	require.True(t, created)
+	created, err = registry.AddFileRef(ctx, FileRef{FileHash: "file-a", Repo: "o/a", SizeBytes: 99})
+	require.NoError(t, err)
+	require.False(t, created)
+
+	got, err := registry.RepoXetBytes(ctx, "o/a")
+	require.NoError(t, err)
+	require.Equal(t, int64(12), got)
+}
+
 func TestHasFileRefIsPerRepository(t *testing.T) {
 	ctx := context.Background()
 	registry := NewRegistry(kvtest.GetStore(ctx, t))
-	require.NoError(t, registry.PutFileRef(ctx, FileRef{FileHash: "file-a", Repo: "o/a", SizeBytes: 12}))
+	_, err := registry.AddFileRef(ctx, FileRef{FileHash: "file-a", Repo: "o/a", SizeBytes: 12})
+	require.NoError(t, err)
 
 	for repo, expected := range map[string]bool{"o/a": true, "o/ab": false, "o/b": false} {
 		held, err := registry.HasFileRef(ctx, repo, "file-a")
@@ -89,7 +107,8 @@ func TestRepoXetBytesSumsOnlyThatRepository(t *testing.T) {
 		{FileHash: "file-b", Repo: "o/a", SizeBytes: 5},
 		{FileHash: "file-a", Repo: "o/ab", SizeBytes: 100},
 	} {
-		require.NoError(t, registry.PutFileRef(ctx, ref))
+		_, err := registry.AddFileRef(ctx, ref)
+		require.NoError(t, err)
 	}
 
 	for repo, expected := range map[string]int64{"o/a": 15, "o/ab": 100, "o/none": 0} {
@@ -110,7 +129,8 @@ func TestDeleteRepoFileRefsKeepsOtherRepositories(t *testing.T) {
 		{FileHash: "file-a", Repo: "o/a", SizeBytes: 10},
 		{FileHash: "file-b", Repo: "o/a", SizeBytes: 5},
 	}, kept...) {
-		require.NoError(t, registry.PutFileRef(ctx, ref))
+		_, err := registry.AddFileRef(ctx, ref)
+		require.NoError(t, err)
 	}
 
 	require.NoError(t, registry.DeleteRepoFileRefs(ctx, "o/a"))

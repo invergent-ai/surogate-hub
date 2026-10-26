@@ -817,12 +817,13 @@ func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request,
 	}
 	fullPhysicalAddress := swag.StringValue(body.Staging.PhysicalAddress)
 	xetFileHash, isXETAddress := xetstore.ParsePhysicalAddress(fullPhysicalAddress)
+	xetRegistry := xetstore.NewRegistry(c.Catalog.KVStore)
 	if isXETAddress {
 		if xetFileHash == "" {
 			writeError(w, r, http.StatusBadRequest, "xet physical address is missing file hash")
 			return
 		}
-		file, err := xetstore.NewRegistry(c.Catalog.KVStore).GetFile(ctx, xetFileHash)
+		file, err := xetRegistry.GetFile(ctx, xetFileHash)
 		if errors.Is(err, kv.ErrNotFound) {
 			writeError(w, r, http.StatusNotFound, "xet file not found")
 			return
@@ -869,14 +870,12 @@ func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request,
 		entryBuilder.Metadata(body.UserMetadata.AdditionalProperties)
 	}
 	entry := entryBuilder.Build()
-	// The ref goes first: if the entry write then fails, xet GC only keeps the
-	// file longer, while an entry without a ref would look like garbage.
-	// A repository is charged for a file once, when it first gets the ref. Two
-	// concurrent first links can both charge; the reconciler corrects that.
-	chargeXET := false
+	// The ref is written before the entry and charged when it is created, so a
+	// repository is charged exactly for the refs it holds; a link whose entry
+	// write then fails keeps its ref and charge, and a retry of the same file is
+	// free.
 	if isXETAddress {
-		registry := xetstore.NewRegistry(c.Catalog.KVStore)
-		held, err := registry.HasFileRef(ctx, repo.Name, xetFileHash)
+		held, err := xetRegistry.HasFileRef(ctx, repo.Name, xetFileHash)
 		if err != nil {
 			writeError(w, r, http.StatusInternalServerError, err)
 			return
@@ -885,22 +884,21 @@ func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request,
 			if !c.checkStorageQuota(w, r, owner, body.SizeBytes) {
 				return
 			}
-			err = registry.PutFileRef(ctx, xetstore.FileRef{FileHash: xetFileHash, Repo: repo.Name, SizeBytes: uint64(body.SizeBytes)})
+			created, err := xetRegistry.AddFileRef(ctx, xetstore.FileRef{FileHash: xetFileHash, Repo: repo.Name, SizeBytes: uint64(body.SizeBytes)})
 			if err != nil {
 				writeError(w, r, http.StatusInternalServerError, err)
 				return
 			}
-			chargeXET = true
+			if created && c.StorageAccountant != nil {
+				if ownerSlug, repoName, splitErr := stats.SplitNamespacedRepo(repo.Name); splitErr == nil {
+					c.StorageAccountant.Add(ctx, ownerSlug, repoName, body.SizeBytes)
+				}
+			}
 		}
 	}
 	err = c.Catalog.CreateEntry(ctx, repo.Name, branch, entry, graveler.WithForce(swag.BoolValue(body.Force)), graveler.WithIfAbsent(ifAbsent))
 	if c.handleAPIError(ctx, w, r, err) {
 		return
-	}
-	if chargeXET && c.StorageAccountant != nil {
-		if ownerSlug, repoName, splitErr := stats.SplitNamespacedRepo(repo.Name); splitErr == nil {
-			c.StorageAccountant.Add(ctx, ownerSlug, repoName, body.SizeBytes)
-		}
 	}
 
 	metadata := apigen.ObjectUserMetadata{AdditionalProperties: entry.Metadata}
@@ -2270,6 +2268,12 @@ func (c *Controller) CreateRepository(w http.ResponseWriter, r *http.Request, bo
 		if c.handleAPIError(ctx, w, r, err) {
 			return
 		}
+		// A repository recreated under a deleted one's name must not inherit refs
+		// that the delete failed to remove or that a racing link wrote.
+		if err := xetstore.NewRegistry(c.Catalog.KVStore).DeleteRepoFileRefs(ctx, repo.Name); err != nil {
+			c.Logger.WithContext(ctx).WithError(err).WithField("repo", repo.Name).
+				Warn("failed to clean up xet file refs for repository")
+		}
 		if c.StorageAccountant != nil {
 			if ownerSlug, repoName, splitErr := stats.SplitNamespacedRepo(repo.Name); splitErr == nil {
 				if err := c.StorageAccountant.InitRepo(ctx, ownerSlug, repoName); err != nil {
@@ -2293,6 +2297,13 @@ func (c *Controller) CreateRepository(w http.ResponseWriter, r *http.Request, bo
 	if err != nil {
 		c.handleAPIError(ctx, w, r, fmt.Errorf("error creating repository: %w", err))
 		return
+	}
+
+	// A repository recreated under a deleted one's name must not inherit refs
+	// that the delete failed to remove or that a racing link wrote.
+	if err := xetstore.NewRegistry(c.Catalog.KVStore).DeleteRepoFileRefs(ctx, newRepo.Name); err != nil {
+		c.Logger.WithContext(ctx).WithError(err).WithField("repo", newRepo.Name).
+			Warn("failed to clean up xet file refs for repository")
 	}
 
 	if c.StorageAccountant != nil {
