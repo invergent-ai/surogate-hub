@@ -29,24 +29,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPostTokenIssuesScopedJWT(t *testing.T) {
+func TestPostTokenIssuesGrantScopedJWT(t *testing.T) {
 	ctx := auth.WithUser(context.Background(), &model.User{Username: "user-a"})
+	var authorized TokenGrant
 	handler := NewHandler(
 		xetstore.NewRegistry(kvtest.GetStore(ctx, t)),
 		WithTokenSigningKey([]byte("test-token-key")),
 		WithTokenTTL(time.Hour),
+		WithTokenAuthorizer(func(ctx context.Context, username string, grant TokenGrant) error {
+			require.Equal(t, "user-a", username)
+			authorized = grant
+			return nil
+		}),
 	)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/token", nil).WithContext(ctx)
+	req := httptest.NewRequest(http.MethodPost, "/v1/token?mode=read&repository=owner%2Frepo&ref=main&path=models%2Fa.bin", nil).WithContext(ctx)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, TokenGrant{Mode: "read", Repo: "owner/repo", Ref: "main", Path: "models/a.bin"}, authorized)
 	var body tokenResponse
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
-	require.NotEmpty(t, body.AccessToken)
 	require.Greater(t, body.ExpiresAt, time.Now().Unix())
-
 	claims := jwt.MapClaims{}
 	token, err := jwt.ParseWithClaims(body.AccessToken, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte("test-token-key"), nil
@@ -55,40 +60,33 @@ func TestPostTokenIssuesScopedJWT(t *testing.T) {
 	require.True(t, token.Valid)
 	require.Equal(t, "user-a", claims["sub"])
 	require.Equal(t, "xet", claims["aud"])
-	require.Equal(t, "read write", claims["scope"])
+	require.Equal(t, "read", claims["scope"])
+	require.Equal(t, "owner/repo", claims["repo"])
+	require.Equal(t, "main", claims["ref"])
+	require.Equal(t, "models/a.bin", claims["path"])
 }
 
-func TestRefreshTokenIssuesNewScopedJWT(t *testing.T) {
+func TestPostTokenRejectsIncompleteOrDeniedGrant(t *testing.T) {
 	ctx := auth.WithUser(context.Background(), &model.User{Username: "user-a"})
 	handler := NewHandler(
 		xetstore.NewRegistry(kvtest.GetStore(ctx, t)),
 		WithTokenSigningKey([]byte("test-token-key")),
-		WithTokenTTL(time.Hour),
+		WithTokenAuthorizer(func(ctx context.Context, username string, grant TokenGrant) error {
+			return ErrTokenNotAllowed
+		}),
 	)
-	req := httptest.NewRequest(http.MethodPost, "/v1/token", nil).WithContext(ctx)
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-	require.Equal(t, http.StatusOK, rec.Code)
-	var issued tokenResponse
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &issued))
 
-	refreshReq := httptest.NewRequest(http.MethodGet, "/v1/token/refresh", nil)
-	refreshReq.Header.Set("Authorization", "Bearer "+issued.AccessToken)
-	refreshRec := httptest.NewRecorder()
-	handler.ServeHTTP(refreshRec, refreshReq)
+	for query, code := range map[string]int{
+		"mode=read&repository=owner%2Frepo&ref=main":             http.StatusBadRequest,
+		"mode=admin&repository=owner%2Frepo&ref=main&path=a.bin": http.StatusBadRequest,
+		"mode=write&repository=owner%2Frepo&ref=main&path=a.bin": http.StatusForbidden,
+	} {
+		req := httptest.NewRequest(http.MethodPost, "/v1/token?"+query, nil).WithContext(ctx)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
 
-	require.Equal(t, http.StatusOK, refreshRec.Code)
-	var refreshed tokenResponse
-	require.NoError(t, json.Unmarshal(refreshRec.Body.Bytes(), &refreshed))
-	require.NotEmpty(t, refreshed.AccessToken)
-	claims := jwt.MapClaims{}
-	token, err := jwt.ParseWithClaims(refreshed.AccessToken, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte("test-token-key"), nil
-	})
-	require.NoError(t, err)
-	require.True(t, token.Valid)
-	require.Equal(t, "user-a", claims["sub"])
-	require.Equal(t, "read write", claims["scope"])
+		require.Equal(t, code, rec.Code, query)
+	}
 }
 
 func TestScopedAuthRejectsMissingToken(t *testing.T) {
@@ -114,7 +112,7 @@ func TestScopedAuthRejectsInsufficientScope(t *testing.T) {
 		WithTokenSigningKey([]byte("test-token-key")),
 		WithTokenAuthRequired(),
 	)
-	token := testXETToken(t, "user-a", "read", time.Now().Add(time.Hour))
+	token := testXETToken(t, "user-a", TokenGrant{Mode: "read"}, time.Now().Add(time.Hour))
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/xorb-a", strings.NewReader("xorb-bytes"))
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -303,12 +301,15 @@ func TestPostXorbVerificationHonorsMaxConcurrency(t *testing.T) {
 	require.Equal(t, int32(1), maxSeen)
 }
 
-func testXETToken(t *testing.T, subject string, scope string, expires time.Time) string {
+func testXETToken(t *testing.T, subject string, grant TokenGrant, expires time.Time) string {
 	t.Helper()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":   subject,
 		"aud":   "xet",
-		"scope": scope,
+		"scope": grant.Mode,
+		"repo":  grant.Repo,
+		"ref":   grant.Ref,
+		"path":  grant.Path,
 		"iat":   time.Now().Unix(),
 		"exp":   expires.Unix(),
 	})
@@ -458,7 +459,7 @@ func TestGetReconstructionReturnsV1Manifest(t *testing.T) {
 	}`, rec.Body.String())
 }
 
-func TestGetReconstructionRequiresDirectCapabilityWhenConfigured(t *testing.T) {
+func TestGetReconstructionChecksTheTokenGrant(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
 	fileHash, _, _ := xettest.SeedFile(t, ctx, registry, mem.New(ctx), "mem://xet-cas", []byte("hello world!"))
@@ -467,11 +468,9 @@ func TestGetReconstructionRequiresDirectCapabilityWhenConfigured(t *testing.T) {
 		registry,
 		WithTokenSigningKey([]byte("test-token-key")),
 		WithTokenAuthRequired(),
-		WithReconstructionCapabilityChecker(func(ctx context.Context, fileHash string, logical ReconstructionLogicalContext) error {
+		WithReconstructionCapabilityChecker(func(ctx context.Context, fileHash string, grant TokenGrant) error {
 			called = true
-			require.Equal(t, "repo-a", logical.Repo)
-			require.Equal(t, "main", logical.Ref)
-			require.Equal(t, "models/checkpoint.bin", logical.Path)
+			require.Equal(t, TokenGrant{Mode: "read", Repo: "repo-a", Ref: "main", Path: "models/checkpoint.bin"}, grant)
 			return nil
 		}),
 		withReconstructionRangeResolverFactory(func(ctx context.Context, fileHash string, terms []reconstruct.Term) (reconstruct.RangeResolver, error) {
@@ -484,8 +483,8 @@ func TestGetReconstructionRequiresDirectCapabilityWhenConfigured(t *testing.T) {
 		}),
 	)
 
-	req := httptest.NewRequest(http.MethodGet, "/v2/reconstructions/"+fileHash+"?repo=repo-a&ref=main&path=models/checkpoint.bin", nil)
-	req.Header.Set("Authorization", "Bearer "+testXETToken(t, "user-a", "read", time.Now().Add(time.Hour)))
+	req := httptest.NewRequest(http.MethodGet, "/v2/reconstructions/"+fileHash, nil)
+	req.Header.Set("Authorization", "Bearer "+testXETToken(t, "user-a", TokenGrant{Mode: "read", Repo: "repo-a", Ref: "main", Path: "models/checkpoint.bin"}, time.Now().Add(time.Hour)))
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -493,7 +492,7 @@ func TestGetReconstructionRequiresDirectCapabilityWhenConfigured(t *testing.T) {
 	require.True(t, called)
 }
 
-func TestGetReconstructionRejectsMissingDirectCapabilityContext(t *testing.T) {
+func TestGetReconstructionReturnsNotFoundWhenGrantDoesNotCoverFile(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
 	fileHash, _, _ := xettest.SeedFile(t, ctx, registry, mem.New(ctx), "mem://xet-cas", []byte("hello world!"))
@@ -501,16 +500,13 @@ func TestGetReconstructionRejectsMissingDirectCapabilityContext(t *testing.T) {
 		registry,
 		WithTokenSigningKey([]byte("test-token-key")),
 		WithTokenAuthRequired(),
-		WithReconstructionCapabilityChecker(func(ctx context.Context, fileHash string, logical ReconstructionLogicalContext) error {
-			require.Empty(t, logical.Repo)
-			require.Empty(t, logical.Ref)
-			require.Empty(t, logical.Path)
+		WithReconstructionCapabilityChecker(func(ctx context.Context, fileHash string, grant TokenGrant) error {
 			return ErrReconstructionCapabilityNotFound
 		}),
 	)
 
 	req := httptest.NewRequest(http.MethodGet, "/v2/reconstructions/"+fileHash, nil)
-	req.Header.Set("Authorization", "Bearer "+testXETToken(t, "user-a", "read", time.Now().Add(time.Hour)))
+	req.Header.Set("Authorization", "Bearer "+testXETToken(t, "user-a", TokenGrant{Mode: "read"}, time.Now().Add(time.Hour)))
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 

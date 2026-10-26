@@ -335,7 +335,7 @@ func TestServeXETXorbUploadRoute(t *testing.T) {
 	server := setupServer(t, handler)
 	clt := setupClientByEndpoint(t, server.URL, "", "")
 	cred := createDefaultAdminUser(t, clt)
-	token := issueXETTokenForTest(t, server.URL, cred)
+	token := issueXETTokenForTest(t, server.URL, cred, "write", "admin/repo", "main", "model.bin")
 
 	req, err := http.NewRequest(http.MethodPost, server.URL+"/xet/v1/xorbs/default/xorb-a", strings.NewReader("xorb-bytes"))
 	require.NoError(t, err)
@@ -349,7 +349,7 @@ func TestServeXETXorbUploadRoute(t *testing.T) {
 	require.Contains(t, string(body), "invalid xorb address")
 }
 
-func TestServeXETReconstructionRequiresLiveLogicalContext(t *testing.T) {
+func TestServeXETReconstructionChecksTheTokenObject(t *testing.T) {
 	handler, deps := setupXETHandler(t)
 	ctx := context.Background()
 	repo := testUniqueRepoName()
@@ -357,7 +357,6 @@ func TestServeXETReconstructionRequiresLiveLogicalContext(t *testing.T) {
 	const path = "models/checkpoint.bin"
 	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
 	require.NoError(t, err)
-
 	chunk := []byte("hello world!")
 	fileHash, _, _ := xettest.SeedFile(t, ctx, xetstore.NewRegistry(deps.catalog.KVStore), deps.blocks, "mem://_hub_xet", chunk)
 	err = deps.catalog.CreateEntry(ctx, repo, branch, catalog.DBEntry{
@@ -369,91 +368,61 @@ func TestServeXETReconstructionRequiresLiveLogicalContext(t *testing.T) {
 		Checksum:        "checksum-a",
 	})
 	require.NoError(t, err)
+	commit, err := deps.catalog.Commit(ctx, repo, branch, "add checkpoint", "admin", nil, nil, nil, false)
+	require.NoError(t, err)
+	require.NoError(t, deps.catalog.DeleteEntry(ctx, repo, branch, path))
 
 	server := setupServer(t, handler)
 	clt := setupClientByEndpoint(t, server.URL, "", "")
 	cred := createDefaultAdminUser(t, clt)
-	token := issueXETTokenForTest(t, server.URL, cred)
-	req, err := http.NewRequest(
-		http.MethodGet,
-		server.URL+"/xet/v2/reconstructions/"+fileHash+"?repo="+url.QueryEscape(repo)+"&ref=main&path="+url.QueryEscape("models/other.bin"),
-		nil,
-	)
-	require.NoError(t, err)
-	req.Header.Set("Authorization", "Bearer "+token)
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
-	defer resp.Body.Close()
+	for _, tc := range []struct {
+		ref, path string
+		status    int
+	}{
+		{ref: commit.Reference, path: "models/other.bin", status: http.StatusNotFound},
+		{ref: branch, path: path, status: http.StatusNotFound},
+		{ref: commit.Reference, path: path, status: http.StatusOK},
+	} {
+		token := issueXETTokenForTest(t, server.URL, cred, "read", repo, tc.ref, tc.path)
+		req, err := http.NewRequest(http.MethodGet, server.URL+"/xet/v2/reconstructions/"+fileHash, nil)
+		require.NoError(t, err)
+		req.Header.Set("Authorization", "Bearer "+token)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		_ = resp.Body.Close()
 
-	require.Equal(t, http.StatusNotFound, resp.StatusCode)
-
-	req, err = http.NewRequest(
-		http.MethodGet,
-		server.URL+"/xet/v2/reconstructions/"+fileHash+"?repo="+url.QueryEscape(repo)+"&ref=main&path="+url.QueryEscape(path),
-		nil,
-	)
-	require.NoError(t, err)
-	req.Header.Set("Authorization", "Bearer "+token)
-	resp, err = http.DefaultClient.Do(req)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-	refs, err := xetstore.NewRegistry(deps.catalog.KVStore).ListFileRefs(ctx, fileHash, 32)
-	require.NoError(t, err)
-	require.Contains(t, refs, xetstore.FileRef{
-		FileHash: fileHash,
-		Repo:     repo,
-		Ref:      branch,
-		Path:     path,
-	})
+		require.Equal(t, tc.status, resp.StatusCode, "%s %s", tc.ref, tc.path)
+	}
 }
 
-func TestServeXETReconstructionUsesFileRefFallback(t *testing.T) {
-	handler, deps := setupXETHandler(t)
+func TestServeXETWriteTokenRequiresWritePermission(t *testing.T) {
+	handler, _ := setupXETHandler(t)
+	server := setupServer(t, handler)
+	adminClt := setupClientByEndpoint(t, server.URL, "", "")
+	cred := createDefaultAdminUser(t, adminClt)
+	adminClt = setupClientByEndpoint(t, server.URL, cred.AccessKeyID, cred.SecretAccessKey)
 	ctx := context.Background()
-	repo := testUniqueRepoName()
-	const branch = "main"
-	const path = "models/checkpoint.bin"
-	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	userRes, err := adminClt.CreateUserWithResponse(ctx, apigen.CreateUserJSONRequestBody{Id: "xet-reader", InviteUser: swag.Bool(false)})
 	require.NoError(t, err)
+	require.NotNil(t, userRes.JSON201)
+	credsRes, err := adminClt.CreateCredentialsWithResponse(ctx, userRes.JSON201.Id)
+	require.NoError(t, err)
+	require.NotNil(t, credsRes.JSON201)
 
-	chunk := []byte("hello world!")
-	registry := xetstore.NewRegistry(deps.catalog.KVStore)
-	fileHash, _, _ := xettest.SeedFile(t, ctx, registry, deps.blocks, "mem://_hub_xet", chunk)
-	err = deps.catalog.CreateEntry(ctx, repo, branch, catalog.DBEntry{
-		Path:            path,
-		PhysicalAddress: "xet://" + fileHash,
-		AddressType:     catalog.AddressTypeFull,
-		CreationDate:    time.Now(),
-		Size:            int64(len(chunk)),
-		Checksum:        "checksum-a",
-	})
+	req, err := http.NewRequest(http.MethodPost, server.URL+"/xet/v1/token?mode=write&repository=someone%2Frepo&ref=main&path=model.bin", nil)
 	require.NoError(t, err)
-	require.NoError(t, registry.PutFileRef(ctx, xetstore.FileRef{
-		FileHash: fileHash,
-		Repo:     repo,
-		Ref:      branch,
-		Path:     path,
-	}))
-
-	server := setupServer(t, handler)
-	clt := setupClientByEndpoint(t, server.URL, "", "")
-	cred := createDefaultAdminUser(t, clt)
-	token := issueXETTokenForTest(t, server.URL, cred)
-	req, err := http.NewRequest(http.MethodGet, server.URL+"/xet/v2/reconstructions/"+fileHash, nil)
-	require.NoError(t, err)
-	req.Header.Set("Authorization", "Bearer "+token)
+	req.SetBasicAuth(credsRes.JSON201.AccessKeyId, credsRes.JSON201.SecretAccessKey)
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	_ = resp.Body.Close()
 
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
-func issueXETTokenForTest(t testing.TB, serverURL string, cred *authmodel.BaseCredential) string {
+func issueXETTokenForTest(t testing.TB, serverURL string, cred *authmodel.BaseCredential, mode, repo, ref, path string) string {
 	t.Helper()
-	req, err := http.NewRequest(http.MethodPost, serverURL+"/xet/v1/token", nil)
+	query := url.Values{"mode": {mode}, "repository": {repo}, "ref": {ref}, "path": {path}}
+	req, err := http.NewRequest(http.MethodPost, serverURL+"/xet/v1/token?"+query.Encode(), nil)
 	require.NoError(t, err)
 	req.SetBasicAuth(cred.AccessKeyID, cred.SecretAccessKey)
 	resp, err := http.DefaultClient.Do(req)

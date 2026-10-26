@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -22,10 +23,11 @@ func TestXETSmartClientSmoke(t *testing.T) {
 	xorbHash, xorbBytes := xettest.SerializedXorb(t, chunk)
 	fileHash := xettest.FileHash(t, chunk)
 
-	postXETXorb(t, xorbHash, xorbBytes)
-	registerXETShard(t, xettest.Shard(t, fileHash, xorbHash, 0, 1, uint32(len(chunk))))
-
 	path := "models/smoke-checkpoint.bin"
+	token := xetToken(t, "write", repo, mainBranch, path)
+	postXETXorb(t, token, xorbHash, xorbBytes)
+	registerXETShard(t, token, xettest.Shard(t, fileHash, xorbHash, 0, 1, uint32(len(chunk))))
+
 	physicalAddress := "xet://" + fileHash
 	linkResp, err := client.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.LinkPhysicalAddressParams{
 		Path: path,
@@ -58,11 +60,11 @@ func TestXETSmartClientSmoke(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, missingResp.StatusCode())
 }
 
-func postXETXorb(t *testing.T, xorbID string, body []byte) bool {
+func postXETXorb(t *testing.T, token, xorbID string, body []byte) bool {
 	t.Helper()
 	req, err := http.NewRequest(http.MethodPost, xetRootEndpoint()+"/xet/v1/xorbs/default/"+xorbID, bytes.NewReader(body))
 	require.NoError(t, err)
-	authorizeXETRequest(t, req)
+	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
@@ -77,12 +79,12 @@ func postXETXorb(t *testing.T, xorbID string, body []byte) bool {
 	return result.WasInserted
 }
 
-func registerXETShard(t *testing.T, shard []byte) {
+func registerXETShard(t *testing.T, token string, shard []byte) {
 	t.Helper()
 	registerReq, err := http.NewRequest(http.MethodPost, xetRootEndpoint()+"/xet/v1/shards", bytes.NewReader(shard))
 	require.NoError(t, err)
 	registerReq.Header.Set("Content-Type", "application/octet-stream")
-	authorizeXETRequest(t, registerReq)
+	registerReq.Header.Set("Authorization", "Bearer "+token)
 
 	registerResp, err := http.DefaultClient.Do(registerReq)
 	require.NoError(t, err)
@@ -101,14 +103,10 @@ func xetRootEndpoint() string {
 	return strings.TrimSuffix(endpointURL, apiutil.BaseURL)
 }
 
-func authorizeXETRequest(t *testing.T, req *http.Request) {
+func xetToken(t *testing.T, mode, repo, ref, path string) string {
 	t.Helper()
-	req.Header.Set("Authorization", "Bearer "+xetBearerToken(t))
-}
-
-func xetBearerToken(t *testing.T) string {
-	t.Helper()
-	req, err := http.NewRequest(http.MethodPost, xetRootEndpoint()+"/xet/v1/token", nil)
+	query := url.Values{"mode": {mode}, "repository": {repo}, "ref": {ref}, "path": {path}}
+	req, err := http.NewRequest(http.MethodPost, xetRootEndpoint()+"/xet/v1/token?"+query.Encode(), nil)
 	require.NoError(t, err)
 	req.SetBasicAuth(viper.GetString("access_key_id"), viper.GetString("secret_access_key"))
 

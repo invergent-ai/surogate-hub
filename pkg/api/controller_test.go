@@ -389,27 +389,14 @@ func TestController_LinkXETPhysicalAddressCrashAfterGravelerWrite(t *testing.T) 
 	require.Equal(t, http.StatusOK, getResp.StatusCode(), "body: %s", string(getResp.Body))
 	require.Equal(t, chunk, getResp.Body)
 
-	token := signedXETTokenForTest(t, "admin")
-	req, err := http.NewRequest(
-		http.MethodGet,
-		deps.server.URL+"/xet/v2/reconstructions/"+fileHash+"?repo="+url.QueryEscape(repo)+"&ref=main&path="+url.QueryEscape(path),
-		nil,
-	)
+	token := signedXETTokenForTest(t, "admin", repo, branch, path)
+	req, err := http.NewRequest(http.MethodGet, deps.server.URL+"/xet/v2/reconstructions/"+fileHash, nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+token)
 	reconstructionResp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer reconstructionResp.Body.Close()
 	require.Equal(t, http.StatusOK, reconstructionResp.StatusCode)
-
-	refs, err = xetstore.NewRegistry(deps.catalog.KVStore).ListFileRefs(ctx, fileHash, 32)
-	require.NoError(t, err)
-	require.Contains(t, refs, xetstore.FileRef{
-		FileHash: fileHash,
-		Repo:     repo,
-		Ref:      branch,
-		Path:     path,
-	})
 }
 
 func TestController_GetObjectXETPhysicalAddressRange(t *testing.T) {
@@ -456,12 +443,15 @@ func (s *failOnceFileRefSetStore) Set(ctx context.Context, partitionKey, key, va
 	return s.Store.Set(ctx, partitionKey, key, value)
 }
 
-func signedXETTokenForTest(t testing.TB, subject string) string {
+func signedXETTokenForTest(t testing.TB, subject, repo, ref, path string) string {
 	t.Helper()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":   subject,
 		"aud":   "xet",
-		"scope": "read write",
+		"scope": "read",
+		"repo":  repo,
+		"ref":   ref,
+		"path":  path,
 		"iat":   time.Now().Unix(),
 		"exp":   time.Now().Add(time.Hour).Unix(),
 	})

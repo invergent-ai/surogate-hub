@@ -43,6 +43,7 @@ type Handler struct {
 	verifyXorb                         func(expectedHash string, data []byte) error
 	reconstructionRangeResolverFactory reconstructionRangeResolverFactory
 	reconstructionCapabilityChecker    ReconstructionCapabilityChecker
+	tokenAuthorizer                    TokenAuthorizer
 	proxyGrantKey                      []byte
 	tokenSigningKey                    []byte
 	tokenTTL                           time.Duration
@@ -53,15 +54,28 @@ type HandlerOption func(*Handler)
 
 type reconstructionRangeResolverFactory func(ctx context.Context, fileHash string, terms []reconstruct.Term) (reconstruct.RangeResolver, error)
 
-type ReconstructionLogicalContext struct {
+// TokenGrant is what an xet token allows: reading or writing one object.
+type TokenGrant struct {
+	Mode string
 	Repo string
 	Ref  string
 	Path string
 }
 
-type ReconstructionCapabilityChecker func(ctx context.Context, fileHash string, logical ReconstructionLogicalContext) error
+// TokenAuthorizer decides whether a user may get a token for a grant. It runs
+// when the token is minted.
+type TokenAuthorizer func(ctx context.Context, username string, grant TokenGrant) error
 
-var ErrReconstructionCapabilityNotFound = errors.New("xet reconstruction capability not found")
+// ReconstructionCapabilityChecker decides whether the grant of the token on a
+// reconstruction request covers the file.
+type ReconstructionCapabilityChecker func(ctx context.Context, fileHash string, grant TokenGrant) error
+
+var (
+	ErrReconstructionCapabilityNotFound = errors.New("xet reconstruction capability not found")
+	ErrTokenNotAllowed                  = errors.New("xet token not allowed")
+)
+
+type tokenGrantKey struct{}
 
 func WithXorbStore(store *XorbStore) HandlerOption {
 	return func(h *Handler) {
@@ -96,6 +110,12 @@ func WithTokenTTL(ttl time.Duration) HandlerOption {
 func WithTokenAuthRequired() HandlerOption {
 	return func(h *Handler) {
 		h.tokenAuthRequired = true
+	}
+}
+
+func WithTokenAuthorizer(authorizer TokenAuthorizer) HandlerOption {
+	return func(h *Handler) {
+		h.tokenAuthorizer = authorizer
 	}
 }
 
@@ -148,7 +168,6 @@ func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler
 		opt(h)
 	}
 	r := chi.NewRouter()
-	r.Get("/v1/token/refresh", h.getTokenRefresh)
 	r.With(h.requireXETScope("read")).Get("/v1/reconstructions/{file_hash}", h.getReconstructionV1)
 	r.Get("/v1/xorbs/{prefix}/{hash}", h.getXorbProxy)
 	r.With(h.requireXETScope("read")).Get("/v2/reconstructions/{file_hash}", h.getReconstruction)
@@ -206,34 +225,35 @@ func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(putXorbResponse{WasInserted: result.WasInserted})
 }
 
+// postToken mints a token for one object. hf_xet refreshes through the client,
+// which mints again, so every token carries a fresh permission check.
 func (h *Handler) postToken(w http.ResponseWriter, r *http.Request) {
 	user, err := auth.GetUser(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	response, err := h.issueXETToken(user.Username, time.Now())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	query := r.URL.Query()
+	grant := TokenGrant{
+		Mode: query.Get("mode"),
+		Repo: query.Get("repository"),
+		Ref:  query.Get("ref"),
+		Path: query.Get("path"),
+	}
+	if (grant.Mode != "read" && grant.Mode != "write") || grant.Repo == "" || grant.Ref == "" || grant.Path == "" {
+		http.Error(w, "mode (read or write), repository, ref and path are required", http.StatusBadRequest)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(response)
-}
-
-func (h *Handler) getTokenRefresh(w http.ResponseWriter, r *http.Request) {
-	tokenString, ok := bearerToken(r.Header.Get("Authorization"))
-	if !ok {
-		http.Error(w, "missing bearer token", http.StatusUnauthorized)
-		return
+	if h.tokenAuthorizer != nil {
+		if err := h.tokenAuthorizer(r.Context(), user.Username, grant); errors.Is(err, ErrTokenNotAllowed) {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		} else if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
-	subject, err := h.verifyXETToken(tokenString)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-	response, err := h.issueXETToken(subject, time.Now())
+	response, err := h.issueXETToken(user.Username, grant, time.Now())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -265,12 +285,16 @@ func (h *Handler) requireXETScope(scope string) func(http.Handler) http.Handler 
 			}
 			subject, _ := claims["sub"].(string)
 			ctx := auth.WithUser(r.Context(), &model.User{Username: subject})
+			repo, _ := claims["repo"].(string)
+			ref, _ := claims["ref"].(string)
+			path, _ := claims["path"].(string)
+			ctx = context.WithValue(ctx, tokenGrantKey{}, TokenGrant{Mode: scope, Repo: repo, Ref: ref, Path: path})
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
 
-func (h *Handler) issueXETToken(subject string, now time.Time) (tokenResponse, error) {
+func (h *Handler) issueXETToken(subject string, grant TokenGrant, now time.Time) (tokenResponse, error) {
 	if len(h.tokenSigningKey) == 0 {
 		return tokenResponse{}, errors.New("token signing key is not configured")
 	}
@@ -278,7 +302,10 @@ func (h *Handler) issueXETToken(subject string, now time.Time) (tokenResponse, e
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":   subject,
 		"aud":   "xet",
-		"scope": "read write",
+		"scope": grant.Mode,
+		"repo":  grant.Repo,
+		"ref":   grant.Ref,
+		"path":  grant.Path,
 		"iat":   now.Unix(),
 		"exp":   expires.Unix(),
 	})
@@ -290,18 +317,6 @@ func (h *Handler) issueXETToken(subject string, now time.Time) (tokenResponse, e
 		AccessToken: signed,
 		ExpiresAt:   expires.Unix(),
 	}, nil
-}
-
-func (h *Handler) verifyXETToken(tokenString string) (string, error) {
-	claims, err := h.verifyXETTokenClaims(tokenString)
-	if err != nil {
-		return "", err
-	}
-	subject, _ := claims["sub"].(string)
-	if subject == "" {
-		return "", errors.New("invalid token subject")
-	}
-	return subject, nil
 }
 
 func (h *Handler) verifyXETTokenClaims(tokenString string) (jwt.MapClaims, error) {
@@ -409,12 +424,8 @@ func (h *Handler) getReconstructionV1(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) buildReconstructionManifest(w http.ResponseWriter, r *http.Request) (reconstruct.Manifest, bool) {
 	fileHash := chi.URLParam(r, "file_hash")
 	if h.reconstructionCapabilityChecker != nil {
-		logical := ReconstructionLogicalContext{
-			Repo: r.URL.Query().Get("repo"),
-			Ref:  r.URL.Query().Get("ref"),
-			Path: r.URL.Query().Get("path"),
-		}
-		if err := h.reconstructionCapabilityChecker(r.Context(), fileHash, logical); err != nil {
+		grant, _ := r.Context().Value(tokenGrantKey{}).(TokenGrant)
+		if err := h.reconstructionCapabilityChecker(r.Context(), fileHash, grant); err != nil {
 			if errors.Is(err, ErrReconstructionCapabilityNotFound) {
 				http.NotFound(w, r)
 				return reconstruct.Manifest{}, false

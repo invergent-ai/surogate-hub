@@ -111,12 +111,10 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 			xetcas.WithProxyGrantKey([]byte(cfg.GetBaseConfig().Auth.Encrypt.SecretKey.SecureValue())),
 			xetcas.WithTokenSigningKey([]byte(cfg.GetBaseConfig().Auth.Encrypt.SecretKey.SecureValue())),
 			xetcas.WithTokenAuthRequired(),
-			xetcas.WithReconstructionCapabilityChecker(xetReconstructionCapabilityChecker(
-				catalog,
-				authService,
-				xetRegistry,
-				cfg.GetBaseConfig().XET.Read.CapabilityScanBatchSize,
-			)),
+			xetcas.WithTokenAuthorizer(xetTokenAuthorizer(authService)),
+			xetcas.WithReconstructionCapabilityChecker(func(ctx context.Context, fileHash string, grant xetcas.TokenGrant) error {
+				return checkXETReconstructionCandidate(ctx, catalog, authService, fileHash, grant)
+			}),
 		)))
 	}
 	r.Mount(apiutil.BaseURL, http.HandlerFunc(InvalidAPIEndpointHandler))
@@ -127,43 +125,35 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 	return r
 }
 
-func xetReconstructionCapabilityChecker(cat *catalog.Catalog, authService auth.Service, registry *xetstore.Registry, scanBatchSize int) xetcas.ReconstructionCapabilityChecker {
-	return func(ctx context.Context, fileHash string, logical xetcas.ReconstructionLogicalContext) error {
-		if logical.Repo != "" && logical.Ref != "" && logical.Path != "" {
-			if err := checkXETReconstructionCandidate(ctx, cat, authService, fileHash, logical); err != nil {
-				return err
-			}
-			_ = registry.PutFileRef(ctx, xetstore.FileRef{
-				FileHash: fileHash,
-				Repo:     logical.Repo,
-				Ref:      logical.Ref,
-				Path:     logical.Path,
-			})
-			return nil
+// xetTokenAuthorizer allows a token only for an object the user may read or
+// write, depending on the token's mode.
+func xetTokenAuthorizer(authService auth.Service) xetcas.TokenAuthorizer {
+	return func(ctx context.Context, username string, grant xetcas.TokenGrant) error {
+		action := permissions.ReadObjectAction
+		if grant.Mode == "write" {
+			action = permissions.WriteObjectAction
 		}
-		refs, err := registry.ListFileRefs(ctx, fileHash, scanBatchSize)
+		resp, err := authService.Authorize(ctx, &auth.AuthorizationRequest{
+			Username: username,
+			RequiredPermissions: permissions.Node{
+				Permission: permissions.Permission{
+					Action:   action,
+					Resource: permissions.ObjectArn(grant.Repo, grant.Path),
+				},
+			},
+		})
 		if err != nil {
 			return err
 		}
-		for _, ref := range refs {
-			err := checkXETReconstructionCandidate(ctx, cat, authService, fileHash, xetcas.ReconstructionLogicalContext{
-				Repo: ref.Repo,
-				Ref:  ref.Ref,
-				Path: ref.Path,
-			})
-			if err == nil {
-				return nil
-			}
-			if !errors.Is(err, xetcas.ErrReconstructionCapabilityNotFound) {
-				return err
-			}
+		if resp.Error != nil || !resp.Allowed {
+			return xetcas.ErrTokenNotAllowed
 		}
-		return xetcas.ErrReconstructionCapabilityNotFound
+		return nil
 	}
 }
 
-func checkXETReconstructionCandidate(ctx context.Context, cat *catalog.Catalog, authService auth.Service, fileHash string, logical xetcas.ReconstructionLogicalContext) error {
-	if logical.Repo == "" || logical.Ref == "" || logical.Path == "" {
+func checkXETReconstructionCandidate(ctx context.Context, cat *catalog.Catalog, authService auth.Service, fileHash string, grant xetcas.TokenGrant) error {
+	if grant.Mode != "read" || grant.Repo == "" || grant.Ref == "" || grant.Path == "" {
 		return xetcas.ErrReconstructionCapabilityNotFound
 	}
 	user, err := auth.GetUser(ctx)
@@ -175,7 +165,7 @@ func checkXETReconstructionCandidate(ctx context.Context, cat *catalog.Catalog, 
 		RequiredPermissions: permissions.Node{
 			Permission: permissions.Permission{
 				Action:   permissions.ReadObjectAction,
-				Resource: permissions.ObjectArn(logical.Repo, logical.Path),
+				Resource: permissions.ObjectArn(grant.Repo, grant.Path),
 			},
 		},
 	})
@@ -185,7 +175,7 @@ func checkXETReconstructionCandidate(ctx context.Context, cat *catalog.Catalog, 
 	if resp.Error != nil || !resp.Allowed {
 		return xetcas.ErrReconstructionCapabilityNotFound
 	}
-	entry, err := cat.GetEntry(ctx, logical.Repo, logical.Ref, logical.Path, catalog.GetEntryParams{})
+	entry, err := cat.GetEntry(ctx, grant.Repo, grant.Ref, grant.Path, catalog.GetEntryParams{})
 	if errors.Is(err, graveler.ErrNotFound) {
 		return xetcas.ErrReconstructionCapabilityNotFound
 	}
