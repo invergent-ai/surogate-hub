@@ -233,7 +233,7 @@ func TestPostXorbAcceptsLZ4SerializedHash(t *testing.T) {
 	ctx := context.Background()
 	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
 	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
-	xorbHash, xorbBytes := xettest.SerializedXorbWithScheme(t, bytes.Repeat([]byte("a"), 2048), 1)
+	xorbHash, xorbBytes := xettest.SerializedXorbWithScheme(t, xettest.SchemeLZ4, bytes.Repeat([]byte("a"), 2048))
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/"+xorbHash, bytes.NewReader(xorbBytes))
 	rec := httptest.NewRecorder()
@@ -247,7 +247,7 @@ func TestPostXorbAcceptsBG4LZ4SerializedHash(t *testing.T) {
 	ctx := context.Background()
 	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
 	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
-	xorbHash, xorbBytes := xettest.SerializedXorbWithScheme(t, bytes.Repeat([]byte{0x01, 0x02, 0x03, 0x04}, 512), 2)
+	xorbHash, xorbBytes := xettest.SerializedXorbWithScheme(t, xettest.SchemeBG4LZ4, bytes.Repeat([]byte{0x01, 0x02, 0x03, 0x04}, 512))
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/"+xorbHash, bytes.NewReader(xorbBytes))
 	rec := httptest.NewRecorder()
@@ -632,4 +632,32 @@ func TestReconstructFileRangeReadsXorbBytes(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, []byte("lo wor"), got)
+}
+
+func TestReconstructFileRangeStreamsChunkRunsAcrossXorbs(t *testing.T) {
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	adapter := mem.New(ctx)
+	xorbA, xorbABytes := xettest.SerializedXorbWithScheme(t, xettest.SchemeLZ4, []byte("hello "), []byte("world"), []byte("!!"))
+	xorbB, xorbBBytes := xettest.SerializedXorb(t, []byte("tail"))
+	xettest.PutXorb(t, ctx, registry, adapter, "mem://xet-cas", xorbA, xorbABytes)
+	xettest.PutXorb(t, ctx, registry, adapter, "mem://xet-cas", xorbB, xorbBBytes)
+	fileHash := xettest.FileHash(t, []byte("world"), []byte("!!"), []byte("tail"))
+	_, err := registry.RegisterFile(ctx, xetstore.ShardFileInfo{
+		FileHash:  fileHash,
+		SizeBytes: 11,
+		Segments: []xetstore.ShardFileSegment{
+			{XorbHash: xorbA, SizeBytes: 7, ChunkIndexStart: 1, ChunkIndexEnd: 3},
+			{XorbHash: xorbB, SizeBytes: 4, ChunkIndexEnd: 1},
+		},
+	})
+	require.NoError(t, err)
+
+	reader, err := ReconstructFileRange(ctx, registry, NewXorbStore(adapter, "mem://xet-cas"), fileHash, reconstruct.ByteRange{Start: 3, End: 9})
+	require.NoError(t, err)
+	defer func() { _ = reader.Close() }()
+	got, err := io.ReadAll(reader)
+	require.NoError(t, err)
+
+	require.Equal(t, "ld!!ta", string(got))
 }

@@ -22,59 +22,73 @@ const (
 )
 
 // SerializedXorb returns the hash and serialization, footer included, of a xorb
-// holding one uncompressed chunk.
-func SerializedXorb(t testing.TB, chunk []byte) (string, []byte) {
-	return SerializedXorbWithScheme(t, chunk, SchemeNone)
+// holding the given uncompressed chunks.
+func SerializedXorb(t testing.TB, chunks ...[]byte) (string, []byte) {
+	return SerializedXorbWithScheme(t, SchemeNone, chunks...)
 }
 
-func SerializedXorbWithScheme(t testing.TB, chunk []byte, scheme byte) (string, []byte) {
+func SerializedXorbWithScheme(t testing.TB, scheme byte, chunks ...[]byte) (string, []byte) {
 	t.Helper()
-	chunkHash := xetstore.ComputeDataHash(chunk)
-	xorbHash, err := xetstore.ComputeXorbMerkleHash([]xetstore.ShardChunkInfo{{
-		Hash:      chunkHash,
-		SizeBytes: uint64(len(chunk)),
-	}})
+	infos := make([]xetstore.ShardChunkInfo, 0, len(chunks))
+	for _, chunk := range chunks {
+		infos = append(infos, xetstore.ShardChunkInfo{Hash: xetstore.ComputeDataHash(chunk), SizeBytes: uint64(len(chunk))})
+	}
+	xorbHash, err := xetstore.ComputeXorbMerkleHash(infos)
 	require.NoError(t, err)
 
-	serializedChunk := chunk
-	if scheme == SchemeBG4LZ4 {
-		serializedChunk = bg4Split(chunk)
-	}
-	if scheme == SchemeLZ4 || scheme == SchemeBG4LZ4 {
-		var compressed bytes.Buffer
-		writer := lz4.NewWriter(&compressed)
-		_, err := writer.Write(serializedChunk)
-		require.NoError(t, err)
-		require.NoError(t, writer.Close())
-		serializedChunk = compressed.Bytes()
-	}
 	var b bytes.Buffer
-	b.WriteByte(0)
-	writeU24(&b, uint32(len(serializedChunk)))
-	b.WriteByte(scheme)
-	writeU24(&b, uint32(len(chunk)))
-	b.Write(serializedChunk)
+	var boundaries, unpackedOffsets []uint32
+	var unpacked uint32
+	for _, chunk := range chunks {
+		serializedChunk := chunk
+		if scheme == SchemeBG4LZ4 {
+			serializedChunk = bg4Split(chunk)
+		}
+		if scheme == SchemeLZ4 || scheme == SchemeBG4LZ4 {
+			var compressed bytes.Buffer
+			writer := lz4.NewWriter(&compressed)
+			_, err := writer.Write(serializedChunk)
+			require.NoError(t, err)
+			require.NoError(t, writer.Close())
+			serializedChunk = compressed.Bytes()
+		}
+		b.WriteByte(0)
+		writeU24(&b, uint32(len(serializedChunk)))
+		b.WriteByte(scheme)
+		writeU24(&b, uint32(len(chunk)))
+		b.Write(serializedChunk)
+		unpacked += uint32(len(chunk))
+		boundaries = append(boundaries, uint32(b.Len()))
+		unpackedOffsets = append(unpackedOffsets, unpacked)
+	}
 
-	chunkBoundary := uint32(b.Len())
+	n := uint32(len(chunks))
+	infoLength := 92 + 40*n
 	b.WriteString("XETBLOB")
 	b.WriteByte(1)
 	WriteHash(t, &b, xorbHash)
 
 	b.WriteString("XBLBHSH")
 	b.WriteByte(0)
-	writeU32(&b, 1)
-	WriteHash(t, &b, chunkHash)
+	writeU32(&b, n)
+	for _, info := range infos {
+		WriteHash(t, &b, info.Hash)
+	}
 
 	b.WriteString("XBLBBND")
 	b.WriteByte(1)
-	writeU32(&b, 1)
-	writeU32(&b, chunkBoundary)
-	writeU32(&b, uint32(len(chunk)))
-	writeU32(&b, 1)
-	writeU32(&b, 92)
-	writeU32(&b, 48)
+	writeU32(&b, n)
+	for _, boundary := range boundaries {
+		writeU32(&b, boundary)
+	}
+	for _, offset := range unpackedOffsets {
+		writeU32(&b, offset)
+	}
+	writeU32(&b, n)
+	writeU32(&b, infoLength-40)
+	writeU32(&b, infoLength-52-32*n)
 	b.Write(make([]byte, 16))
-	writeU32(&b, 132)
+	writeU32(&b, infoLength)
 
 	return xorbHash, b.Bytes()
 }
@@ -123,16 +137,22 @@ func Shard(t testing.TB, fileHash, xorbHash string, chunkStart, chunkEnd, sizeBy
 	return b.Bytes()
 }
 
+// PutXorb stores a serialized xorb and its footer the way a verified upload does.
+func PutXorb(t testing.TB, ctx context.Context, registry *xetstore.Registry, adapter block.Adapter, storageNamespace, xorbHash string, xorb []byte) {
+	t.Helper()
+	_, err := adapter.Put(ctx, xetstore.XorbObjectPointer(storageNamespace, "default", xorbHash), int64(len(xorb)), bytes.NewReader(xorb), block.PutOpts{})
+	require.NoError(t, err)
+	require.NoError(t, registry.PutXorbInfo(ctx, xorbHash, xorb[footerStart(t, xorb):]))
+}
+
 // SeedFile stores a one-chunk xorb and its file record the way a verified
 // upload does, and returns the file and xorb hashes and the xorb bytes.
 func SeedFile(t testing.TB, ctx context.Context, registry *xetstore.Registry, adapter block.Adapter, storageNamespace string, chunk []byte) (string, string, []byte) {
 	t.Helper()
 	xorbHash, xorb := SerializedXorb(t, chunk)
-	_, err := adapter.Put(ctx, xetstore.XorbObjectPointer(storageNamespace, "default", xorbHash), int64(len(xorb)), bytes.NewReader(xorb), block.PutOpts{})
-	require.NoError(t, err)
-	require.NoError(t, registry.PutXorbInfo(ctx, xorbHash, xorb[footerStart(t, xorb):]))
+	PutXorb(t, ctx, registry, adapter, storageNamespace, xorbHash, xorb)
 	fileHash := FileHash(t, chunk)
-	_, err = registry.RegisterFile(ctx, xetstore.ShardFileInfo{
+	_, err := registry.RegisterFile(ctx, xetstore.ShardFileInfo{
 		FileHash:  fileHash,
 		SizeBytes: uint64(len(chunk)),
 		Segments: []xetstore.ShardFileSegment{{

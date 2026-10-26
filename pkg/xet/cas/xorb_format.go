@@ -116,15 +116,7 @@ func parseFooterlessXorbInfo(data []byte) (parsedXorbInfo, error) {
 	var compressedOffset uint32
 	var unpackedOffset uint32
 	for reader.Len() > 0 {
-		header, err := readXorbChunkHeader(reader)
-		if err != nil {
-			return parsedXorbInfo{}, err
-		}
-		serializedChunk := make([]byte, header.compressedLength)
-		if _, err := io.ReadFull(reader, serializedChunk); err != nil {
-			return parsedXorbInfo{}, fmt.Errorf("read xorb chunk data: %w", err)
-		}
-		chunk, err := decompressXorbChunk(header, serializedChunk)
+		header, chunk, err := readXorbChunk(reader)
 		if err != nil {
 			return parsedXorbInfo{}, err
 		}
@@ -284,15 +276,7 @@ func decodeXorbChunks(data []byte, info parsedXorbInfo) ([][]byte, error) {
 	var compressedOffset uint32
 	var unpackedOffset uint32
 	for i, expectedHash := range info.ChunkHashes {
-		header, err := readXorbChunkHeader(reader)
-		if err != nil {
-			return nil, err
-		}
-		serializedChunk := make([]byte, header.compressedLength)
-		if _, err := io.ReadFull(reader, serializedChunk); err != nil {
-			return nil, fmt.Errorf("read xorb chunk data: %w", err)
-		}
-		chunk, err := decompressXorbChunk(header, serializedChunk)
+		header, chunk, err := readXorbChunk(reader)
 		if err != nil {
 			return nil, err
 		}
@@ -312,6 +296,20 @@ func decodeXorbChunks(data []byte, info parsedXorbInfo) ([][]byte, error) {
 		return nil, fmt.Errorf("xorb content bytes after chunks")
 	}
 	return chunks, nil
+}
+
+// readXorbChunk reads one serialized chunk and returns its header and data.
+func readXorbChunk(reader io.Reader) (xorbChunkHeader, []byte, error) {
+	header, err := readXorbChunkHeader(reader)
+	if err != nil {
+		return xorbChunkHeader{}, nil, err
+	}
+	serializedChunk := make([]byte, header.compressedLength)
+	if _, err := io.ReadFull(reader, serializedChunk); err != nil {
+		return xorbChunkHeader{}, nil, fmt.Errorf("read xorb chunk data: %w", err)
+	}
+	chunk, err := decompressXorbChunk(header, serializedChunk)
+	return header, chunk, err
 }
 
 func decompressXorbChunk(header xorbChunkHeader, serializedChunk []byte) ([]byte, error) {
