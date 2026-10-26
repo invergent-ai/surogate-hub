@@ -113,10 +113,10 @@ func TestController_LinkXETPhysicalAddressWritesFileRef(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, physicalAddress, entry.PhysicalAddress)
 
-	fileRefKey := "xet/file_refs/" + fileHash + "/" + url.PathEscape(repo)
+	fileRefKey := "xet/file_refs/" + url.PathEscape(repo) + "/" + fileHash
 	fileRef, err := deps.catalog.KVStore.Get(ctx, []byte(xetstore.Partition), []byte(fileRefKey))
 	require.NoError(t, err)
-	require.Equal(t, []byte{}, fileRef.Value)
+	require.Equal(t, []byte("12"), fileRef.Value)
 }
 
 func TestController_CopyObjectXETPhysicalAddress(t *testing.T) {

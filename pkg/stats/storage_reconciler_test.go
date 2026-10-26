@@ -22,20 +22,20 @@ func (f *fakeRepoLister) ListRepos(_ context.Context, fn func(stats.ReconcilerRe
 	return nil
 }
 
-type fakeNamespaceSizer struct {
+type fakeRepoSizer struct {
 	sizes map[string]int64
 }
 
-func (f *fakeNamespaceSizer) NamespaceSize(_ context.Context, _ string, storageNamespace string) (int64, error) {
-	return f.sizes[storageNamespace], nil
+func (f *fakeRepoSizer) RepoSize(_ context.Context, repo stats.ReconcilerRepo) (int64, error) {
+	return f.sizes[repo.StorageNamespace], nil
 }
 
 type errInjectingSizer struct {
 	sizes map[string]int64
 }
 
-func (e *errInjectingSizer) NamespaceSize(_ context.Context, _ string, storageNamespace string) (int64, error) {
-	if v, ok := e.sizes[storageNamespace]; ok {
+func (e *errInjectingSizer) RepoSize(_ context.Context, repo stats.ReconcilerRepo) (int64, error) {
+	if v, ok := e.sizes[repo.StorageNamespace]; ok {
 		return v, nil
 	}
 	return 0, errors.New("boom")
@@ -53,7 +53,7 @@ func TestStorageReconciler_OverwritesRepoCountersFromWalker(t *testing.T) {
 		{Owner: "alice", Name: "training", StorageID: "s1", StorageNamespace: "s3://alice-training"},
 		{Owner: "alice", Name: "evals", StorageID: "s1", StorageNamespace: "s3://alice-evals"},
 	}}
-	ns := &fakeNamespaceSizer{sizes: map[string]int64{
+	ns := &fakeRepoSizer{sizes: map[string]int64{
 		"s3://alice-training": 150,
 		"s3://alice-evals":    200,
 	}}
@@ -86,7 +86,7 @@ func TestStorageReconciler_FlushesPendingAccountantDeltasBeforeOverwrite(t *test
 	rl := &fakeRepoLister{repos: []stats.ReconcilerRepo{
 		{Owner: "alice", Name: "training", StorageID: "s1", StorageNamespace: "s3://alice-training"},
 	}}
-	ns := &fakeNamespaceSizer{sizes: map[string]int64{"s3://alice-training": 100}}
+	ns := &fakeRepoSizer{sizes: map[string]int64{"s3://alice-training": 100}}
 
 	r := stats.NewStorageReconciler(store, rl, ns, a)
 	if err := r.RunOnce(ctx); err != nil {
@@ -114,7 +114,7 @@ func TestStorageReconciler_ContinuesOnNamespaceError(t *testing.T) {
 }
 
 func TestStorageReconciler_PartialFailureDoesNotMarkClean(t *testing.T) {
-	// When a single repo's NamespaceSize fails, the owner's last_reconciled_at must NOT be
+	// When a single repo's RepoSize fails, the owner's last_reconciled_at must NOT be
 	// updated — otherwise the API's is_estimate flag would flip to false while the failed
 	// repo's counter is still stale.
 	ctx := context.Background()
@@ -147,7 +147,7 @@ func TestStorageReconciler_FullyCleanPassMarksReconciledAt(t *testing.T) {
 	rl := &fakeRepoLister{repos: []stats.ReconcilerRepo{
 		{Owner: "alice", Name: "ok", StorageID: "s1", StorageNamespace: "ok"},
 	}}
-	ns := &fakeNamespaceSizer{sizes: map[string]int64{"ok": 7}}
+	ns := &fakeRepoSizer{sizes: map[string]int64{"ok": 7}}
 	r := stats.NewStorageReconciler(store, rl, ns, stats.NewStorageAccountant(store))
 	if err := r.RunOnce(ctx); err != nil {
 		t.Fatalf("RunOnce: %v", err)
@@ -180,7 +180,7 @@ func TestStorageReconciler_LockMapDoesNotGrowAcrossPasses(t *testing.T) {
 		sizes[ns] = int64(i + 1)
 	}
 	rl := &fakeRepoLister{repos: pass1}
-	r := stats.NewStorageReconciler(store, rl, &fakeNamespaceSizer{sizes: sizes}, stats.NewStorageAccountant(store)).WithConcurrency(4)
+	r := stats.NewStorageReconciler(store, rl, &fakeRepoSizer{sizes: sizes}, stats.NewStorageAccountant(store)).WithConcurrency(4)
 	if err := r.RunOnce(ctx); err != nil {
 		t.Fatalf("pass 1: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestStorageReconciler_LockMapDoesNotGrowAcrossPasses(t *testing.T) {
 		sizes2[ns] = int64(i + 100)
 	}
 	rl.repos = pass2
-	r2 := stats.NewStorageReconciler(store, rl, &fakeNamespaceSizer{sizes: sizes2}, stats.NewStorageAccountant(store)).WithConcurrency(4)
+	r2 := stats.NewStorageReconciler(store, rl, &fakeRepoSizer{sizes: sizes2}, stats.NewStorageAccountant(store)).WithConcurrency(4)
 	if err := r2.RunOnce(ctx); err != nil {
 		t.Fatalf("pass 2: %v", err)
 	}
@@ -220,7 +220,7 @@ func TestStorageReconciler_ConcurrentRunsPerRepoSafe(t *testing.T) {
 		sizes[ns] = int64(i + 1)
 		expectedTotal += int64(i + 1)
 	}
-	r := stats.NewStorageReconciler(store, &fakeRepoLister{repos: repos}, &fakeNamespaceSizer{sizes: sizes}, stats.NewStorageAccountant(store)).WithConcurrency(8)
+	r := stats.NewStorageReconciler(store, &fakeRepoLister{repos: repos}, &fakeRepoSizer{sizes: sizes}, stats.NewStorageAccountant(store)).WithConcurrency(8)
 	if err := r.RunOnce(ctx); err != nil {
 		t.Fatalf("RunOnce: %v", err)
 	}
