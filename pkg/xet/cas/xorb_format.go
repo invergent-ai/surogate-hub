@@ -187,6 +187,10 @@ func parseXorbInfo(data []byte) (parsedXorbInfo, int, error) {
 	if err != nil {
 		return parsedXorbInfo{}, 0, fmt.Errorf("read xorb hash count: %w", err)
 	}
+	// The count is untrusted: check it fits the footer before allocating for it.
+	if uint64(numChunks)*32 > uint64(reader.Len()) {
+		return parsedXorbInfo{}, 0, fmt.Errorf("xorb chunk count %d exceeds footer", numChunks)
+	}
 	chunkHashes := make([]string, 0, numChunks)
 	for i := uint32(0); i < numChunks; i++ {
 		chunkHash, err := readXorbMDBHash(reader)

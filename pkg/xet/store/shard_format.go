@@ -109,7 +109,8 @@ func readShardFiles(reader io.Reader) ([]ShardFileInfo, error) {
 		}
 
 		var sizeBytes uint64
-		segments := make([]ShardFileSegment, 0, numEntries)
+		// numEntries is untrusted; append grows only as far as the data goes.
+		var segments []ShardFileSegment
 		for i := uint32(0); i < numEntries; i++ {
 			xorbHash, _, err := readMDBHash(reader)
 			if err != nil {

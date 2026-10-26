@@ -216,13 +216,31 @@ func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := h.registry.PutXorbInfo(r.Context(), hash, data[footerStart:]); err != nil {
+	if err := h.recordXorbInfo(r.Context(), hash, result.WasInserted, data[footerStart:]); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(putXorbResponse{WasInserted: result.WasInserted})
+}
+
+// recordXorbInfo stores the footer that describes the stored xorb. A re-upload
+// may be compressed differently, so it never replaces the footer of the bytes
+// already stored; that footer is read back from the object only when missing.
+// ponytail: two concurrent first uploads with different layouts can still race
+// (Put is check-then-write); a conditional Put closes it if that ever matters.
+func (h *Handler) recordXorbInfo(ctx context.Context, hash string, inserted bool, footer []byte) error {
+	if !inserted {
+		_, err := h.registry.GetXorbInfo(ctx, hash)
+		if !errors.Is(err, kv.ErrNotFound) {
+			return err
+		}
+		if footer, err = h.xorbs.storedFooter(ctx, hash); err != nil {
+			return err
+		}
+	}
+	return h.registry.PutXorbInfo(ctx, hash, footer)
 }
 
 // postToken mints a token for one object. hf_xet refreshes through the client,

@@ -145,6 +145,34 @@ func TestPostXorbStoresBytesAndReportsIdempotency(t *testing.T) {
 	require.Equal(t, xorbBytes, body)
 }
 
+func TestPostXorbKeepsTheStoredLayoutWhenReuploadedCompressedDifferently(t *testing.T) {
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
+	handler := NewHandler(registry, WithXorbStore(xorbStore))
+	chunks := [][]byte{bytes.Repeat([]byte("a"), 2048), bytes.Repeat([]byte("b"), 2048)}
+	xorbHash, plain := xettest.SerializedXorb(t, chunks...)
+	lz4Hash, compressed := xettest.SerializedXorbWithScheme(t, xettest.SchemeLZ4, chunks...)
+	require.Equal(t, xorbHash, lz4Hash)
+	postTestXorb(t, handler, xorbHash, plain)
+	postTestXorb(t, handler, xorbHash, compressed)
+
+	fileHash := xettest.FileHash(t, chunks...)
+	_, err := registry.RegisterFile(ctx, xetstore.ShardFileInfo{
+		FileHash:  fileHash,
+		SizeBytes: 4096,
+		Segments:  []xetstore.ShardFileSegment{{XorbHash: xorbHash, SizeBytes: 4096, ChunkIndexEnd: 2}},
+	})
+	require.NoError(t, err)
+	reader, err := ReconstructFileRange(ctx, registry, xorbStore, fileHash, reconstruct.ByteRange{Start: 0, End: 4096})
+	require.NoError(t, err)
+	defer func() { _ = reader.Close() }()
+	got, err := io.ReadAll(reader)
+	require.NoError(t, err)
+
+	require.Equal(t, bytes.Join(chunks, nil), got)
+}
+
 func TestPostXorbRejectsUnverifiableAddress(t *testing.T) {
 	ctx := context.Background()
 	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(NewXorbStore(mem.New(ctx), "mem://xet-cas")))
@@ -157,6 +185,21 @@ func TestPostXorbRejectsUnverifiableAddress(t *testing.T) {
 
 		require.Equal(t, http.StatusBadRequest, rec.Code, path)
 	}
+}
+
+func TestParseXorbInfoRejectsChunkCountBeyondFooter(t *testing.T) {
+	var footer bytes.Buffer
+	footer.WriteString(xorbInfoIdent)
+	footer.WriteByte(1)
+	footer.Write(make([]byte, 32))
+	footer.WriteString(xorbHashSectionIdent)
+	footer.WriteByte(0)
+	writeXorbU32(&footer, ^uint32(0))
+	writeXorbU32(&footer, uint32(footer.Len()))
+
+	_, _, err := parseXorbInfo(footer.Bytes())
+
+	require.ErrorContains(t, err, "exceeds footer")
 }
 
 func TestDecompressLZ4XorbChunkStopsPastDeclaredLength(t *testing.T) {

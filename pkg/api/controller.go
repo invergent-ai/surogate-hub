@@ -5067,7 +5067,7 @@ func (c *Controller) getXETObject(w http.ResponseWriter, r *http.Request, entry 
 		c.Logger.
 			WithError(err).
 			WithField("physical_address", entry.PhysicalAddress).
-			Debug("GetObject copy xet content")
+			Error("GetObject: xet reconstruction failed after the response started")
 	}
 }
 
