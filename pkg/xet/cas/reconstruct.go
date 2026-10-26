@@ -54,7 +54,7 @@ func writeTermRun(ctx context.Context, xorbs *XorbStore, info parsedXorbInfo, te
 	if err != nil {
 		return err
 	}
-	reader, err := xorbs.adapter.GetRange(ctx, xorbs.objectPointer(xorbPrefix, terms[0].XorbHash), int64(byteRange.Start), int64(byteRange.End))
+	reader, err := xorbs.adapter.GetRange(ctx, xorbs.objectPointer(terms[0].XorbHash), int64(byteRange.Start), int64(byteRange.End))
 	if err != nil {
 		return err
 	}

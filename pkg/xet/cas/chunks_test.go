@@ -137,7 +137,7 @@ func TestPostXorbStoresBytesAndReportsIdempotency(t *testing.T) {
 		require.JSONEq(t, fmt.Sprintf(`{"was_inserted":%t}`, inserted), rec.Body.String())
 	}
 
-	reader, err := xorbStore.Get(ctx, "default", xorbHash)
+	reader, err := xorbStore.Get(ctx, xorbHash)
 	require.NoError(t, err)
 	defer reader.Close()
 	body, err := io.ReadAll(reader)
@@ -199,7 +199,7 @@ func TestPostXorbAcceptsMatchingSerializedHash(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.JSONEq(t, `{"was_inserted":true}`, rec.Body.String())
-	reader, err := xorbStore.Get(ctx, "default", xorbHash)
+	reader, err := xorbStore.Get(ctx, xorbHash)
 	require.NoError(t, err)
 	defer reader.Close()
 	body, err := io.ReadAll(reader)
@@ -220,7 +220,7 @@ func TestPostXorbAcceptsNoFooterSerializedHash(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code)
-	reader, err := xorbStore.Get(ctx, "default", xorbHash)
+	reader, err := xorbStore.Get(ctx, xorbHash)
 	require.NoError(t, err)
 	body, err := io.ReadAll(reader)
 	require.NoError(t, err)
@@ -590,7 +590,7 @@ func TestGetReconstructionFallsBackToGrantedProxyURL(t *testing.T) {
 	proxyRec := httptest.NewRecorder()
 	handler.ServeHTTP(proxyRec, proxyReq)
 
-	require.Equal(t, http.StatusOK, proxyRec.Code)
+	require.Equal(t, http.StatusPartialContent, proxyRec.Code)
 	require.Equal(t, xorbBytes[byteRange.Start:byteRange.End+1], proxyRec.Body.Bytes())
 }
 

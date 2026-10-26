@@ -119,7 +119,7 @@ func (controller *GetObject) Handle(w http.ResponseWriter, req *http.Request, o 
 		Identifier:       entry.PhysicalAddress,
 	}
 
-	if fileHash, isXETAddress := parseXETPhysicalAddress(entry.PhysicalAddress); isXETAddress {
+	if fileHash, isXETAddress := xetstore.ParsePhysicalAddress(entry.PhysicalAddress); isXETAddress {
 		byteRange := xetreconstruct.ByteRange{Start: 0, End: uint64(entry.Size)}
 		if rangeSpec != "" && err == nil {
 			contentLength = rng.Size()
@@ -271,8 +271,4 @@ func handleListParts(w http.ResponseWriter, req *http.Request, o *PathOperation)
 	}
 
 	o.EncodeResponse(w, req, resp, http.StatusOK)
-}
-
-func parseXETPhysicalAddress(address string) (string, bool) {
-	return strings.TrimPrefix(address, "xet://"), strings.HasPrefix(address, "xet://")
 }

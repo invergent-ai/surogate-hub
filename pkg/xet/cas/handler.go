@@ -211,7 +211,7 @@ func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	result, err := h.xorbs.Put(r.Context(), xorbPrefix, hash, int64(len(data)), bytes.NewReader(data))
+	result, err := h.xorbs.Put(r.Context(), hash, int64(len(data)), bytes.NewReader(data))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -365,7 +365,7 @@ func bearerToken(header string) (string, bool) {
 }
 
 func (h *Handler) getXorbProxy(w http.ResponseWriter, r *http.Request) {
-	if h.xorbs == nil {
+	if h.xorbs == nil || chi.URLParam(r, "prefix") != xorbPrefix {
 		http.NotFound(w, r)
 		return
 	}
@@ -386,7 +386,7 @@ func (h *Handler) getXorbProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	reader, err := h.xorbs.adapter.GetRange(
 		r.Context(),
-		h.xorbs.objectPointer(chi.URLParam(r, "prefix"), hash),
+		h.xorbs.objectPointer(hash),
 		int64(byteRange.Start),
 		int64(byteRange.End),
 	)
@@ -397,7 +397,9 @@ func (h *Handler) getXorbProxy(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = reader.Close() }()
 
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Length", strconv.FormatUint(byteRange.End-byteRange.Start+1, 10))
+	w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/*", byteRange.Start, byteRange.End))
+	w.WriteHeader(http.StatusPartialContent)
 	_, _ = io.Copy(w, reader)
 }
 
@@ -583,9 +585,9 @@ func (h *Handler) presignedReconstructionRangeResolver(r *http.Request, fileHash
 		}
 		url, ok := urls[xorbHash]
 		if !ok {
-			url, _, err = h.xorbs.adapter.GetPreSignedURL(ctx, h.xorbs.objectPointer(xorbPrefix, xorbHash), block.PreSignModeRead)
+			url, _, err = h.xorbs.adapter.GetPreSignedURL(ctx, h.xorbs.objectPointer(xorbHash), block.PreSignModeRead)
 			if errors.Is(err, block.ErrOperationNotSupported) {
-				url, err = h.proxyXorbURL(proxyBaseURL, fileHash, xorbPrefix, xorbHash, grantedRanges[xorbHash])
+				url, err = h.proxyXorbURL(proxyBaseURL, fileHash, xorbHash, grantedRanges[xorbHash])
 				if err != nil {
 					return reconstruct.ResolvedRange{}, err
 				}
@@ -625,7 +627,7 @@ func appendGrantedRange(ranges []reconstruct.HTTPRange, next reconstruct.HTTPRan
 	return ranges
 }
 
-func (h *Handler) proxyXorbURL(baseURL, fileHash, prefix, xorbHash string, ranges []reconstruct.HTTPRange) (string, error) {
+func (h *Handler) proxyXorbURL(baseURL, fileHash, xorbHash string, ranges []reconstruct.HTTPRange) (string, error) {
 	grant, err := h.signProxyGrant(proxyGrant{
 		FileHash: fileHash,
 		XorbHash: xorbHash,
@@ -635,7 +637,7 @@ func (h *Handler) proxyXorbURL(baseURL, fileHash, prefix, xorbHash string, range
 	if err != nil {
 		return "", err
 	}
-	return baseURL + "/v1/xorbs/" + url.PathEscape(prefix) + "/" + url.PathEscape(xorbHash) + "?grant=" + url.QueryEscape(grant), nil
+	return baseURL + "/v1/xorbs/" + xorbPrefix + "/" + url.PathEscape(xorbHash) + "?grant=" + url.QueryEscape(grant), nil
 }
 
 func reconstructionProxyBaseURL(r *http.Request) string {

@@ -260,7 +260,7 @@ func mergedHashOfSequence(chunks []ShardChunkInfo) (ShardChunkInfo, error) {
 }
 
 func hashModulo(hash string, divisor uint64) uint64 {
-	if len(hash) < 16 {
+	if len(hash) != 64 {
 		return 0
 	}
 	value, err := strconv.ParseUint(hash[48:64], 16, 64)
