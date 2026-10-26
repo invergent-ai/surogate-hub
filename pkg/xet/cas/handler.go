@@ -28,6 +28,15 @@ import (
 	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 )
 
+const (
+	// xorbPrefix is the only CAS prefix hf_xet uses; every read path assumes it.
+	xorbPrefix = "default"
+	// hf_xet cuts xorbs at 64 MiB of chunk data; the rest covers chunk headers and the footer.
+	maxXorbBytes = 80 << 20
+	// hf_xet targets 64 MiB shards.
+	maxShardBytes = 128 << 20
+)
+
 type Handler struct {
 	registry                           *xetstore.Registry
 	xorbs                              *XorbStore
@@ -170,32 +179,29 @@ func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	hash := chi.URLParam(r, "hash")
-	body := r.Body
-	size := r.ContentLength
-	if isXETHash(hash) {
-		data, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err := h.withXorbVerificationSlot(r, func() error {
-			canonical, err := canonicalSerializedXorb(hash, data)
-			if err != nil {
-				return err
-			}
-			if err := h.verifyXorb(hash, canonical); err != nil {
-				return err
-			}
-			data = canonical
-			return nil
-		}); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		body = io.NopCloser(bytes.NewReader(data))
-		size = int64(len(data))
+	if chi.URLParam(r, "prefix") != xorbPrefix || !isXETHash(hash) {
+		http.Error(w, "invalid xorb address", http.StatusBadRequest)
+		return
 	}
-	result, err := h.xorbs.Put(r.Context(), chi.URLParam(r, "prefix"), hash, size, body)
+	data, err := readLimitedBody(w, r, maxXorbBytes)
+	if err != nil {
+		return
+	}
+	if err := h.withXorbVerificationSlot(r, func() error {
+		canonical, err := canonicalSerializedXorb(hash, data)
+		if err != nil {
+			return err
+		}
+		if err := h.verifyXorb(hash, canonical); err != nil {
+			return err
+		}
+		data = canonical
+		return nil
+	}); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	result, err := h.xorbs.Put(r.Context(), xorbPrefix, hash, int64(len(data)), bytes.NewReader(data))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -513,9 +519,8 @@ func (h *Handler) postShard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) postBinaryShard(w http.ResponseWriter, r *http.Request) {
-	shard, err := io.ReadAll(r.Body)
+	shard, err := readLimitedBody(w, r, maxShardBytes)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	canonicalShard, info, err := xetstore.CanonicalShard(shard)
@@ -598,6 +603,20 @@ func (h *Handler) validateXorbs(r *http.Request, xorbIDs []string) error {
 		}
 	}
 	return nil
+}
+
+// readLimitedBody reads at most limit bytes and writes the error response itself.
+func readLimitedBody(w http.ResponseWriter, r *http.Request, limit int64) ([]byte, error) {
+	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, limit))
+	if err != nil {
+		status := http.StatusBadRequest
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			status = http.StatusRequestEntityTooLarge
+		}
+		http.Error(w, err.Error(), status)
+	}
+	return data, err
 }
 
 func (h *Handler) withXorbVerificationSlot(r *http.Request, verify func() error) error {

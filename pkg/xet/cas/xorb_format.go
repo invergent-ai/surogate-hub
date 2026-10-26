@@ -322,13 +322,13 @@ func decompressXorbChunk(header xorbChunkHeader, serializedChunk []byte) ([]byte
 		}
 		return serializedChunk, nil
 	case 1:
-		decompressed, err := decompressLZ4XorbChunk(serializedChunk)
+		decompressed, err := decompressLZ4XorbChunk(serializedChunk, header.uncompressedLength)
 		if err != nil {
 			return nil, err
 		}
 		return validateXorbChunkLength("lz4", decompressed, header.uncompressedLength)
 	case 2:
-		decompressed, err := decompressLZ4XorbChunk(serializedChunk)
+		decompressed, err := decompressLZ4XorbChunk(serializedChunk, header.uncompressedLength)
 		if err != nil {
 			return nil, err
 		}
@@ -338,9 +338,12 @@ func decompressXorbChunk(header xorbChunkHeader, serializedChunk []byte) ([]byte
 	}
 }
 
-func decompressLZ4XorbChunk(serializedChunk []byte) ([]byte, error) {
+// decompressLZ4XorbChunk stops one byte past the declared length, so a small
+// chunk cannot expand without bound before the length check rejects it.
+func decompressLZ4XorbChunk(serializedChunk []byte, uncompressedLength uint32) ([]byte, error) {
 	var decompressed bytes.Buffer
-	if _, err := io.Copy(&decompressed, lz4.NewReader(bytes.NewReader(serializedChunk))); err != nil {
+	reader := io.LimitReader(lz4.NewReader(bytes.NewReader(serializedChunk)), int64(uncompressedLength)+1)
+	if _, err := io.Copy(&decompressed, reader); err != nil {
 		return nil, fmt.Errorf("decompress xorb lz4 chunk: %w", err)
 	}
 	return decompressed.Bytes(), nil

@@ -160,27 +160,50 @@ func TestPostXorbStoresBytesAndReportsIdempotency(t *testing.T) {
 	ctx := context.Background()
 	xorbStore := NewXorbStore(mem.New(ctx), "mem://xet-cas")
 	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(xorbStore))
+	xorbHash, xorbBytes := testSerializedXorb(t, []byte("chunk-data"))
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/xorb-a", bytes.NewReader([]byte("xorb-bytes")))
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
+	for _, inserted := range []bool{true, false} {
+		req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/"+xorbHash, bytes.NewReader(xorbBytes))
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
 
-	require.Equal(t, http.StatusOK, rec.Code)
-	require.JSONEq(t, `{"was_inserted":true}`, rec.Body.String())
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.JSONEq(t, fmt.Sprintf(`{"was_inserted":%t}`, inserted), rec.Body.String())
+	}
 
-	secondReq := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/xorb-a", bytes.NewReader([]byte("different")))
-	secondRec := httptest.NewRecorder()
-	handler.ServeHTTP(secondRec, secondReq)
-
-	require.Equal(t, http.StatusOK, secondRec.Code)
-	require.JSONEq(t, `{"was_inserted":false}`, secondRec.Body.String())
-
-	reader, err := xorbStore.Get(ctx, "default", "xorb-a")
+	reader, err := xorbStore.Get(ctx, "default", xorbHash)
 	require.NoError(t, err)
 	defer reader.Close()
 	body, err := io.ReadAll(reader)
 	require.NoError(t, err)
-	require.Equal(t, []byte("xorb-bytes"), body)
+	require.Equal(t, xorbBytes, body)
+}
+
+func TestPostXorbRejectsUnverifiableAddress(t *testing.T) {
+	ctx := context.Background()
+	handler := NewHandler(xetstore.NewRegistry(kvtest.GetStore(ctx, t)), WithXorbStore(NewXorbStore(mem.New(ctx), "mem://xet-cas")))
+	xorbHash, xorbBytes := testSerializedXorb(t, []byte("chunk-data"))
+
+	for _, path := range []string{"/v1/xorbs/default/xorb-a", "/v1/xorbs/other/" + xorbHash} {
+		req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(xorbBytes))
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusBadRequest, rec.Code, path)
+	}
+}
+
+func TestDecompressLZ4XorbChunkStopsPastDeclaredLength(t *testing.T) {
+	var compressed bytes.Buffer
+	writer := lz4.NewWriter(&compressed)
+	_, err := writer.Write(make([]byte, 1<<20))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	decompressed, err := decompressLZ4XorbChunk(compressed.Bytes(), 16)
+
+	require.NoError(t, err)
+	require.Len(t, decompressed, 17)
 }
 
 func TestPostXorbRejectsMismatchedSerializedHash(t *testing.T) {

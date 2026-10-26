@@ -392,21 +392,10 @@ func TestServeXETXorbUploadRoute(t *testing.T) {
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
-	require.Equal(t, http.StatusOK, resp.StatusCode)
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	require.JSONEq(t, `{"was_inserted":true}`, string(body))
-
-	req, err = http.NewRequest(http.MethodPost, server.URL+"/xet/v1/xorbs/default/xorb-a", strings.NewReader("different"))
-	require.NoError(t, err)
-	req.Header.Set("Authorization", "Bearer "+token)
-	resp, err = http.DefaultClient.Do(req)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-	body, err = io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.JSONEq(t, `{"was_inserted":false}`, string(body))
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	require.Contains(t, string(body), "invalid xorb address")
 }
 
 func TestServeXETReconstructionRequiresLiveLogicalContext(t *testing.T) {
