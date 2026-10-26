@@ -17,11 +17,11 @@ type Registry struct {
 	store kv.Store
 }
 
+// FileRef records that a repository holds a file. xet GC keeps a file while
+// any repository that holds it exists.
 type FileRef struct {
 	FileHash string
 	Repo     string
-	Ref      string
-	Path     string
 }
 
 func NewRegistry(store kv.Store) *Registry {
@@ -55,10 +55,6 @@ func (r *Registry) GetFile(ctx context.Context, fileHash string) (ShardFileInfo,
 		return ShardFileInfo{}, fmt.Errorf("decode xet file %s: %w", fileHash, err)
 	}
 	return file, nil
-}
-
-func (r *Registry) DeleteFile(ctx context.Context, fileHash string) error {
-	return r.store.Delete(ctx, []byte(Partition), fileKey(fileHash))
 }
 
 func (r *Registry) ListFileHashes(ctx context.Context, batchSize int) ([]string, error) {
@@ -106,20 +102,8 @@ func (r *Registry) PutFileRef(ctx context.Context, ref FileRef) error {
 	return r.store.Set(ctx, []byte(Partition), fileRefKey(ref), []byte{})
 }
 
-func (r *Registry) DeleteFileRef(ctx context.Context, ref FileRef) error {
-	return r.store.Delete(ctx, []byte(Partition), fileRefKey(ref))
-}
-
-func (r *Registry) ListFileRefs(ctx context.Context, fileHash string, batchSize int) ([]FileRef, error) {
-	prefix := fileRefPrefix(fileHash)
-	return r.listFileRefsByPrefix(ctx, prefix, batchSize)
-}
-
 func (r *Registry) ListAllFileRefs(ctx context.Context, batchSize int) ([]FileRef, error) {
-	return r.listFileRefsByPrefix(ctx, "xet/file_refs/", batchSize)
-}
-
-func (r *Registry) listFileRefsByPrefix(ctx context.Context, prefix string, batchSize int) ([]FileRef, error) {
+	prefix := "xet/file_refs/"
 	iter, err := r.store.Scan(ctx, []byte(Partition), kv.ScanOptions{
 		KeyStart:  []byte(prefix),
 		BatchSize: batchSize,
@@ -157,11 +141,7 @@ func xorbKey(xorbHash string) []byte {
 }
 
 func fileRefKey(ref FileRef) []byte {
-	return []byte(fileRefPrefix(ref.FileHash) + escapeFileRefField(ref.Repo) + "/" + escapeFileRefField(ref.Ref) + "/" + escapeFileRefField(ref.Path))
-}
-
-func fileRefPrefix(fileHash string) string {
-	return "xet/file_refs/" + fileHash + "/"
+	return []byte("xet/file_refs/" + ref.FileHash + "/" + url.PathEscape(ref.Repo))
 }
 
 func parseFileRefKey(key string) (FileRef, bool) {
@@ -169,34 +149,13 @@ func parseFileRefKey(key string) (FileRef, bool) {
 	if !ok {
 		return FileRef{}, false
 	}
-	parts := strings.SplitN(rest, "/", 4)
-	if len(parts) != 4 || parts[0] == "" || parts[1] == "" || parts[2] == "" || parts[3] == "" {
+	fileHash, escapedRepo, ok := strings.Cut(rest, "/")
+	if !ok || fileHash == "" || escapedRepo == "" {
 		return FileRef{}, false
 	}
-	repo, err := unescapeFileRefField(parts[1])
+	repo, err := url.PathUnescape(escapedRepo)
 	if err != nil {
 		return FileRef{}, false
 	}
-	ref, err := unescapeFileRefField(parts[2])
-	if err != nil {
-		return FileRef{}, false
-	}
-	path, err := unescapeFileRefField(parts[3])
-	if err != nil {
-		return FileRef{}, false
-	}
-	return FileRef{
-		FileHash: parts[0],
-		Repo:     repo,
-		Ref:      ref,
-		Path:     path,
-	}, true
-}
-
-func escapeFileRefField(field string) string {
-	return url.PathEscape(field)
-}
-
-func unescapeFileRefField(field string) (string, error) {
-	return url.PathUnescape(field)
+	return FileRef{FileHash: fileHash, Repo: repo}, true
 }

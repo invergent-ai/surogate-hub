@@ -46,52 +46,24 @@ func TestXorbInfoRoundTrips(t *testing.T) {
 	require.Equal(t, []byte("footer"), footer)
 }
 
-func TestPutFileRefWritesOneKeyPerTuple(t *testing.T) {
+func TestFileRefsRoundTripRepositoriesWithSlashes(t *testing.T) {
 	ctx := context.Background()
 	kvStore := kvtest.GetStore(ctx, t)
 	registry := NewRegistry(kvStore)
+	refs := []FileRef{
+		{FileHash: "file-a", Repo: "test-user/repo-a"},
+		{FileHash: "file-a", Repo: "test-user/repo-b"},
+		{FileHash: "file-b", Repo: "repo-c"},
+	}
+	for _, ref := range refs {
+		require.NoError(t, registry.PutFileRef(ctx, ref))
+	}
 
-	err := registry.PutFileRef(ctx, FileRef{
-		FileHash: "file-a",
-		Repo:     "test-user/repo-a",
-		Ref:      "feature/xet",
-		Path:     "models/checkpoint.bin",
-	})
-	require.NoError(t, err)
-
-	requireKVValue(t, ctx, kvStore, "xet/file_refs/file-a/test-user%2Frepo-a/feature%2Fxet/models%2Fcheckpoint.bin", []byte{})
-}
-
-func TestListFileRefsScansOneFileHashPrefix(t *testing.T) {
-	ctx := context.Background()
-	kvStore := kvtest.GetStore(ctx, t)
-	registry := NewRegistry(kvStore)
-	require.NoError(t, registry.PutFileRef(ctx, FileRef{
-		FileHash: "file-a",
-		Repo:     "test-user/repo-a",
-		Ref:      "main",
-		Path:     "models/a.bin",
-	}))
-	require.NoError(t, registry.PutFileRef(ctx, FileRef{
-		FileHash: "file-a",
-		Repo:     "test-user/repo-b",
-		Ref:      "dev",
-		Path:     "models/b.bin",
-	}))
-	require.NoError(t, registry.PutFileRef(ctx, FileRef{
-		FileHash: "file-b",
-		Repo:     "repo-c",
-		Ref:      "main",
-		Path:     "models/c.bin",
-	}))
-
-	refs, err := registry.ListFileRefs(ctx, "file-a", 32)
+	got, err := registry.ListAllFileRefs(ctx, 32)
 
 	require.NoError(t, err)
-	require.ElementsMatch(t, []FileRef{
-		{FileHash: "file-a", Repo: "test-user/repo-a", Ref: "main", Path: "models/a.bin"},
-		{FileHash: "file-a", Repo: "test-user/repo-b", Ref: "dev", Path: "models/b.bin"},
-	}, refs)
+	require.ElementsMatch(t, refs, got)
+	requireKVValue(t, ctx, kvStore, "xet/file_refs/file-a/test-user%2Frepo-a", []byte{})
 }
 
 func requireKVValue(t *testing.T, ctx context.Context, kvStore kv.Store, key string, expected []byte) {

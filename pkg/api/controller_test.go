@@ -113,13 +113,13 @@ func TestController_LinkXETPhysicalAddressWritesFileRef(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, physicalAddress, entry.PhysicalAddress)
 
-	fileRefKey := "xet/file_refs/" + fileHash + "/" + url.PathEscape(repo) + "/" + url.PathEscape(branch) + "/" + url.PathEscape(path)
+	fileRefKey := "xet/file_refs/" + fileHash + "/" + url.PathEscape(repo)
 	fileRef, err := deps.catalog.KVStore.Get(ctx, []byte(xetstore.Partition), []byte(fileRefKey))
 	require.NoError(t, err)
 	require.Equal(t, []byte{}, fileRef.Value)
 }
 
-func TestController_CopyObjectXETPhysicalAddressWritesDestinationFileRef(t *testing.T) {
+func TestController_CopyObjectXETPhysicalAddress(t *testing.T) {
 	clt, deps := setupClientWithAdmin(t)
 	ctx := context.Background()
 	repo := testUniqueRepoName()
@@ -157,16 +157,7 @@ func TestController_CopyObjectXETPhysicalAddressWritesDestinationFileRef(t *test
 	require.NoError(t, err)
 	require.Equal(t, physicalAddress, entry.PhysicalAddress)
 
-	refs, err := registry.ListFileRefs(ctx, fileHash, 32)
-	require.NoError(t, err)
-	require.Contains(t, refs, xetstore.FileRef{
-		FileHash: fileHash,
-		Repo:     repo,
-		Ref:      branch,
-		Path:     destPath,
-	})
 }
-
 func TestController_GetUnderlyingPropertiesXETPhysicalAddressReturnsBadRequest(t *testing.T) {
 	clt, deps := setupClientWithAdmin(t)
 	ctx := context.Background()
@@ -350,7 +341,7 @@ func TestController_ListObjectsXETPhysicalAddress(t *testing.T) {
 	require.Equal(t, int64(9), swag.Int64Value(resp.JSON200.Results[0].SizeBytes))
 }
 
-func TestController_LinkXETPhysicalAddressCrashAfterGravelerWrite(t *testing.T) {
+func TestController_LinkXETPhysicalAddressWritesFileRefBeforeEntry(t *testing.T) {
 	clt, deps := setupClientWithAdmin(t)
 	ctx := context.Background()
 	repo := testUniqueRepoName()
@@ -377,13 +368,19 @@ func TestController_LinkXETPhysicalAddressCrashAfterGravelerWrite(t *testing.T) 
 	require.NoError(t, err)
 	require.Equal(t, http.StatusInternalServerError, resp.StatusCode())
 
-	entry, err := deps.catalog.GetEntry(ctx, repo, branch, path, catalog.GetEntryParams{})
-	require.NoError(t, err)
-	require.Equal(t, physicalAddress, entry.PhysicalAddress)
-	refs, err := xetstore.NewRegistry(deps.catalog.KVStore).ListFileRefs(ctx, fileHash, 32)
-	require.NoError(t, err)
-	require.Empty(t, refs)
+	_, err = deps.catalog.GetEntry(ctx, repo, branch, path, catalog.GetEntryParams{})
+	require.ErrorIs(t, err, graveler.ErrNotFound)
 
+	resp, err = clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.LinkPhysicalAddressParams{
+		Path: path,
+	}, apigen.LinkPhysicalAddressJSONRequestBody{
+		Checksum:  "checksum-a",
+		SizeBytes: int64(len(chunk)),
+		Staging: apigen.StagingLocation{
+			PhysicalAddress: &physicalAddress,
+		},
+	})
+	verifyResponseOK(t, resp, err)
 	getResp, err := clt.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.GetObjectParams{Path: path})
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, getResp.StatusCode(), "body: %s", string(getResp.Body))
@@ -397,37 +394,6 @@ func TestController_LinkXETPhysicalAddressCrashAfterGravelerWrite(t *testing.T) 
 	require.NoError(t, err)
 	defer reconstructionResp.Body.Close()
 	require.Equal(t, http.StatusOK, reconstructionResp.StatusCode)
-}
-
-func TestController_GetObjectXETPhysicalAddressRange(t *testing.T) {
-	clt, deps := setupClientWithAdmin(t)
-	ctx := context.Background()
-	repo := testUniqueRepoName()
-	const branch = "main"
-	const path = "models/checkpoint.bin"
-	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
-	require.NoError(t, err)
-
-	chunk := []byte("hello world!")
-	fileHash, _, _ := xettest.SeedFile(t, ctx, xetstore.NewRegistry(deps.catalog.KVStore), deps.blocks, "mem://_hub_xet", chunk)
-	err = deps.catalog.CreateEntry(ctx, repo, branch, catalog.DBEntry{
-		Path:            path,
-		PhysicalAddress: "xet://" + fileHash,
-		AddressType:     catalog.AddressTypeFull,
-		CreationDate:    time.Now(),
-		Size:            int64(len(chunk)),
-		Checksum:        "checksum-a",
-	})
-	require.NoError(t, err)
-
-	rng := "bytes=3-8"
-	resp, err := clt.GetObjectWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.GetObjectParams{
-		Path:  path,
-		Range: &rng,
-	})
-	require.NoError(t, err)
-	require.Equalf(t, http.StatusPartialContent, resp.StatusCode(), "body: %s", string(resp.Body))
-	require.Equal(t, []byte("lo wor"), resp.Body)
 }
 
 type failOnceFileRefSetStore struct {

@@ -869,21 +869,18 @@ func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request,
 		entryBuilder.Metadata(body.UserMetadata.AdditionalProperties)
 	}
 	entry := entryBuilder.Build()
-	err = c.Catalog.CreateEntry(ctx, repo.Name, branch, entry, graveler.WithForce(swag.BoolValue(body.Force)), graveler.WithIfAbsent(ifAbsent))
-	if c.handleAPIError(ctx, w, r, err) {
-		return
-	}
+	// The ref goes first: if the entry write then fails, xet GC only keeps the
+	// file longer, while an entry without a ref would look like garbage.
 	if isXETAddress {
-		err = xetstore.NewRegistry(c.Catalog.KVStore).PutFileRef(ctx, xetstore.FileRef{
-			FileHash: xetFileHash,
-			Repo:     repo.Name,
-			Ref:      branch,
-			Path:     params.Path,
-		})
+		err = xetstore.NewRegistry(c.Catalog.KVStore).PutFileRef(ctx, xetstore.FileRef{FileHash: xetFileHash, Repo: repo.Name})
 		if err != nil {
 			writeError(w, r, http.StatusInternalServerError, err)
 			return
 		}
+	}
+	err = c.Catalog.CreateEntry(ctx, repo.Name, branch, entry, graveler.WithForce(swag.BoolValue(body.Force)), graveler.WithIfAbsent(ifAbsent))
+	if c.handleAPIError(ctx, w, r, err) {
+		return
 	}
 
 	metadata := apigen.ObjectUserMetadata{AdditionalProperties: entry.Metadata}
@@ -3844,18 +3841,9 @@ func (c *Controller) CopyObject(w http.ResponseWriter, r *http.Request, body api
 		dstEntry := *srcEntry
 		dstEntry.Path = destPath
 		dstEntry.CreationDate = time.Now()
+		// The copy stays in the same repository, which already holds a ref to the file.
 		err = c.Catalog.CreateEntry(ctx, repository, branch, dstEntry, graveler.WithForce(swag.BoolValue(body.Force)))
 		if c.handleAPIError(ctx, w, r, err) {
-			return
-		}
-		err = xetstore.NewRegistry(c.Catalog.KVStore).PutFileRef(ctx, xetstore.FileRef{
-			FileHash: xetFileHash,
-			Repo:     repo.Name,
-			Ref:      branch,
-			Path:     destPath,
-		})
-		if err != nil {
-			writeError(w, r, http.StatusInternalServerError, err)
 			return
 		}
 		entry = &dstEntry

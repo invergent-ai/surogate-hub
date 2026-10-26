@@ -7,9 +7,9 @@ import (
 	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 )
 
+// FileRefLiveFunc reports whether the repository a ref names still exists.
 type FileRefLiveFunc func(ctx context.Context, ref xetstore.FileRef) (bool, error)
 type ListXorbsFunc func(ctx context.Context) ([]XorbRef, error)
-type RemoveXorbFunc func(ctx context.Context, ref XorbRef) error
 
 type XorbRef struct {
 	Prefix string
@@ -22,7 +22,6 @@ type Params struct {
 	ScanBatchSize int
 	FileRefLive   FileRefLiveFunc
 	ListXorbs     ListXorbsFunc
-	RemoveXorb    RemoveXorbFunc
 	MinAge        time.Duration
 	Now           func() time.Time
 }
@@ -34,6 +33,7 @@ type Report struct {
 	StaleXorbs      []XorbRef
 }
 
+// DryRun reports xet data no live repository holds. Nothing deletes it yet.
 func DryRun(ctx context.Context, params Params) (Report, error) {
 	refs, err := params.Registry.ListAllFileRefs(ctx, params.ScanBatchSize)
 	if err != nil {
@@ -90,31 +90,6 @@ func DryRun(ctx context.Context, params Params) (Report, error) {
 			}
 			if _, ok := liveXorbHashes[xorb.Hash]; !ok {
 				report.StaleXorbs = append(report.StaleXorbs, xorb)
-			}
-		}
-	}
-	return report, nil
-}
-
-func Sweep(ctx context.Context, params Params) (Report, error) {
-	report, err := DryRun(ctx, params)
-	if err != nil {
-		return Report{}, err
-	}
-	for _, ref := range report.StaleFileRefs {
-		if err := params.Registry.DeleteFileRef(ctx, ref); err != nil {
-			return Report{}, err
-		}
-	}
-	for _, fileHash := range report.StaleFiles {
-		if err := params.Registry.DeleteFile(ctx, fileHash); err != nil {
-			return Report{}, err
-		}
-	}
-	if params.RemoveXorb != nil {
-		for _, xorb := range report.StaleXorbs {
-			if err := params.RemoveXorb(ctx, xorb); err != nil {
-				return Report{}, err
 			}
 		}
 	}

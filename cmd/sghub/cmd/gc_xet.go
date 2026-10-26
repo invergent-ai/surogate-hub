@@ -79,14 +79,11 @@ func runXETGCDryRun(ctx context.Context, cfg config.Config) (xetgc.Report, error
 		ScanBatchSize: baseCfg.XET.Read.CapabilityScanBatchSize,
 		MinAge:        baseCfg.XET.GC.MinAge,
 		FileRefLive: func(ctx context.Context, ref xetstore.FileRef) (bool, error) {
-			entry, err := cat.GetEntry(ctx, ref.Repo, ref.Ref, ref.Path, catalog.GetEntryParams{})
+			_, err := cat.GetRepository(ctx, ref.Repo)
 			if errors.Is(err, graveler.ErrNotFound) {
 				return false, nil
 			}
-			if err != nil {
-				return false, err
-			}
-			return entry.PhysicalAddress == "xet://"+ref.FileHash, nil
+			return err == nil, err
 		},
 		ListXorbs: func(ctx context.Context) ([]xetgc.XorbRef, error) {
 			storageURI, err := url.Parse(strings.TrimRight(storageNamespace, "/"))
