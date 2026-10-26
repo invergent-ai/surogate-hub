@@ -8,7 +8,6 @@ import (
 )
 
 type FileRefLiveFunc func(ctx context.Context, ref xetstore.FileRef) (bool, error)
-type ParseShardFunc func(data []byte) (xetstore.ShardInfo, error)
 type ListXorbsFunc func(ctx context.Context) ([]XorbRef, error)
 type RemoveXorbFunc func(ctx context.Context, ref XorbRef) error
 
@@ -22,7 +21,6 @@ type Params struct {
 	Registry      *xetstore.Registry
 	ScanBatchSize int
 	FileRefLive   FileRefLiveFunc
-	ParseShard    ParseShardFunc
 	ListXorbs     ListXorbsFunc
 	RemoveXorb    RemoveXorbFunc
 	MinAge        time.Duration
@@ -32,8 +30,7 @@ type Params struct {
 type Report struct {
 	FileRefsScanned int
 	StaleFileRefs   []xetstore.FileRef
-	StaleShards     []string
-	StaleChunkRefs  []xetstore.ChunkRef
+	StaleFiles      []string
 	StaleXorbs      []XorbRef
 }
 
@@ -43,10 +40,6 @@ func DryRun(ctx context.Context, params Params) (Report, error) {
 		return Report{}, err
 	}
 	report := Report{FileRefsScanned: len(refs)}
-	parseShard := params.ParseShard
-	if parseShard == nil {
-		parseShard = xetstore.ParseShardInfo
-	}
 	now := time.Now
 	if params.Now != nil {
 		now = params.Now
@@ -67,36 +60,22 @@ func DryRun(ctx context.Context, params Params) (Report, error) {
 
 	liveXorbHashes := make(map[string]struct{})
 	for fileHash := range liveFileHashes {
-		shard, err := params.Registry.GetShardByFileHash(ctx, fileHash)
+		file, err := params.Registry.GetFile(ctx, fileHash)
 		if err != nil {
 			return Report{}, err
 		}
-		info, err := parseShard(shard)
-		if err != nil {
-			return Report{}, err
-		}
-		for _, xorbHash := range info.XorbHashes {
-			liveXorbHashes[xorbHash] = struct{}{}
+		for _, segment := range file.Segments {
+			liveXorbHashes[segment.XorbHash] = struct{}{}
 		}
 	}
 
-	shards, err := params.Registry.ListShardFileHashes(ctx, params.ScanBatchSize)
+	files, err := params.Registry.ListFileHashes(ctx, params.ScanBatchSize)
 	if err != nil {
 		return Report{}, err
 	}
-	for _, fileHash := range shards {
+	for _, fileHash := range files {
 		if _, ok := liveFileHashes[fileHash]; !ok {
-			report.StaleShards = append(report.StaleShards, fileHash)
-		}
-	}
-
-	chunkRefs, err := params.Registry.ListChunkRefs(ctx, params.ScanBatchSize)
-	if err != nil {
-		return Report{}, err
-	}
-	for _, ref := range chunkRefs {
-		if _, ok := liveFileHashes[ref.FileHash]; !ok {
-			report.StaleChunkRefs = append(report.StaleChunkRefs, ref)
+			report.StaleFiles = append(report.StaleFiles, fileHash)
 		}
 	}
 
@@ -127,13 +106,8 @@ func Sweep(ctx context.Context, params Params) (Report, error) {
 			return Report{}, err
 		}
 	}
-	for _, ref := range report.StaleChunkRefs {
-		if err := params.Registry.DeleteChunkRef(ctx, ref); err != nil {
-			return Report{}, err
-		}
-	}
-	for _, fileHash := range report.StaleShards {
-		if err := params.Registry.DeleteShard(ctx, fileHash); err != nil {
+	for _, fileHash := range report.StaleFiles {
+		if err := params.Registry.DeleteFile(ctx, fileHash); err != nil {
 			return Report{}, err
 		}
 	}

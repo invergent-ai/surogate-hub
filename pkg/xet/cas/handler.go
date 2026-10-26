@@ -6,7 +6,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -118,18 +117,6 @@ func withReconstructionRangeResolverFactory(factory reconstructionRangeResolverF
 	}
 }
 
-type registerShardRequest struct {
-	FileHash string   `json:"file_hash"`
-	Shard    string   `json:"shard"`
-	ChunkIDs []string `json:"chunk_ids"`
-	XorbIDs  []string `json:"xorb_ids"`
-}
-
-type registerShardResponse struct {
-	FileHash    string `json:"file_hash"`
-	WasInserted bool   `json:"was_inserted"`
-}
-
 type putXorbResponse struct {
 	WasInserted bool `json:"was_inserted"`
 }
@@ -161,7 +148,6 @@ func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler
 		opt(h)
 	}
 	r := chi.NewRouter()
-	r.With(h.requireXETScope("read")).Get("/v1/chunks/{prefix}/{hash}", h.getChunk)
 	r.Get("/v1/token/refresh", h.getTokenRefresh)
 	r.With(h.requireXETScope("read")).Get("/v1/reconstructions/{file_hash}", h.getReconstructionV1)
 	r.Get("/v1/xorbs/{prefix}/{hash}", h.getXorbProxy)
@@ -201,8 +187,17 @@ func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	_, footerStart, err := parseXorbInfo(data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	result, err := h.xorbs.Put(r.Context(), xorbPrefix, hash, int64(len(data)), bytes.NewReader(data))
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := h.registry.PutXorbInfo(r.Context(), hash, data[footerStart:]); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -376,7 +371,7 @@ func (h *Handler) getXorbProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	reader, err := h.xorbs.adapter.GetRange(
 		r.Context(),
-		xetstore.XorbObjectPointer(h.xorbs.storageNamespace, chi.URLParam(r, "prefix"), hash),
+		h.xorbs.objectPointer(chi.URLParam(r, "prefix"), hash),
 		int64(byteRange.Start),
 		int64(byteRange.End),
 	)
@@ -428,7 +423,7 @@ func (h *Handler) buildReconstructionManifest(w http.ResponseWriter, r *http.Req
 			return reconstruct.Manifest{}, false
 		}
 	}
-	shard, err := h.registry.GetShardByFileHash(r.Context(), fileHash)
+	file, err := h.registry.GetFile(r.Context(), fileHash)
 	if errors.Is(err, kv.ErrNotFound) {
 		http.NotFound(w, r)
 		return reconstruct.Manifest{}, false
@@ -437,32 +432,26 @@ func (h *Handler) buildReconstructionManifest(w http.ResponseWriter, r *http.Req
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return reconstruct.Manifest{}, false
 	}
-	info, err := xetstore.ParseShardInfo(shard)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return reconstruct.Manifest{}, false
-	}
-	file, ok := shardFileByHash(info, fileHash)
-	if !ok {
-		http.NotFound(w, r)
-		return reconstruct.Manifest{}, false
-	}
 	byteRange, err := reconstructionByteRange(r.Header.Get("Range"), file.SizeBytes)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusRequestedRangeNotSatisfiable)
 		return reconstruct.Manifest{}, false
 	}
-	terms, err := reconstruct.MapRange(info, fileHash, byteRange)
+	infos, err := xorbInfos(r.Context(), h.registry, file.Segments)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return reconstruct.Manifest{}, false
 	}
-	resolverFactory := h.reconstructionRangeResolverFactory
+	terms, err := reconstruct.MapRange(file, xorbChunks(infos), byteRange)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return reconstruct.Manifest{}, false
+	}
 	var resolver reconstruct.RangeResolver
-	if resolverFactory == nil {
-		resolver, err = h.presignedReconstructionRangeResolverFactory(r, fileHash, terms)
+	if h.reconstructionRangeResolverFactory == nil {
+		resolver, err = h.presignedReconstructionRangeResolver(r, fileHash, terms, infos)
 	} else {
-		resolver, err = resolverFactory(r.Context(), fileHash, terms)
+		resolver, err = h.reconstructionRangeResolverFactory(r.Context(), fileHash, terms)
 	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -476,91 +465,53 @@ func (h *Handler) buildReconstructionManifest(w http.ResponseWriter, r *http.Req
 	return manifest, true
 }
 
+// postShard registers the files a shard describes. Each file is checked against
+// the stored metadata of the xorbs it references; the shard's own xorb section is
+// ignored, because hf_xet leaves out xorbs uploaded in earlier sessions and a
+// client could put anything there.
 func (h *Handler) postShard(w http.ResponseWriter, r *http.Request) {
-	if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
-		h.postBinaryShard(w, r)
-		return
-	}
-
-	var req registerShardRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if req.FileHash == "" || req.Shard == "" {
-		http.Error(w, "file_hash and shard are required", http.StatusBadRequest)
-		return
-	}
-	if req.FileHash != computedShimFileHash(req.Shard) {
-		http.Error(w, "file_hash does not match shard", http.StatusBadRequest)
-		return
-	}
-	if err := h.validateXorbs(r, req.XorbIDs); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	result, err := h.registry.RegisterShard(r.Context(), xetstore.RegisterShardParams{
-		FileHash: req.FileHash,
-		Shard:    []byte(req.Shard),
-		ChunkIDs: req.ChunkIDs,
-	})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(registerShardResponse{
-		FileHash:    req.FileHash,
-		WasInserted: result.WasInserted,
-	})
-}
-
-func (h *Handler) postBinaryShard(w http.ResponseWriter, r *http.Request) {
 	shard, err := readLimitedBody(w, r, maxShardBytes)
 	if err != nil {
 		return
 	}
-	canonicalShard, info, err := xetstore.CanonicalShard(shard)
+	files, err := xetstore.ParseShardFiles(shard)
 	if err != nil {
-		if h.acceptExistingAbbreviatedShard(r.Context(), shard) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(uploadShardResponse{Result: 0})
-			return
-		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if len(info.Files) == 0 {
+	if len(files) == 0 {
 		http.Error(w, "shard contains no file entries", http.StatusBadRequest)
 		return
 	}
-	if err := h.validateXorbs(r, info.XorbHashes); err != nil {
+	var segments []xetstore.ShardFileSegment
+	for _, file := range files {
+		segments = append(segments, file.Segments...)
+	}
+	infos, err := xorbInfos(r.Context(), h.registry, segments)
+	if errors.Is(err, kv.ErrNotFound) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	summary, err := json.Marshal(info.Summary)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	chunks := xorbChunks(infos)
+	for i := range files {
+		if files[i], err = xetstore.VerifyFile(files[i], chunks); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
 
 	wasInserted := false
-	for _, file := range info.Files {
-		result, err := h.registry.RegisterShard(r.Context(), xetstore.RegisterShardParams{
-			FileHash: file.FileHash,
-			Shard:    canonicalShard,
-			Summary:  summary,
-			ChunkIDs: info.ChunkHashes,
-		})
+	for _, file := range files {
+		inserted, err := h.registry.RegisterFile(r.Context(), file)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		wasInserted = wasInserted || result.WasInserted
+		wasInserted = wasInserted || inserted
 	}
 
 	responseResult := 0
@@ -570,39 +521,6 @@ func (h *Handler) postBinaryShard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(uploadShardResponse{Result: responseResult})
-}
-
-func (h *Handler) acceptExistingAbbreviatedShard(ctx context.Context, shard []byte) bool {
-	files, err := xetstore.ParseShardFiles(shard)
-	if err != nil || len(files) == 0 {
-		return false
-	}
-	for _, file := range files {
-		exists, err := h.registry.HasShard(ctx, file.FileHash)
-		if err != nil || !exists {
-			return false
-		}
-	}
-	return true
-}
-
-func (h *Handler) validateXorbs(r *http.Request, xorbIDs []string) error {
-	if len(xorbIDs) == 0 {
-		return nil
-	}
-	if h.xorbs == nil {
-		return fmt.Errorf("xorb store is not configured")
-	}
-	for _, xorbID := range xorbIDs {
-		exists, err := h.xorbs.Exists(r.Context(), "default", xorbID)
-		if err != nil {
-			return err
-		}
-		if !exists {
-			return fmt.Errorf("xorb %s not found", xorbID)
-		}
-	}
-	return nil
 }
 
 // readLimitedBody reads at most limit bytes and writes the error response itself.
@@ -636,45 +554,27 @@ func normalizeVerifyMaxConcurrent(maxConcurrent int) int {
 	return runtime.NumCPU()
 }
 
-func (h *Handler) presignedReconstructionRangeResolverFactory(r *http.Request, fileHash string, terms []reconstruct.Term) (reconstruct.RangeResolver, error) {
+func (h *Handler) presignedReconstructionRangeResolver(r *http.Request, fileHash string, terms []reconstruct.Term, infos map[string]parsedXorbInfo) (reconstruct.RangeResolver, error) {
 	if h.xorbs == nil {
 		return nil, fmt.Errorf("xorb store is not configured")
 	}
 	ctx := r.Context()
 	proxyBaseURL := reconstructionProxyBaseURL(r)
-	parsed := make(map[string]parsedXorbInfo)
-	urls := make(map[string]string)
-	grantedRanges, err := h.reconstructionGrantedRanges(ctx, terms, parsed)
+	grantedRanges, err := reconstructionGrantedRanges(terms, infos)
 	if err != nil {
 		return nil, err
 	}
+	urls := make(map[string]string)
 	return func(xorbHash string, chunks reconstruct.IndexRange) (reconstruct.ResolvedRange, error) {
-		info, ok := parsed[xorbHash]
-		if !ok {
-			reader, err := h.xorbs.Get(ctx, "default", xorbHash)
-			if err != nil {
-				return reconstruct.ResolvedRange{}, err
-			}
-			data, err := io.ReadAll(reader)
-			_ = reader.Close()
-			if err != nil {
-				return reconstruct.ResolvedRange{}, err
-			}
-			info, _, err = parseXorbInfo(data)
-			if err != nil {
-				return reconstruct.ResolvedRange{}, err
-			}
-			parsed[xorbHash] = info
-		}
-		byteRange, err := xorbByteRange(info, chunks)
+		byteRange, err := xorbByteRange(infos[xorbHash], chunks)
 		if err != nil {
 			return reconstruct.ResolvedRange{}, err
 		}
 		url, ok := urls[xorbHash]
 		if !ok {
-			url, _, err = h.xorbs.adapter.GetPreSignedURL(ctx, xetstore.XorbObjectPointer(h.xorbs.storageNamespace, "default", xorbHash), block.PreSignModeRead)
+			url, _, err = h.xorbs.adapter.GetPreSignedURL(ctx, h.xorbs.objectPointer(xorbPrefix, xorbHash), block.PreSignModeRead)
 			if errors.Is(err, block.ErrOperationNotSupported) {
-				url, err = h.proxyXorbURL(proxyBaseURL, fileHash, "default", xorbHash, grantedRanges[xorbHash])
+				url, err = h.proxyXorbURL(proxyBaseURL, fileHash, xorbPrefix, xorbHash, grantedRanges[xorbHash])
 				if err != nil {
 					return reconstruct.ResolvedRange{}, err
 				}
@@ -687,31 +587,14 @@ func (h *Handler) presignedReconstructionRangeResolverFactory(r *http.Request, f
 	}, nil
 }
 
-func (h *Handler) reconstructionGrantedRanges(ctx context.Context, terms []reconstruct.Term, parsed map[string]parsedXorbInfo) (map[string][]reconstruct.HTTPRange, error) {
+func reconstructionGrantedRanges(terms []reconstruct.Term, infos map[string]parsedXorbInfo) (map[string][]reconstruct.HTTPRange, error) {
 	groupedTerms, err := reconstruct.GroupTerms(terms)
 	if err != nil {
 		return nil, err
 	}
 	grants := make(map[string][]reconstruct.HTTPRange)
 	for _, term := range groupedTerms {
-		info, ok := parsed[term.Hash]
-		if !ok {
-			reader, err := h.xorbs.Get(ctx, "default", term.Hash)
-			if err != nil {
-				return nil, err
-			}
-			data, err := io.ReadAll(reader)
-			_ = reader.Close()
-			if err != nil {
-				return nil, err
-			}
-			info, _, err = parseXorbInfo(data)
-			if err != nil {
-				return nil, err
-			}
-			parsed[term.Hash] = info
-		}
-		byteRange, err := xorbByteRange(info, term.Range)
+		byteRange, err := xorbByteRange(infos[term.Hash], term.Range)
 		if err != nil {
 			return nil, err
 		}
@@ -790,15 +673,6 @@ func xorbByteRange(info parsedXorbInfo, chunks reconstruct.IndexRange) (reconstr
 		return reconstruct.HTTPRange{}, fmt.Errorf("invalid xorb byte range")
 	}
 	return reconstruct.HTTPRange{Start: start, End: end - 1}, nil
-}
-
-func shardFileByHash(info xetstore.ShardInfo, fileHash string) (xetstore.ShardFileInfo, bool) {
-	for _, file := range info.Files {
-		if file.FileHash == fileHash {
-			return file, true
-		}
-	}
-	return xetstore.ShardFileInfo{}, false
 }
 
 func reconstructionByteRange(header string, fileSize uint64) (reconstruct.ByteRange, error) {
@@ -914,24 +788,4 @@ func rangeGranted(requested reconstruct.HTTPRange, grants []reconstruct.HTTPRang
 		}
 	}
 	return false
-}
-
-func computedShimFileHash(shard string) string {
-	sum := sha256.Sum256([]byte(shard))
-	return hex.EncodeToString(sum[:])
-}
-
-func (h *Handler) getChunk(w http.ResponseWriter, r *http.Request) {
-	shard, err := h.registry.GetDedupShardByChunk(r.Context(), chi.URLParam(r, "hash"))
-	if errors.Is(err, kv.ErrNotFound) {
-		http.NotFound(w, r)
-		return
-	}
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/octet-stream")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(shard)
 }

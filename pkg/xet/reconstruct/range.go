@@ -21,11 +21,9 @@ type Term struct {
 	Length         uint64
 }
 
-func MapRange(info xetstore.ShardInfo, fileHash string, requested ByteRange) ([]Term, error) {
-	file, ok := findFile(info.Files, fileHash)
-	if !ok {
-		return nil, fmt.Errorf("file hash %s not found in shard", fileHash)
-	}
+// MapRange maps a byte range of a file onto chunk terms, given the chunks of
+// every xorb the file references.
+func MapRange(file xetstore.ShardFileInfo, xorbChunks map[string][]xetstore.ShardChunkInfo, requested ByteRange) ([]Term, error) {
 	if requested.End < requested.Start {
 		return nil, fmt.Errorf("invalid range")
 	}
@@ -36,23 +34,18 @@ func MapRange(info xetstore.ShardInfo, fileHash string, requested ByteRange) ([]
 		return nil, nil
 	}
 
-	xorbs := make(map[string]xetstore.ShardXorbInfo, len(info.Xorbs))
-	for _, xorb := range info.Xorbs {
-		xorbs[xorb.Hash] = xorb
-	}
-
 	var terms []Term
 	var fileOffset uint64
 	for _, segment := range file.Segments {
-		xorb, ok := xorbs[segment.XorbHash]
+		chunks, ok := xorbChunks[segment.XorbHash]
 		if !ok {
 			return nil, fmt.Errorf("segment references missing xorb %s", segment.XorbHash)
 		}
-		if segment.ChunkIndexEnd < segment.ChunkIndexStart || int(segment.ChunkIndexEnd) > len(xorb.Chunks) {
+		if segment.ChunkIndexEnd < segment.ChunkIndexStart || int(segment.ChunkIndexEnd) > len(chunks) {
 			return nil, fmt.Errorf("segment references invalid chunk range %d-%d in xorb %s", segment.ChunkIndexStart, segment.ChunkIndexEnd, segment.XorbHash)
 		}
 		for chunkIndex := segment.ChunkIndexStart; chunkIndex < segment.ChunkIndexEnd; chunkIndex++ {
-			chunk := xorb.Chunks[chunkIndex]
+			chunk := chunks[chunkIndex]
 			chunkStart := fileOffset
 			chunkEnd := fileOffset + chunk.SizeBytes
 			if chunkEnd > requested.Start && chunkStart < requested.End {
@@ -60,7 +53,7 @@ func MapRange(info xetstore.ShardInfo, fileHash string, requested ByteRange) ([]
 				termEnd := min(chunkEnd, requested.End)
 				terms = append(terms, Term{
 					FileOffset:     termStart,
-					XorbHash:       xorb.Hash,
+					XorbHash:       segment.XorbHash,
 					ChunkHash:      chunk.Hash,
 					ChunkIndex:     chunkIndex,
 					ChunkSizeBytes: chunk.SizeBytes,
@@ -72,13 +65,4 @@ func MapRange(info xetstore.ShardInfo, fileHash string, requested ByteRange) ([]
 		}
 	}
 	return terms, nil
-}
-
-func findFile(files []xetstore.ShardFileInfo, fileHash string) (xetstore.ShardFileInfo, bool) {
-	for _, file := range files {
-		if file.FileHash == fileHash {
-			return file, true
-		}
-	}
-	return xetstore.ShardFileInfo{}, false
 }

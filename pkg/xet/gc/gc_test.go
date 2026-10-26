@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
 	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
 	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 	"github.com/stretchr/testify/require"
@@ -13,11 +14,7 @@ import (
 func TestDryRunReportsStaleFileRefs(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
-	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: "file-a",
-		Shard:    []byte("live-shard"),
-	})
-	require.NoError(t, err)
+	registerTestFile(t, registry, "file-a", "xorb-a")
 	require.NoError(t, registry.PutFileRef(ctx, xetstore.FileRef{
 		FileHash: "file-a",
 		Repo:     "repo-a",
@@ -35,9 +32,6 @@ func TestDryRunReportsStaleFileRefs(t *testing.T) {
 		Registry: registry,
 		FileRefLive: func(ctx context.Context, ref xetstore.FileRef) (bool, error) {
 			return ref.Path == "live.bin", nil
-		},
-		ParseShard: func(data []byte) (xetstore.ShardInfo, error) {
-			return xetstore.ShardInfo{}, nil
 		},
 	})
 
@@ -56,21 +50,11 @@ func TestDryRunReportsStaleFileRefs(t *testing.T) {
 	require.Len(t, refs, 2)
 }
 
-func TestDryRunReportsUnreferencedShardsAndChunkRefs(t *testing.T) {
+func TestDryRunReportsUnreferencedFiles(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
-	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: "file-live",
-		Shard:    []byte("live-shard"),
-		ChunkIDs: []string{"chunk-live"},
-	})
-	require.NoError(t, err)
-	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: "file-stale",
-		Shard:    []byte("stale-shard"),
-		ChunkIDs: []string{"chunk-stale"},
-	})
-	require.NoError(t, err)
+	registerTestFile(t, registry, "file-live", "xorb-live")
+	registerTestFile(t, registry, "file-stale", "xorb-stale")
 	require.NoError(t, registry.PutFileRef(ctx, xetstore.FileRef{
 		FileHash: "file-live",
 		Repo:     "repo-a",
@@ -83,27 +67,16 @@ func TestDryRunReportsUnreferencedShardsAndChunkRefs(t *testing.T) {
 		FileRefLive: func(ctx context.Context, ref xetstore.FileRef) (bool, error) {
 			return true, nil
 		},
-		ParseShard: func(data []byte) (xetstore.ShardInfo, error) {
-			return xetstore.ShardInfo{}, nil
-		},
 	})
 
 	require.NoError(t, err)
-	require.Equal(t, []string{"file-stale"}, report.StaleShards)
-	require.Equal(t, []xetstore.ChunkRef{{
-		ChunkHash: "chunk-stale",
-		FileHash:  "file-stale",
-	}}, report.StaleChunkRefs)
+	require.Equal(t, []string{"file-stale"}, report.StaleFiles)
 }
 
 func TestDryRunReportsUnreferencedXorbs(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
-	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: "file-live",
-		Shard:    []byte("live-shard"),
-	})
-	require.NoError(t, err)
+	registerTestFile(t, registry, "file-live", "xorb-live")
 	require.NoError(t, registry.PutFileRef(ctx, xetstore.FileRef{
 		FileHash: "file-live",
 		Repo:     "repo-a",
@@ -115,10 +88,6 @@ func TestDryRunReportsUnreferencedXorbs(t *testing.T) {
 		Registry: registry,
 		FileRefLive: func(ctx context.Context, ref xetstore.FileRef) (bool, error) {
 			return true, nil
-		},
-		ParseShard: func(data []byte) (xetstore.ShardInfo, error) {
-			require.Equal(t, []byte("live-shard"), data)
-			return xetstore.ShardInfo{XorbHashes: []string{"xorb-live"}}, nil
 		},
 		ListXorbs: func(ctx context.Context) ([]XorbRef, error) {
 			return []XorbRef{
@@ -135,11 +104,7 @@ func TestDryRunReportsUnreferencedXorbs(t *testing.T) {
 func TestSweepDeletesStaleFileRefs(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
-	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: "file-a",
-		Shard:    []byte("live-shard"),
-	})
-	require.NoError(t, err)
+	registerTestFile(t, registry, "file-a", "xorb-a")
 	require.NoError(t, registry.PutFileRef(ctx, xetstore.FileRef{
 		FileHash: "file-a",
 		Repo:     "repo-a",
@@ -158,9 +123,6 @@ func TestSweepDeletesStaleFileRefs(t *testing.T) {
 		FileRefLive: func(ctx context.Context, ref xetstore.FileRef) (bool, error) {
 			return ref.Path == "live.bin", nil
 		},
-		ParseShard: func(data []byte) (xetstore.ShardInfo, error) {
-			return xetstore.ShardInfo{}, nil
-		},
 	})
 
 	require.NoError(t, err)
@@ -175,21 +137,11 @@ func TestSweepDeletesStaleFileRefs(t *testing.T) {
 	}}, refs)
 }
 
-func TestSweepDeletesStaleShardsAndChunkRefs(t *testing.T) {
+func TestSweepDeletesStaleFiles(t *testing.T) {
 	ctx := context.Background()
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
-	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: "file-live",
-		Shard:    []byte("live-shard"),
-		ChunkIDs: []string{"chunk-live"},
-	})
-	require.NoError(t, err)
-	_, err = registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: "file-stale",
-		Shard:    []byte("stale-shard"),
-		ChunkIDs: []string{"chunk-stale"},
-	})
-	require.NoError(t, err)
+	registerTestFile(t, registry, "file-live", "xorb-live")
+	registerTestFile(t, registry, "file-stale", "xorb-stale")
 	require.NoError(t, registry.PutFileRef(ctx, xetstore.FileRef{
 		FileHash: "file-live",
 		Repo:     "repo-a",
@@ -202,32 +154,21 @@ func TestSweepDeletesStaleShardsAndChunkRefs(t *testing.T) {
 		FileRefLive: func(ctx context.Context, ref xetstore.FileRef) (bool, error) {
 			return true, nil
 		},
-		ParseShard: func(data []byte) (xetstore.ShardInfo, error) {
-			return xetstore.ShardInfo{}, nil
-		},
 	})
 
 	require.NoError(t, err)
-	require.Equal(t, []string{"file-stale"}, report.StaleShards)
-	hasLive, err := registry.HasShard(ctx, "file-live")
+	require.Equal(t, []string{"file-stale"}, report.StaleFiles)
+	_, err = registry.GetFile(ctx, "file-live")
 	require.NoError(t, err)
-	require.True(t, hasLive)
-	hasStale, err := registry.HasShard(ctx, "file-stale")
-	require.NoError(t, err)
-	require.False(t, hasStale)
-	_, err = registry.GetDedupShardByChunk(ctx, "chunk-stale")
-	require.Error(t, err)
+	_, err = registry.GetFile(ctx, "file-stale")
+	require.ErrorIs(t, err, kv.ErrNotFound)
 }
 
 func TestSweepDeletesOnlyOldStaleXorbs(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
 	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
-	_, err := registry.RegisterShard(ctx, xetstore.RegisterShardParams{
-		FileHash: "file-live",
-		Shard:    []byte("live-shard"),
-	})
-	require.NoError(t, err)
+	registerTestFile(t, registry, "file-live", "xorb-live")
 	require.NoError(t, registry.PutFileRef(ctx, xetstore.FileRef{
 		FileHash: "file-live",
 		Repo:     "repo-a",
@@ -240,9 +181,6 @@ func TestSweepDeletesOnlyOldStaleXorbs(t *testing.T) {
 		Registry: registry,
 		FileRefLive: func(ctx context.Context, ref xetstore.FileRef) (bool, error) {
 			return true, nil
-		},
-		ParseShard: func(data []byte) (xetstore.ShardInfo, error) {
-			return xetstore.ShardInfo{XorbHashes: []string{"xorb-live"}}, nil
 		},
 		ListXorbs: func(ctx context.Context) ([]XorbRef, error) {
 			return []XorbRef{
@@ -266,4 +204,13 @@ func TestSweepDeletesOnlyOldStaleXorbs(t *testing.T) {
 		Mtime:  now.Add(-48 * time.Hour),
 	}}, report.StaleXorbs)
 	require.Equal(t, report.StaleXorbs, removed)
+}
+
+func registerTestFile(t *testing.T, registry *xetstore.Registry, fileHash, xorbHash string) {
+	t.Helper()
+	_, err := registry.RegisterFile(context.Background(), xetstore.ShardFileInfo{
+		FileHash: fileHash,
+		Segments: []xetstore.ShardFileSegment{{XorbHash: xorbHash}},
+	})
+	require.NoError(t, err)
 }

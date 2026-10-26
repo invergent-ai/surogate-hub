@@ -822,13 +822,17 @@ func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request,
 			writeError(w, r, http.StatusBadRequest, "xet physical address is missing file hash")
 			return
 		}
-		exists, err := xetstore.NewRegistry(c.Catalog.KVStore).HasShard(ctx, xetFileHash)
+		file, err := xetstore.NewRegistry(c.Catalog.KVStore).GetFile(ctx, xetFileHash)
+		if errors.Is(err, kv.ErrNotFound) {
+			writeError(w, r, http.StatusNotFound, "xet file not found")
+			return
+		}
 		if err != nil {
 			writeError(w, r, http.StatusInternalServerError, err)
 			return
 		}
-		if !exists {
-			writeError(w, r, http.StatusNotFound, "xet shard not found")
+		if body.SizeBytes != int64(file.SizeBytes) {
+			writeError(w, r, http.StatusBadRequest, fmt.Sprintf("size_bytes %d does not match xet file size %d", body.SizeBytes, file.SizeBytes))
 			return
 		}
 	}

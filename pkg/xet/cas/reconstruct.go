@@ -11,15 +11,15 @@ import (
 )
 
 func ReconstructFileRange(ctx context.Context, registry *xetstore.Registry, xorbs *XorbStore, fileHash string, byteRange reconstruct.ByteRange) (io.ReadCloser, error) {
-	shard, err := registry.GetShardByFileHash(ctx, fileHash)
+	file, err := registry.GetFile(ctx, fileHash)
 	if err != nil {
 		return nil, err
 	}
-	info, err := xetstore.ParseShardInfo(shard)
+	infos, err := xorbInfos(ctx, registry, file.Segments)
 	if err != nil {
 		return nil, err
 	}
-	terms, err := reconstruct.MapRange(info, fileHash, byteRange)
+	terms, err := reconstruct.MapRange(file, xorbChunks(infos), byteRange)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func readXorbChunks(ctx context.Context, xorbs *XorbStore, xorbHash string) ([][
 	if xorbs == nil {
 		return nil, fmt.Errorf("xorb store is not configured")
 	}
-	reader, err := xorbs.Get(ctx, "default", xorbHash)
+	reader, err := xorbs.Get(ctx, xorbPrefix, xorbHash)
 	if err != nil {
 		return nil, err
 	}
@@ -66,4 +66,32 @@ func readXorbChunks(ctx context.Context, xorbs *XorbStore, xorbHash string) ([][
 		return nil, err
 	}
 	return decodeXorbChunks(data[:footerStart], info)
+}
+
+// xorbInfos loads the stored footer of every xorb the segments reference.
+func xorbInfos(ctx context.Context, registry *xetstore.Registry, segments []xetstore.ShardFileSegment) (map[string]parsedXorbInfo, error) {
+	infos := make(map[string]parsedXorbInfo)
+	for _, segment := range segments {
+		if _, ok := infos[segment.XorbHash]; ok {
+			continue
+		}
+		footer, err := registry.GetXorbInfo(ctx, segment.XorbHash)
+		if err != nil {
+			return nil, fmt.Errorf("xorb %s: %w", segment.XorbHash, err)
+		}
+		info, _, err := parseXorbInfo(footer)
+		if err != nil {
+			return nil, fmt.Errorf("xorb %s: %w", segment.XorbHash, err)
+		}
+		infos[segment.XorbHash] = info
+	}
+	return infos, nil
+}
+
+func xorbChunks(infos map[string]parsedXorbInfo) map[string][]xetstore.ShardChunkInfo {
+	chunks := make(map[string][]xetstore.ShardChunkInfo, len(infos))
+	for hash, info := range infos {
+		chunks[hash] = shardChunksFromParsedXorb(info)
+	}
+	return chunks
 }

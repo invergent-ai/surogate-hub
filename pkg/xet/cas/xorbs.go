@@ -43,10 +43,6 @@ func (s *XorbStore) Get(ctx context.Context, prefix, hash string) (io.ReadCloser
 	return s.adapter.Get(ctx, s.objectPointer(prefix, hash))
 }
 
-func (s *XorbStore) Exists(ctx context.Context, prefix, hash string) (bool, error) {
-	return s.adapter.Exists(ctx, s.objectPointer(prefix, hash))
-}
-
 func (s *XorbStore) objectPointer(prefix, hash string) block.ObjectPointer {
 	return xetstore.XorbObjectPointer(s.storageNamespace, prefix, hash)
 }

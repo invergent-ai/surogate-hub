@@ -13,7 +13,6 @@ import (
 
 const (
 	mdbShardHeaderVersion = uint64(2)
-	mdbShardFooterVersion = uint64(1)
 	mdbShardFooterSize    = uint64(200)
 
 	mdbFileFlagWithVerification = uint32(1 << 31)
@@ -36,14 +35,6 @@ var dataHashKey = [32]byte{
 	157, 228, 33, 16, 155, 235, 43, 88, 180, 208, 176, 75, 147, 173, 242, 41,
 }
 
-type ShardInfo struct {
-	Files       []ShardFileInfo
-	XorbHashes  []string
-	Xorbs       []ShardXorbInfo
-	ChunkHashes []string
-	Summary     ShardSummary
-}
-
 type ShardFileInfo struct {
 	FileHash  string             `json:"file_hash"`
 	SizeBytes uint64             `json:"size_bytes"`
@@ -62,115 +53,12 @@ type ShardChunkInfo struct {
 	SizeBytes uint64
 }
 
-type ShardXorbInfo struct {
-	Hash   string
-	Chunks []ShardChunkInfo
-}
-
-type ShardSummary struct {
-	CreatedAt uint64 `json:"created_at"`
-	SizeBytes uint64 `json:"size"`
-	NumXorbs  int    `json:"num_xorbs"`
-	NumChunks int    `json:"num_chunks"`
-}
-
-func CanonicalShard(data []byte) ([]byte, ShardInfo, error) {
-	info, footerSize, err := parseShardInfo(data)
-	if err != nil {
-		return nil, ShardInfo{}, err
-	}
-	if footerSize == mdbShardFooterSize {
-		return data, info, nil
-	}
-	canonical := append([]byte(nil), data...)
-	binary.LittleEndian.PutUint64(canonical[40:48], mdbShardFooterSize)
-	canonical = append(canonical, shardFooter(uint64(len(canonical)), info.Summary)...)
-	return canonical, info, nil
-}
-
-func ParseShardInfo(data []byte) (ShardInfo, error) {
-	info, _, err := parseShardInfo(data)
-	return info, err
-}
-
 func ParseShardFiles(data []byte) ([]ShardFileInfo, error) {
 	reader := bytes.NewReader(data)
 	if _, err := readShardHeader(reader); err != nil {
 		return nil, err
 	}
 	return readShardFiles(reader)
-}
-
-func parseShardInfo(data []byte) (ShardInfo, uint64, error) {
-	reader := bytes.NewReader(data)
-	footerSize, err := readShardHeader(reader)
-	if err != nil {
-		return ShardInfo{}, 0, err
-	}
-
-	files, err := readShardFiles(reader)
-	if err != nil {
-		return ShardInfo{}, 0, err
-	}
-	xorbHashes, chunkHashes, err := readShardXorbs(reader)
-	if err != nil {
-		return ShardInfo{}, 0, err
-	}
-	if err := verifyShardFileHashes(files, xorbHashes); err != nil {
-		return ShardInfo{}, 0, err
-	}
-	var summary ShardSummary
-	if footerSize > 0 {
-		summary, err = readShardFooter(reader)
-		if err != nil {
-			return ShardInfo{}, 0, err
-		}
-	}
-	summary.NumXorbs = len(xorbHashes)
-	summary.NumChunks = len(chunkHashes)
-	if summary.SizeBytes == 0 {
-		for _, file := range files {
-			summary.SizeBytes += file.SizeBytes
-		}
-	}
-
-	return ShardInfo{
-		Files:       files,
-		XorbHashes:  shardXorbHashes(xorbHashes),
-		Xorbs:       xorbHashes,
-		ChunkHashes: chunkHashes,
-		Summary:     summary,
-	}, footerSize, nil
-}
-
-func shardFooter(offset uint64, summary ShardSummary) []byte {
-	var footer bytes.Buffer
-	writeShardU64(&footer, mdbShardFooterVersion)
-	writeShardU64(&footer, 48)
-	writeShardU64(&footer, 192)
-	writeShardU64(&footer, offset)
-	writeShardU64(&footer, 0)
-	writeShardU64(&footer, offset)
-	writeShardU64(&footer, 0)
-	writeShardU64(&footer, offset)
-	writeShardU64(&footer, 0)
-	footer.Write(make([]byte, 32))
-	writeShardU64(&footer, summary.CreatedAt)
-	writeShardU64(&footer, ^uint64(0))
-	for i := 0; i < 6; i++ {
-		writeShardU64(&footer, 0)
-	}
-	writeShardU64(&footer, summary.SizeBytes)
-	writeShardU64(&footer, summary.SizeBytes)
-	writeShardU64(&footer, summary.SizeBytes)
-	writeShardU64(&footer, offset)
-	return footer.Bytes()
-}
-
-func writeShardU64(w io.Writer, value uint64) {
-	var raw [8]byte
-	binary.LittleEndian.PutUint64(raw[:], value)
-	_, _ = w.Write(raw[:])
 }
 
 func readShardHeader(reader io.Reader) (uint64, error) {
@@ -269,88 +157,31 @@ func readShardFiles(reader io.Reader) ([]ShardFileInfo, error) {
 	return files, nil
 }
 
-func readShardXorbs(reader io.Reader) ([]ShardXorbInfo, []string, error) {
-	var xorbs []ShardXorbInfo
-	var chunkHashes []string
-	for {
-		xorbHash, isBookend, err := readMDBHash(reader)
-		if err != nil {
-			return nil, nil, fmt.Errorf("read shard xorb hash: %w", err)
+// VerifyFile checks a shard's file entry against the chunks of the xorbs it
+// references and returns it with sizes taken from those chunks.
+func VerifyFile(file ShardFileInfo, xorbChunks map[string][]ShardChunkInfo) (ShardFileInfo, error) {
+	var chunks []ShardChunkInfo
+	file.SizeBytes = 0
+	for i, segment := range file.Segments {
+		xorb := xorbChunks[segment.XorbHash]
+		if segment.ChunkIndexEnd < segment.ChunkIndexStart || int(segment.ChunkIndexEnd) > len(xorb) {
+			return ShardFileInfo{}, fmt.Errorf("file %s references invalid chunk range %d-%d in xorb %s", file.FileHash, segment.ChunkIndexStart, segment.ChunkIndexEnd, segment.XorbHash)
 		}
-		if err := skipU32s(reader, 1); err != nil {
-			return nil, nil, fmt.Errorf("read shard xorb flags: %w", err)
+		file.Segments[i].SizeBytes = 0
+		for _, chunk := range xorb[segment.ChunkIndexStart:segment.ChunkIndexEnd] {
+			file.Segments[i].SizeBytes += chunk.SizeBytes
 		}
-		numEntries, err := readU32(reader)
-		if err != nil {
-			return nil, nil, fmt.Errorf("read shard xorb entry count: %w", err)
-		}
-		if err := skipU32s(reader, 2); err != nil {
-			return nil, nil, fmt.Errorf("read shard xorb byte counts: %w", err)
-		}
-		if isBookend {
-			break
-		}
-		chunks := make([]ShardChunkInfo, 0, numEntries)
-		for i := uint32(0); i < numEntries; i++ {
-			chunkHash, _, err := readMDBHash(reader)
-			if err != nil {
-				return nil, nil, fmt.Errorf("read shard chunk hash: %w", err)
-			}
-			chunkHashes = append(chunkHashes, chunkHash)
-			if err := skipU32s(reader, 1); err != nil {
-				return nil, nil, fmt.Errorf("read shard chunk byte range start: %w", err)
-			}
-			unpackedSegmentBytes, err := readU32(reader)
-			if err != nil {
-				return nil, nil, fmt.Errorf("read shard chunk segment size: %w", err)
-			}
-			if err := skipU32s(reader, 2); err != nil {
-				return nil, nil, fmt.Errorf("read shard chunk flags: %w", err)
-			}
-			chunks = append(chunks, ShardChunkInfo{
-				Hash:      chunkHash,
-				SizeBytes: uint64(unpackedSegmentBytes),
-			})
-		}
-		xorbs = append(xorbs, ShardXorbInfo{Hash: xorbHash, Chunks: chunks})
+		file.SizeBytes += file.Segments[i].SizeBytes
+		chunks = append(chunks, xorb[segment.ChunkIndexStart:segment.ChunkIndexEnd]...)
 	}
-	return xorbs, chunkHashes, nil
-}
-
-func verifyShardFileHashes(files []ShardFileInfo, xorbs []ShardXorbInfo) error {
-	xorbByHash := make(map[string]ShardXorbInfo, len(xorbs))
-	for _, xorb := range xorbs {
-		xorbByHash[xorb.Hash] = xorb
+	computed, err := ComputeFileMerkleHash(chunks)
+	if err != nil {
+		return ShardFileInfo{}, err
 	}
-	for _, file := range files {
-		var chunks []ShardChunkInfo
-		for _, segment := range file.Segments {
-			xorb, ok := xorbByHash[segment.XorbHash]
-			if !ok {
-				return fmt.Errorf("file %s references missing xorb %s", file.FileHash, segment.XorbHash)
-			}
-			if segment.ChunkIndexEnd < segment.ChunkIndexStart || int(segment.ChunkIndexEnd) > len(xorb.Chunks) {
-				return fmt.Errorf("file %s references invalid chunk range %d-%d in xorb %s", file.FileHash, segment.ChunkIndexStart, segment.ChunkIndexEnd, segment.XorbHash)
-			}
-			chunks = append(chunks, xorb.Chunks[segment.ChunkIndexStart:segment.ChunkIndexEnd]...)
-		}
-		computed, err := ComputeFileMerkleHash(chunks)
-		if err != nil {
-			return err
-		}
-		if computed != file.FileHash {
-			return fmt.Errorf("file hash mismatch: shard has %s, computed %s", file.FileHash, computed)
-		}
+	if computed != file.FileHash {
+		return ShardFileInfo{}, fmt.Errorf("file hash mismatch: shard has %s, computed %s", file.FileHash, computed)
 	}
-	return nil
-}
-
-func shardXorbHashes(xorbs []ShardXorbInfo) []string {
-	hashes := make([]string, 0, len(xorbs))
-	for _, xorb := range xorbs {
-		hashes = append(hashes, xorb.Hash)
-	}
-	return hashes
+	return file, nil
 }
 
 func ComputeFileMerkleHash(chunks []ShardChunkInfo) (string, error) {
@@ -470,40 +301,6 @@ func mdbHexFromRaw(raw []byte) string {
 	return dst.String()
 }
 
-func readShardFooter(reader io.Reader) (ShardSummary, error) {
-	version, err := readU64(reader)
-	if err != nil {
-		return ShardSummary{}, fmt.Errorf("read shard footer version: %w", err)
-	}
-	if version != mdbShardFooterVersion {
-		return ShardSummary{}, fmt.Errorf("unsupported shard footer version %d", version)
-	}
-	if err := skipBytes(reader, 8*8); err != nil {
-		return ShardSummary{}, fmt.Errorf("read shard footer offsets: %w", err)
-	}
-	if err := skipBytes(reader, 32); err != nil {
-		return ShardSummary{}, fmt.Errorf("read shard footer hmac key: %w", err)
-	}
-	createdAt, err := readU64(reader)
-	if err != nil {
-		return ShardSummary{}, fmt.Errorf("read shard footer creation timestamp: %w", err)
-	}
-	if err := skipBytes(reader, 8+6*8+8); err != nil {
-		return ShardSummary{}, fmt.Errorf("read shard footer size prelude: %w", err)
-	}
-	sizeBytes, err := readU64(reader)
-	if err != nil {
-		return ShardSummary{}, fmt.Errorf("read shard footer materialized bytes: %w", err)
-	}
-	if err := skipBytes(reader, 8+8); err != nil {
-		return ShardSummary{}, fmt.Errorf("read shard footer tail: %w", err)
-	}
-	return ShardSummary{
-		CreatedAt: createdAt,
-		SizeBytes: sizeBytes,
-	}, nil
-}
-
 func readMDBHash(reader io.Reader) (string, bool, error) {
 	var raw [32]byte
 	if _, err := io.ReadFull(reader, raw[:]); err != nil {
@@ -522,12 +319,6 @@ func readMDBHash(reader io.Reader) (string, bool, error) {
 		binary.LittleEndian.Uint64(raw[16:24]),
 		binary.LittleEndian.Uint64(raw[24:32]),
 	), isBookend, nil
-}
-
-func skipHash(reader io.Reader) error {
-	var raw [32]byte
-	_, err := io.ReadFull(reader, raw[:])
-	return err
 }
 
 func readU32(reader io.Reader) (uint32, error) {
