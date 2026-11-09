@@ -228,3 +228,19 @@ func requireNotParked(t *testing.T, registry *Registry, kind ParkedKind, hash st
 	_, ok := list[hash]
 	require.False(t, ok, "%s is still parked", hash)
 }
+
+func TestGCLockTakesOverExpiredLock(t *testing.T) {
+	ctx := context.Background()
+	registry := NewRegistry(kvtest.GetStore(ctx, t))
+	_, err := registry.AcquireGCLock(ctx, parkedNow, time.Hour)
+	require.NoError(t, err)
+
+	_, err = registry.AcquireGCLock(ctx, parkedNow.Add(59*time.Minute), time.Hour)
+	require.ErrorIs(t, err, ErrGCLocked)
+
+	release, err := registry.AcquireGCLock(ctx, parkedNow.Add(61*time.Minute), time.Hour)
+	require.NoError(t, err)
+	require.NoError(t, release(ctx))
+	_, err = registry.AcquireGCLock(ctx, parkedNow.Add(62*time.Minute), time.Hour)
+	require.NoError(t, err)
+}
