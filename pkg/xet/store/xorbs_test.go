@@ -27,3 +27,26 @@ func TestStorageNamespace(t *testing.T) {
 		require.Equal(t, tc.want, StorageNamespace(cfg), "%s %q", tc.blockstore, tc.prefix)
 	}
 }
+
+func TestXorbWalkURI(t *testing.T) {
+	t.Cleanup(viper.Reset)
+	root := t.TempDir()
+	viper.Set(config.BlockstoreTypeKey, "local")
+	viper.Set("blockstore.local.path", root)
+	viper.Set("blockstore.default_namespace_prefix", "")
+	cfg, err := config.NewConfig("", &config.BaseConfig{})
+	require.NoError(t, err)
+
+	uri, err := XorbWalkURI(cfg)
+
+	require.NoError(t, err)
+	require.Equal(t, "local://"+root+"/_hub_xet", uri.String())
+
+	viper.Set(config.BlockstoreTypeKey, "s3")
+	viper.Set("blockstore.default_namespace_prefix", "s3://bucket/hub")
+	cfg, err = config.NewConfig("", &config.BaseConfig{})
+	require.NoError(t, err)
+	uri, err = XorbWalkURI(cfg)
+	require.NoError(t, err)
+	require.Equal(t, "s3://bucket/hub/_hub_xet", uri.String())
+}

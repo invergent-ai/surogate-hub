@@ -1,6 +1,9 @@
 package store
 
 import (
+	"fmt"
+	"net/url"
+	"path/filepath"
 	"strings"
 
 	"github.com/invergent-ai/surogate-hub/pkg/block"
@@ -37,4 +40,26 @@ func StorageNamespace(cfg config.Config) string {
 		return storage.BlockstoreType() + "://_hub_xet"
 	}
 	return ""
+}
+
+// XorbWalkURI is the storage URI to list xorbs with. The local blockstore
+// resolves "local://_hub_xet" against its root for reads and writes, but its
+// walker only accepts an absolute path under that root.
+func XorbWalkURI(cfg config.Config) (*url.URL, error) {
+	namespace := StorageNamespace(cfg)
+	if namespace == "" {
+		return nil, fmt.Errorf("xet storage is not configured")
+	}
+	uri, err := url.Parse(strings.TrimRight(namespace, "/"))
+	if err != nil {
+		return nil, err
+	}
+	if uri.Scheme != block.BlockstoreTypeLocal {
+		return uri, nil
+	}
+	local, err := cfg.StorageConfig().GetStorageByID(config.SingleBlockstoreID).BlockstoreLocalParams()
+	if err != nil {
+		return nil, err
+	}
+	return &url.URL{Scheme: block.BlockstoreTypeLocal, Path: filepath.Join(local.Path, uri.Host, uri.Path)}, nil
 }

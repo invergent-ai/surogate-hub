@@ -13,7 +13,7 @@ import (
 func TestRegisterFileKeepsFirstRecord(t *testing.T) {
 	ctx := context.Background()
 	registry := NewRegistry(kvtest.GetStore(ctx, t))
-	first := ShardFileInfo{FileHash: "file-a", SizeBytes: 12, Segments: []ShardFileSegment{{XorbHash: "xorb-a", SizeBytes: 12, ChunkIndexEnd: 1}}}
+	first := ShardFileInfo{FileHash: "file-a", SizeBytes: 12, RegisteredAt: 1, Segments: []ShardFileSegment{{XorbHash: "xorb-a", SizeBytes: 12, ChunkIndexEnd: 1}}}
 
 	inserted, err := registry.RegisterFile(ctx, first)
 	require.NoError(t, err)
@@ -25,9 +25,10 @@ func TestRegisterFileKeepsFirstRecord(t *testing.T) {
 	got, err := registry.GetFile(ctx, "file-a")
 	require.NoError(t, err)
 	require.Equal(t, first, got)
-	hashes, err := registry.ListFileHashes(ctx, 32)
+	files, err := registry.ListFiles(ctx, 32)
 	require.NoError(t, err)
-	require.Equal(t, []string{"file-a"}, hashes)
+	require.Len(t, files, 1)
+	require.Equal(t, "file-a", files[0].FileHash)
 }
 
 func TestGetFileReportsMissingFile(t *testing.T) {
@@ -145,4 +146,48 @@ func requireKVValue(t *testing.T, ctx context.Context, kvStore kv.Store, key str
 	res, err := kvStore.Get(ctx, []byte(Partition), []byte(key))
 	require.NoError(t, err)
 	require.Equal(t, expected, res.Value)
+}
+
+func TestRegisterFileStampsRegisteredAt(t *testing.T) {
+	ctx := context.Background()
+	kvStore := kvtest.GetStore(ctx, t)
+	registry := NewRegistry(kvStore)
+	_, err := registry.RegisterFile(ctx, ShardFileInfo{FileHash: "file-a"})
+	require.NoError(t, err)
+	file, err := registry.GetFile(ctx, "file-a")
+	require.NoError(t, err)
+	require.NotZero(t, file.RegisteredAt)
+
+	require.NoError(t, kvStore.Set(ctx, []byte(Partition), []byte("xet/file/file-old"), []byte(`{"file_hash":"file-old","size_bytes":3}`)))
+	old, err := registry.GetFile(ctx, "file-old")
+	require.NoError(t, err)
+	require.Zero(t, old.RegisteredAt)
+}
+
+func TestListXorbFooterHashes(t *testing.T) {
+	ctx := context.Background()
+	registry := NewRegistry(kvtest.GetStore(ctx, t))
+	require.NoError(t, registry.PutXorbInfo(ctx, "xorb-a", []byte("a")))
+	require.NoError(t, registry.PutXorbInfo(ctx, "xorb-b", []byte("b")))
+
+	hashes, err := registry.ListXorbFooterHashes(ctx, 0)
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{"xorb-a", "xorb-b"}, hashes)
+}
+
+func TestDeleteFileRef(t *testing.T) {
+	ctx := context.Background()
+	registry := NewRegistry(kvtest.GetStore(ctx, t))
+	keep := FileRef{FileHash: "file-a", Repo: "o/keep", SizeBytes: 1}
+	drop := FileRef{FileHash: "file-a", Repo: "o/drop", SizeBytes: 1}
+	for _, ref := range []FileRef{keep, drop} {
+		_, err := registry.AddFileRef(ctx, ref)
+		require.NoError(t, err)
+	}
+
+	require.NoError(t, registry.DeleteFileRef(ctx, drop))
+
+	refs, err := registry.ListAllFileRefs(ctx, 0)
+	require.NoError(t, err)
+	require.Equal(t, []FileRef{keep}, refs)
 }

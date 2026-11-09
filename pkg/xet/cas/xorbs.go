@@ -2,7 +2,9 @@ package cas
 
 import (
 	"context"
+	"errors"
 	"io"
+	"os"
 
 	"github.com/invergent-ai/surogate-hub/pkg/block"
 	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
@@ -43,8 +45,8 @@ func (s *XorbStore) Get(ctx context.Context, hash string) (io.ReadCloser, error)
 	return s.adapter.Get(ctx, s.objectPointer(hash))
 }
 
-// storedFooter returns the footer of the stored xorb.
-func (s *XorbStore) storedFooter(ctx context.Context, hash string) ([]byte, error) {
+// StoredFooter returns the footer of the stored xorb.
+func (s *XorbStore) StoredFooter(ctx context.Context, hash string) ([]byte, error) {
 	reader, err := s.Get(ctx, hash)
 	if err != nil {
 		return nil, err
@@ -63,4 +65,14 @@ func (s *XorbStore) storedFooter(ctx context.Context, hash string) ([]byte, erro
 
 func (s *XorbStore) objectPointer(hash string) block.ObjectPointer {
 	return xetstore.XorbObjectPointer(s.storageNamespace, xorbPrefix, hash)
+}
+
+// Remove deletes a xorb object. An object that is already gone counts as
+// removed, so a delete resumed after a crash finishes on every blockstore.
+func (s *XorbStore) Remove(ctx context.Context, hash string) error {
+	err := s.adapter.Remove(ctx, s.objectPointer(hash))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	return err
 }

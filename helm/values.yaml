@@ -61,6 +61,15 @@ init:
   userName: admin
   resources: {}
 
+# CronJob running `sghub gc xet`: deletes xet data no repository holds.
+# Enable it where xet uploads are on (blockstore.default_namespace_prefix set).
+xetGC:
+  enabled: false
+  schedule: "30 3 * * *"
+  dryRun: false
+  activeDeadlineSeconds: 21600
+  resources: {}
+
 # Stats-worker deployment that runs /app/stats-worker against the hub API.
 statsWorker:
   replicaCount: 1

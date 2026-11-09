@@ -6768,3 +6768,32 @@ func writeAPIThreeByteLE(b *bytes.Buffer, value uint32) {
 	b.WriteByte(byte(value >> 8))
 	b.WriteByte(byte(value >> 16))
 }
+
+func TestController_LinkXETRestoresParkedFile(t *testing.T) {
+	viper.Set(config.BlockstoreTypeKey, block.BlockstoreTypeMem)
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), "main", false)
+	require.NoError(t, err)
+	registry := xetstore.NewRegistry(deps.catalog.KVStore)
+	fileHash, _, _ := xettest.SeedFile(t, ctx, registry, deps.blocks, "mem://_hub_xet", []byte("hello world!"))
+	_, err = registry.Park(ctx, xetstore.ParkedFile, fileHash, time.Now())
+	require.NoError(t, err)
+
+	physicalAddress := "xet://" + fileHash
+	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.LinkPhysicalAddressParams{
+		Path: "models/checkpoint.bin",
+	}, apigen.LinkPhysicalAddressJSONRequestBody{
+		Checksum:  fileHash,
+		SizeBytes: 12,
+		Staging:   apigen.StagingLocation{PhysicalAddress: &physicalAddress},
+	})
+	verifyResponseOK(t, resp, err)
+
+	_, err = registry.GetFile(ctx, fileHash)
+	require.NoError(t, err)
+	held, err := registry.HasFileRef(ctx, repo, fileHash)
+	require.NoError(t, err)
+	require.True(t, held)
+}

@@ -1,0 +1,80 @@
+{{- if .Values.xetGC.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "shub.fullname" . }}-xet-gc
+  labels:
+    {{- include "shub.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.xetGC.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: {{ .Values.xetGC.activeDeadlineSeconds }}
+      template:
+        metadata:
+          annotations:
+            checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+          {{- with .Values.jobPodAnnotations }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          labels:
+            {{- include "shub.selectorLabels" . | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          {{- if (.Values.image.privateRegistry).enabled }}
+          imagePullSecrets:
+           {{- if (.Values.image.privateRegistry).secretToken }}
+            - name: "docker-registry"
+           {{- else }}
+            - name: {{ .Values.image.privateRegistry.secretName }}
+           {{- end }}
+          {{- end }}
+          serviceAccountName: {{ include "shub.serviceAccountName" . }}
+          containers:
+            - name: xet-gc
+              image: "{{ include "shub.repository" . }}:{{ include "shub.tag" . }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              args:
+                - "gc"
+                - "xet"
+              {{- if .Values.shubConfig }}
+                - "--config"
+                - "/etc/shub/config.yaml"
+              {{- end }}
+              {{- if .Values.xetGC.dryRun }}
+                - "--dry-run"
+              {{- end }}
+              env:
+                {{- include "shub.envList" . | nindent 16 }}
+              {{- if .Values.extraEnvVarsSecret }}
+              envFrom:
+                - secretRef:
+                    name: {{ .Values.extraEnvVarsSecret }}
+              {{- end }}
+              resources:
+                {{- toYaml .Values.xetGC.resources | nindent 16 }}
+              volumeMounts:
+              {{- if .Values.extraVolumeMounts }}
+                {{- toYaml .Values.extraVolumeMounts | nindent 16 }}
+              {{- end }}
+              {{- if .Values.shubConfig }}
+                - name: config-volume
+                  mountPath: /etc/shub/config.yaml
+                  subPath: "config.yaml"
+                  readOnly: true
+              {{- end }}
+          volumes:
+            {{- include "shub.volumes" . | nindent 12 }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

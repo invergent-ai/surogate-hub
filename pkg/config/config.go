@@ -480,11 +480,10 @@ type BaseConfig struct {
 		Verify struct {
 			MaxConcurrent int `mapstructure:"max_concurrent"`
 		} `mapstructure:"verify"`
-		Read struct {
-			CapabilityScanBatchSize int `mapstructure:"capability_scan_batch_size"`
-		} `mapstructure:"read"`
 		GC struct {
-			MinAge time.Duration `mapstructure:"min_age"`
+			MinAge        time.Duration `mapstructure:"min_age"`
+			XorbMinAge    time.Duration `mapstructure:"xorb_min_age"`
+			ScanBatchSize int           `mapstructure:"scan_batch_size"`
 		} `mapstructure:"gc"`
 	} `mapstructure:"xet"`
 	Graveler struct {

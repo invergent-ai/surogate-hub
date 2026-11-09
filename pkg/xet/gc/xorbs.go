@@ -16,6 +16,8 @@ func ListXorbsFromWalker(ctx context.Context, walker block.Walker, storageURI *u
 			ref, ok = xorbRefFromKey(entry.FullKey)
 		}
 		if ok {
+			ref.Size = entry.Size
+			ref.Mtime = entry.Mtime
 			refs = append(refs, ref)
 		}
 		return nil

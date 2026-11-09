@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
-	"strings"
 
 	blockfactory "github.com/invergent-ai/surogate-hub/modules/block/factory"
 	"github.com/invergent-ai/surogate-hub/pkg/block"
@@ -17,6 +15,7 @@ import (
 	"github.com/invergent-ai/surogate-hub/pkg/kv/kvparams"
 	"github.com/invergent-ai/surogate-hub/pkg/stats"
 	"github.com/invergent-ai/surogate-hub/pkg/upload"
+	xetcas "github.com/invergent-ai/surogate-hub/pkg/xet/cas"
 	xetgc "github.com/invergent-ai/surogate-hub/pkg/xet/gc"
 	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
 	"github.com/spf13/cobra"
@@ -24,27 +23,39 @@ import (
 
 var gcXETCmd = &cobra.Command{
 	Use:   "xet",
-	Short: "Run XET garbage collection",
+	Short: "Delete xet data no repository holds",
+	Long: `Delete xet file records and xorbs that no existing repository holds.
+A run parks what is unneeded and deletes what stayed parked past its grace
+period (xet.gc.min_age for file records, xet.gc.xorb_min_age for xorbs), so
+deleting anything takes at least two runs. Uploads, links and reads bring
+parked data back.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dryRun, err := cmd.Flags().GetBool("dry-run")
 		if err != nil {
 			return err
 		}
-		if !dryRun {
-			return fmt.Errorf("xet gc currently requires --dry-run")
-		}
-		report, err := runXETGCDryRun(cmd.Context(), loadConfig())
+		report, err := runXETGC(cmd.Context(), loadConfig(), dryRun)
 		if err != nil {
 			return err
 		}
 		encoder := json.NewEncoder(cmd.OutOrStdout())
 		encoder.SetIndent("", "  ")
-		return encoder.Encode(report)
+		if err := encoder.Encode(report); err != nil {
+			return err
+		}
+		if len(report.Errors) > 0 {
+			return fmt.Errorf("xet gc finished with %d errors", len(report.Errors))
+		}
+		return nil
 	},
 }
 
-func runXETGCDryRun(ctx context.Context, cfg config.Config) (xetgc.Report, error) {
+func runXETGC(ctx context.Context, cfg config.Config, dryRun bool) (xetgc.Report, error) {
 	baseCfg := cfg.GetBaseConfig()
+	storageNamespace := xetstore.StorageNamespace(cfg)
+	if storageNamespace == "" {
+		return xetgc.Report{}, fmt.Errorf("xet storage is not configured: set blockstore.default_namespace_prefix")
+	}
 	kvParams, err := kvparams.NewConfig(&baseCfg.Database)
 	if err != nil {
 		return xetgc.Report{}, fmt.Errorf("KV params: %w", err)
@@ -69,41 +80,38 @@ func runXETGCDryRun(ctx context.Context, cfg config.Config) (xetgc.Report, error
 	}
 	defer func() { _ = cat.Close() }()
 
-	registry := xetstore.NewRegistry(kvStore)
-	storageNamespace := xetstore.StorageNamespace(cfg)
-	if storageNamespace == "" {
-		return xetgc.Report{}, fmt.Errorf("xet storage is not configured: set blockstore.default_namespace_prefix")
-	}
-	return xetgc.DryRun(ctx, xetgc.Params{
-		Registry:      registry,
-		ScanBatchSize: baseCfg.XET.Read.CapabilityScanBatchSize,
-		MinAge:        baseCfg.XET.GC.MinAge,
-		FileRefLive: func(ctx context.Context, ref xetstore.FileRef) (bool, error) {
-			_, err := cat.GetRepository(ctx, ref.Repo)
+	xorbs := xetcas.NewXorbStore(blockAdapter, storageNamespace)
+	return xetgc.Sweep(ctx, xetgc.Params{
+		Registry:      xetstore.NewRegistry(kvStore),
+		ScanBatchSize: baseCfg.XET.GC.ScanBatchSize,
+		FileMinAge:    baseCfg.XET.GC.MinAge,
+		XorbMinAge:    baseCfg.XET.GC.XorbMinAge,
+		DryRun:        dryRun,
+		RepoExists: func(ctx context.Context, repo string) (bool, error) {
+			_, err := cat.GetRepository(ctx, repo)
 			if errors.Is(err, graveler.ErrNotFound) {
 				return false, nil
 			}
 			return err == nil, err
 		},
 		ListXorbs: func(ctx context.Context) ([]xetgc.XorbRef, error) {
-			storageURI, err := url.Parse(strings.TrimRight(storageNamespace, "/"))
+			storageURI, err := xetstore.XorbWalkURI(cfg)
 			if err != nil {
 				return nil, err
 			}
 			walker, err := blockAdapter.GetWalker(config.SingleBlockstoreID, block.WalkerOptions{StorageURI: storageURI})
-			if errors.Is(err, block.ErrOperationNotSupported) {
-				return nil, nil
-			}
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("list xorbs in %s: %w", storageNamespace, err)
 			}
 			return xetgc.ListXorbsFromWalker(ctx, walker, storageURI)
 		},
+		RemoveXorb:   xorbs.Remove,
+		StoredFooter: xorbs.StoredFooter,
 	})
 }
 
 //nolint:gochecknoinits
 func init() {
-	gcXETCmd.Flags().Bool("dry-run", false, "report XET garbage without deleting it")
+	gcXETCmd.Flags().Bool("dry-run", false, "report what a run would do without changing anything")
 	gcCmd.AddCommand(gcXETCmd)
 }

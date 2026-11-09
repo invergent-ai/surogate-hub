@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,6 +20,7 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/invergent-ai/surogate-hub/pkg/auth"
 	"github.com/invergent-ai/surogate-hub/pkg/auth/model"
+	"github.com/invergent-ai/surogate-hub/pkg/block"
 	"github.com/invergent-ai/surogate-hub/pkg/block/mem"
 	"github.com/invergent-ai/surogate-hub/pkg/kv"
 	"github.com/invergent-ai/surogate-hub/pkg/kv/kvtest"
@@ -699,4 +701,102 @@ func TestReconstructFileRangeStreamsChunkRunsAcrossXorbs(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, "ld!!ta", string(got))
+}
+
+func newGCTestHandler(t *testing.T) (context.Context, *xetstore.Registry, *mem.Adapter, http.Handler) {
+	t.Helper()
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	adapter := mem.New(ctx)
+	return ctx, registry, adapter, NewHandler(registry, WithXorbStore(NewXorbStore(adapter, "mem://xet-cas")), WithProxyGrantKey([]byte("test-proxy-grant-key")))
+}
+
+func TestPostXorbRestoresParkedFooter(t *testing.T) {
+	ctx, registry, _, handler := newGCTestHandler(t)
+	xorbHash, xorbBytes := xettest.SerializedXorb(t, []byte("hello world!"))
+	postTestXorb(t, handler, xorbHash, xorbBytes)
+	_, err := registry.Park(ctx, xetstore.ParkedXorb, xorbHash, time.Now())
+	require.NoError(t, err)
+
+	postTestXorb(t, handler, xorbHash, xorbBytes)
+
+	_, err = registry.GetXorbInfo(ctx, xorbHash)
+	require.NoError(t, err)
+	parked, err := registry.ListParked(ctx, xetstore.ParkedXorb, 0)
+	require.NoError(t, err)
+	require.Empty(t, parked)
+}
+
+func TestPostXorbAnswers503WhileDeleting(t *testing.T) {
+	ctx, registry, _, handler := newGCTestHandler(t)
+	xorbHash, xorbBytes := xettest.SerializedXorb(t, []byte("hello world!"))
+	postTestXorb(t, handler, xorbHash, xorbBytes)
+	_, err := registry.Park(ctx, xetstore.ParkedXorb, xorbHash, time.Now())
+	require.NoError(t, err)
+	_, err = registry.DeleteParked(ctx, xetstore.ParkedXorb, xorbHash, func() error { return errors.New("stop after marking deleting") })
+	require.Error(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/xorbs/default/"+xorbHash, bytes.NewReader(xorbBytes))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusServiceUnavailable, rec.Code)
+}
+
+func TestPostXorbClaimsOrphanObject(t *testing.T) {
+	ctx, registry, adapter, handler := newGCTestHandler(t)
+	xorbHash, xorbBytes := xettest.SerializedXorb(t, []byte("hello world!"))
+	_, err := adapter.Put(ctx, xetstore.XorbObjectPointer("mem://xet-cas", "default", xorbHash), int64(len(xorbBytes)), bytes.NewReader(xorbBytes), block.PutOpts{})
+	require.NoError(t, err)
+
+	postTestXorb(t, handler, xorbHash, xorbBytes)
+
+	_, err = registry.GetXorbInfo(ctx, xorbHash)
+	require.NoError(t, err)
+}
+
+func TestPostShardRestoresParkedFooter(t *testing.T) {
+	ctx, registry, _, handler := newGCTestHandler(t)
+	chunk := []byte("hello world!")
+	xorbHash, xorbBytes := xettest.SerializedXorb(t, chunk)
+	postTestXorb(t, handler, xorbHash, xorbBytes)
+	_, err := registry.Park(ctx, xetstore.ParkedXorb, xorbHash, time.Now())
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewReader(xettest.Shard(t, xettest.FileHash(t, chunk), xorbHash, 0, 1, 12)))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	require.Equalf(t, http.StatusOK, rec.Code, "body: %s", rec.Body.String())
+	require.JSONEq(t, `{"result":1}`, rec.Body.String())
+}
+
+func TestReadRestoresParkedFileAndFooter(t *testing.T) {
+	ctx, registry, adapter, handler := newGCTestHandler(t)
+	chunk := []byte("hello world!")
+	fileHash, xorbHash, _ := xettest.SeedFile(t, ctx, registry, adapter, "mem://xet-cas", chunk)
+	park := func() {
+		_, err := registry.Park(ctx, xetstore.ParkedFile, fileHash, time.Now())
+		require.NoError(t, err)
+		_, err = registry.Park(ctx, xetstore.ParkedXorb, xorbHash, time.Now())
+		require.NoError(t, err)
+	}
+
+	park()
+	reader, err := ReconstructFileRange(ctx, registry, NewXorbStore(adapter, "mem://xet-cas"), fileHash, reconstruct.ByteRange{Start: 0, End: 12})
+	require.NoError(t, err)
+	got, err := io.ReadAll(reader)
+	require.NoError(t, err)
+	require.Equal(t, chunk, got)
+
+	park()
+	req := httptest.NewRequest(http.MethodGet, "/v2/reconstructions/"+fileHash, nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	require.Equalf(t, http.StatusOK, rec.Code, "body: %s", rec.Body.String())
+
+	_, err = registry.GetFile(ctx, fileHash)
+	require.NoError(t, err)
+	_, err = registry.GetXorbInfo(ctx, xorbHash)
+	require.NoError(t, err)
 }
