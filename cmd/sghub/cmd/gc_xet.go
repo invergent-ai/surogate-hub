@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
-	"strings"
 
 	blockfactory "github.com/invergent-ai/surogate-hub/modules/block/factory"
 	"github.com/invergent-ai/surogate-hub/pkg/block"
@@ -97,7 +95,7 @@ func runXETGC(ctx context.Context, cfg config.Config, dryRun bool) (xetgc.Report
 			return err == nil, err
 		},
 		ListXorbs: func(ctx context.Context) ([]xetgc.XorbRef, error) {
-			storageURI, err := url.Parse(strings.TrimRight(storageNamespace, "/"))
+			storageURI, err := xetstore.XorbWalkURI(cfg)
 			if err != nil {
 				return nil, err
 			}
