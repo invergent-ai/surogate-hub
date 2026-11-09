@@ -48,5 +48,5 @@ func TestXorbWalkURI(t *testing.T) {
 	require.NoError(t, err)
 	uri, err = XorbWalkURI(cfg)
 	require.NoError(t, err)
-	require.Equal(t, "s3://bucket/hub/_hub_xet", uri.String())
+	require.Equal(t, "s3://bucket/hub/_hub_xet/", uri.String())
 }
