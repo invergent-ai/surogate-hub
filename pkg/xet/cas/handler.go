@@ -216,7 +216,10 @@ func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := h.recordXorbInfo(r.Context(), hash, result.WasInserted, data[footerStart:]); err != nil {
+	if err := h.recordXorbInfo(r.Context(), hash, result.WasInserted, data[footerStart:]); errors.Is(err, errXorbBeingDeleted) {
+		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+		return
+	} else if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -225,22 +228,31 @@ func (h *Handler) postXorb(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(putXorbResponse{WasInserted: result.WasInserted})
 }
 
+// errXorbBeingDeleted means xet GC is deleting the stored xorb; the client retries.
+var errXorbBeingDeleted = errors.New("xorb is being garbage collected, retry the upload")
+
 // recordXorbInfo stores the footer that describes the stored xorb. A re-upload
 // may be compressed differently, so it never replaces the footer of the bytes
-// already stored; that footer is read back from the object only when missing.
-// ponytail: two concurrent first uploads with different layouts can still race
-// (Put is check-then-write); a conditional Put closes it if that ever matters.
+// already stored: a missing footer is brought back from xet GC's parked key or,
+// failing that, read back from the stored object.
 func (h *Handler) recordXorbInfo(ctx context.Context, hash string, inserted bool, footer []byte) error {
-	if !inserted {
-		_, err := h.registry.GetXorbInfo(ctx, hash)
-		if !errors.Is(err, kv.ErrNotFound) {
-			return err
-		}
-		if footer, err = h.xorbs.storedFooter(ctx, hash); err != nil {
-			return err
-		}
+	if inserted {
+		return h.registry.PutXorbInfo(ctx, hash, footer)
 	}
-	return h.registry.PutXorbInfo(ctx, hash, footer)
+	_, err := h.registry.GetXorbInfo(ctx, hash)
+	if !errors.Is(err, kv.ErrNotFound) {
+		return err
+	}
+	result, err := h.registry.Restore(ctx, xetstore.ParkedXorb, hash, func() ([]byte, error) {
+		return h.xorbs.StoredFooter(ctx, hash)
+	}, true)
+	if err != nil {
+		return err
+	}
+	if result == xetstore.Deleting {
+		return errXorbBeingDeleted
+	}
+	return nil
 }
 
 // postToken mints a token for one object. hf_xet refreshes through the client,
@@ -454,7 +466,7 @@ func (h *Handler) buildReconstructionManifest(w http.ResponseWriter, r *http.Req
 			return reconstruct.Manifest{}, false
 		}
 	}
-	file, err := h.registry.GetFile(r.Context(), fileHash)
+	file, err := h.registry.GetFileRestoring(r.Context(), fileHash)
 	if errors.Is(err, kv.ErrNotFound) {
 		http.NotFound(w, r)
 		return reconstruct.Manifest{}, false
@@ -468,7 +480,7 @@ func (h *Handler) buildReconstructionManifest(w http.ResponseWriter, r *http.Req
 		http.Error(w, err.Error(), http.StatusRequestedRangeNotSatisfiable)
 		return reconstruct.Manifest{}, false
 	}
-	infos, err := xorbInfos(r.Context(), h.registry, file.Segments)
+	infos, err := xorbInfos(r.Context(), h.registry, h.xorbs, file.Segments)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return reconstruct.Manifest{}, false
@@ -518,7 +530,7 @@ func (h *Handler) postShard(w http.ResponseWriter, r *http.Request) {
 	for _, file := range files {
 		segments = append(segments, file.Segments...)
 	}
-	infos, err := xorbInfos(r.Context(), h.registry, segments)
+	infos, err := xorbInfos(r.Context(), h.registry, h.xorbs, segments)
 	if errors.Is(err, kv.ErrNotFound) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

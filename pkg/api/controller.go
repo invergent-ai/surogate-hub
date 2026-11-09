@@ -823,7 +823,7 @@ func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request,
 			writeError(w, r, http.StatusBadRequest, "xet physical address is missing file hash")
 			return
 		}
-		file, err := xetRegistry.GetFile(ctx, xetFileHash)
+		file, err := xetRegistry.GetFileRestoring(ctx, xetFileHash)
 		if errors.Is(err, kv.ErrNotFound) {
 			writeError(w, r, http.StatusNotFound, "xet file not found")
 			return

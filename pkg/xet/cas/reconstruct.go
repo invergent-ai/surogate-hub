@@ -15,11 +15,11 @@ func ReconstructFileRange(ctx context.Context, registry *xetstore.Registry, xorb
 	if xorbs == nil {
 		return nil, fmt.Errorf("xorb store is not configured")
 	}
-	file, err := registry.GetFile(ctx, fileHash)
+	file, err := registry.GetFileRestoring(ctx, fileHash)
 	if err != nil {
 		return nil, err
 	}
-	infos, err := xorbInfos(ctx, registry, file.Segments)
+	infos, err := xorbInfos(ctx, registry, xorbs, file.Segments)
 	if err != nil {
 		return nil, err
 	}
@@ -75,14 +75,20 @@ func writeTermRun(ctx context.Context, xorbs *XorbStore, info parsedXorbInfo, te
 	return nil
 }
 
-// xorbInfos loads the stored footer of every xorb the segments reference.
-func xorbInfos(ctx context.Context, registry *xetstore.Registry, segments []xetstore.ShardFileSegment) (map[string]parsedXorbInfo, error) {
+// xorbInfos loads the stored footer of every xorb the segments reference,
+// bringing back footers xet GC parked.
+func xorbInfos(ctx context.Context, registry *xetstore.Registry, xorbs *XorbStore, segments []xetstore.ShardFileSegment) (map[string]parsedXorbInfo, error) {
 	infos := make(map[string]parsedXorbInfo)
 	for _, segment := range segments {
 		if _, ok := infos[segment.XorbHash]; ok {
 			continue
 		}
-		footer, err := registry.GetXorbInfo(ctx, segment.XorbHash)
+		var rebuild func() ([]byte, error)
+		if xorbs != nil {
+			hash := segment.XorbHash
+			rebuild = func() ([]byte, error) { return xorbs.StoredFooter(ctx, hash) }
+		}
+		footer, err := registry.GetXorbInfoRestoring(ctx, segment.XorbHash, rebuild)
 		if err != nil {
 			return nil, fmt.Errorf("xorb %s: %w", segment.XorbHash, err)
 		}

@@ -43,8 +43,8 @@ func (s *XorbStore) Get(ctx context.Context, hash string) (io.ReadCloser, error)
 	return s.adapter.Get(ctx, s.objectPointer(hash))
 }
 
-// storedFooter returns the footer of the stored xorb.
-func (s *XorbStore) storedFooter(ctx context.Context, hash string) ([]byte, error) {
+// StoredFooter returns the footer of the stored xorb.
+func (s *XorbStore) StoredFooter(ctx context.Context, hash string) ([]byte, error) {
 	reader, err := s.Get(ctx, hash)
 	if err != nil {
 		return nil, err
