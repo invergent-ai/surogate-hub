@@ -33,7 +33,7 @@ cors:
 xet:
   verify:
     max_concurrent: 0
-  read:
-    capability_scan_batch_size: 32
   gc:
     min_age: 24h
+    xorb_min_age: 168h
+    scan_batch_size: 1000
