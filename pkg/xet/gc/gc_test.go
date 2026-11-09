@@ -2,6 +2,7 @@ package gc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -324,4 +325,44 @@ func kvSnapshot(t *testing.T, f *fixture) map[string]string {
 		out[string(iter.Entry().Key)] = string(iter.Entry().Value)
 	}
 	return out
+}
+
+func setParkedState(t *testing.T, f *fixture, kind xetstore.ParkedKind, hash string, p xetstore.Parked) {
+	t.Helper()
+	data, err := json.Marshal(p)
+	require.NoError(t, err)
+	require.NoError(t, f.store.Set(f.ctx, []byte(xetstore.Partition), []byte("xet/gc/"+string(kind)+"/"+hash), data))
+}
+
+func TestSweepKeepsXorbFinishedFromRestoringOutOfOrphans(t *testing.T) {
+	f := newFixture(t)
+	f.objects = append(f.objects, XorbRef{Prefix: "default", Hash: "xorb-a", Size: 100, Mtime: oldTime})
+	setParkedState(t, f, xetstore.ParkedXorb, "xorb-a", xetstore.Parked{State: xetstore.StateRestoring, ParkedAt: oldTime.Unix(), Data: []byte("footer")})
+
+	report := f.sweep(t)
+
+	// Unused with an old object, it is parked again in the same run — with its
+	// footer, not as a data-less orphan next to a live footer.
+	require.Equal(t, []string{"xorb-a"}, hashes(report.Finished))
+	require.Empty(t, report.OrphansParked)
+	require.Equal(t, []string{"xorb-a"}, hashes(report.XorbsParked))
+	parked, err := f.registry.ListParked(f.ctx, xetstore.ParkedXorb, 0)
+	require.NoError(t, err)
+	require.Equal(t, []byte("footer"), parked["xorb-a"].Data)
+}
+
+func TestSweepCountsFileFinishedFromRestoringAsLive(t *testing.T) {
+	f := newFixture(t)
+	f.xorb(t, "xorb-a", oldTime)
+	record, err := json.Marshal(xetstore.ShardFileInfo{FileHash: "file-a", SizeBytes: 5, RegisteredAt: oldTime.Unix(),
+		Segments: []xetstore.ShardFileSegment{{XorbHash: "xorb-a", SizeBytes: 5, ChunkIndexEnd: 1}}})
+	require.NoError(t, err)
+	setParkedState(t, f, xetstore.ParkedFile, "file-a", xetstore.Parked{State: xetstore.StateRestoring, ParkedAt: oldTime.Unix(), Data: record})
+	f.hold(t, "o/r", "file-a")
+
+	report := f.sweep(t)
+
+	require.Empty(t, report.XorbsParked)
+	requireLiveFile(t, f, "file-a", true)
+	requireLiveFooter(t, f, "xorb-a", true)
 }

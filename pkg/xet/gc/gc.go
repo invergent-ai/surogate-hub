@@ -98,6 +98,8 @@ type snapshot struct {
 	files       []xetstore.ShardFileInfo
 	footers     map[string]struct{}
 	objects     map[string]XorbRef
+	// finishedXorbs are xorbs whose interrupted delete this run completed.
+	finishedXorbs map[string]struct{}
 }
 
 func (s *sweep) run(ctx context.Context) error {
@@ -109,8 +111,8 @@ func (s *sweep) run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	s.finishInterrupted(ctx, snap)
-	live := s.files(ctx, snap)
+	restored := s.finishInterrupted(ctx, snap)
+	live := append(s.files(ctx, snap), restored...)
 	s.xorbs(ctx, snap, usedXorbs(live))
 	return nil
 }
@@ -146,7 +148,7 @@ func (s *sweep) refs(ctx context.Context) (map[string]struct{}, error) {
 }
 
 func (s *sweep) list(ctx context.Context, held map[string]struct{}) (snapshot, error) {
-	snap := snapshot{held: held, footers: make(map[string]struct{}), objects: make(map[string]XorbRef)}
+	snap := snapshot{held: held, footers: make(map[string]struct{}), objects: make(map[string]XorbRef), finishedXorbs: make(map[string]struct{})}
 	var err error
 	if snap.parkedFiles, err = s.params.Registry.ListParked(ctx, xetstore.ParkedFile, s.params.ScanBatchSize); err != nil {
 		return snapshot{}, fmt.Errorf("list parked files: %w", err)
@@ -177,8 +179,11 @@ func (s *sweep) list(ctx context.Context, held map[string]struct{}) (snapshot, e
 }
 
 // finishInterrupted completes parked keys a previous run or request left
-// mid-restore or mid-delete, and drops them from the snapshot.
-func (s *sweep) finishInterrupted(ctx context.Context, snap snapshot) {
+// mid-restore or mid-delete and drops them from the parked sets. Restored xorbs
+// join the footers and restored files are returned as live, so the rest of the
+// run treats them as it would any live record.
+func (s *sweep) finishInterrupted(ctx context.Context, snap snapshot) []xetstore.ShardFileInfo {
+	var restoredFiles []xetstore.ShardFileInfo
 	for _, kind := range []xetstore.ParkedKind{xetstore.ParkedFile, xetstore.ParkedXorb} {
 		parked := snap.parkedFiles
 		if kind == xetstore.ParkedXorb {
@@ -188,12 +193,25 @@ func (s *sweep) finishInterrupted(ctx context.Context, snap snapshot) {
 			p := parked[hash]
 			switch p.State {
 			case xetstore.StateRestoring:
-				if s.restore(ctx, kind, hash) {
-					s.report.Finished = append(s.report.Finished, Item{Hash: hash})
+				if !s.restore(ctx, kind, hash) {
+					continue
+				}
+				s.report.Finished = append(s.report.Finished, Item{Hash: hash})
+				if kind == xetstore.ParkedXorb {
+					snap.footers[hash] = struct{}{}
+				} else {
+					var file xetstore.ShardFileInfo
+					if err := json.Unmarshal(p.Data, &file); err == nil {
+						restoredFiles = append(restoredFiles, file)
+					}
 				}
 			case xetstore.StateDeleting, xetstore.StateRemoved:
-				if s.delete(ctx, kind, hash) {
-					s.report.Finished = append(s.report.Finished, Item{Hash: hash, Bytes: snap.objects[hash].Size})
+				if !s.delete(ctx, kind, hash) {
+					continue
+				}
+				s.report.Finished = append(s.report.Finished, Item{Hash: hash, Bytes: snap.objects[hash].Size})
+				if kind == xetstore.ParkedXorb {
+					snap.finishedXorbs[hash] = struct{}{}
 				}
 			default:
 				continue
@@ -201,6 +219,7 @@ func (s *sweep) finishInterrupted(ctx context.Context, snap snapshot) {
 			delete(parked, hash)
 		}
 	}
+	return restoredFiles
 }
 
 // files restores parked files that are held again, deletes those parked long
@@ -265,8 +284,9 @@ func (s *sweep) xorbs(ctx context.Context, snap snapshot, used map[string]struct
 		object := snap.objects[hash]
 		_, hasFooter := snap.footers[hash]
 		_, isParked := snap.parkedXorbs[hash]
+		_, finished := snap.finishedXorbs[hash]
 		_, inUse := used[hash]
-		if hasFooter || isParked || inUse || !s.olderThan(object.Mtime, s.params.FileMinAge) {
+		if hasFooter || isParked || finished || inUse || !s.olderThan(object.Mtime, s.params.FileMinAge) {
 			continue
 		}
 		if s.parkOrphan(ctx, hash) {
