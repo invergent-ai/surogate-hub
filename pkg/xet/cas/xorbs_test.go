@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/invergent-ai/surogate-hub/pkg/block/local"
 	"github.com/invergent-ai/surogate-hub/pkg/block/mem"
 	"github.com/stretchr/testify/require"
 )
@@ -28,4 +29,16 @@ func TestXorbStorePutIsIdempotentAndStoresBytes(t *testing.T) {
 	body, err := io.ReadAll(reader)
 	require.NoError(t, err)
 	require.Equal(t, []byte("xorb-bytes"), body)
+}
+
+func TestXorbStoreRemoveIsIdempotent(t *testing.T) {
+	ctx := context.Background()
+	adapter, err := local.NewAdapter(t.TempDir())
+	require.NoError(t, err)
+	store := NewXorbStore(adapter, "local://_hub_xet")
+	_, err = store.Put(ctx, "xorb-a", int64(len("xorb-bytes")), strings.NewReader("xorb-bytes"))
+	require.NoError(t, err)
+
+	require.NoError(t, store.Remove(ctx, "xorb-a"))
+	require.NoError(t, store.Remove(ctx, "xorb-a"))
 }

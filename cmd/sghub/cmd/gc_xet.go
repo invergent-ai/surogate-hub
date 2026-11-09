@@ -105,9 +105,7 @@ func runXETGC(ctx context.Context, cfg config.Config, dryRun bool) (xetgc.Report
 			}
 			return xetgc.ListXorbsFromWalker(ctx, walker, storageURI)
 		},
-		RemoveXorb: func(ctx context.Context, hash string) error {
-			return blockAdapter.Remove(ctx, xetstore.XorbObjectPointer(storageNamespace, "default", hash))
-		},
+		RemoveXorb:   xorbs.Remove,
 		StoredFooter: xorbs.StoredFooter,
 	})
 }
