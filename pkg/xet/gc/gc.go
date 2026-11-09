@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
 	"time"
 
 	xetstore "github.com/invergent-ai/surogate-hub/pkg/xet/store"
@@ -182,7 +184,8 @@ func (s *sweep) finishInterrupted(ctx context.Context, snap snapshot) {
 		if kind == xetstore.ParkedXorb {
 			parked = snap.parkedXorbs
 		}
-		for hash, p := range parked {
+		for _, hash := range sortedKeys(parked) {
+			p := parked[hash]
 			switch p.State {
 			case xetstore.StateRestoring:
 				if s.restore(ctx, kind, hash) {
@@ -204,7 +207,8 @@ func (s *sweep) finishInterrupted(ctx context.Context, snap snapshot) {
 // enough, parks old unheld ones, and returns the file records live after that.
 func (s *sweep) files(ctx context.Context, snap snapshot) []xetstore.ShardFileInfo {
 	var live []xetstore.ShardFileInfo
-	for hash, p := range snap.parkedFiles {
+	for _, hash := range sortedKeys(snap.parkedFiles) {
+		p := snap.parkedFiles[hash]
 		var file xetstore.ShardFileInfo
 		if err := json.Unmarshal(p.Data, &file); err != nil {
 			s.fail("decode parked file %s: %v", hash, err)
@@ -236,7 +240,8 @@ func (s *sweep) files(ctx context.Context, snap snapshot) []xetstore.ShardFileIn
 // enough, parks unused ones whose object is old, and parks old objects that
 // have no footer at all.
 func (s *sweep) xorbs(ctx context.Context, snap snapshot, used map[string]struct{}) {
-	for hash, p := range snap.parkedXorbs {
+	for _, hash := range sortedKeys(snap.parkedXorbs) {
+		p := snap.parkedXorbs[hash]
 		if _, ok := used[hash]; ok {
 			if s.restore(ctx, xetstore.ParkedXorb, hash) {
 				s.report.XorbsRestored = append(s.report.XorbsRestored, Item{Hash: hash, Bytes: snap.objects[hash].Size})
@@ -247,7 +252,7 @@ func (s *sweep) xorbs(ctx context.Context, snap snapshot, used map[string]struct
 			s.report.XorbsDeleted = append(s.report.XorbsDeleted, Item{Hash: hash, Bytes: snap.objects[hash].Size})
 		}
 	}
-	for hash := range snap.footers {
+	for _, hash := range sortedKeys(snap.footers) {
 		object, ok := snap.objects[hash]
 		if _, inUse := used[hash]; inUse || !ok || !s.olderThan(object.Mtime, s.params.FileMinAge) {
 			continue
@@ -256,7 +261,8 @@ func (s *sweep) xorbs(ctx context.Context, snap snapshot, used map[string]struct
 			s.report.XorbsParked = append(s.report.XorbsParked, Item{Hash: hash, Bytes: object.Size})
 		}
 	}
-	for hash, object := range snap.objects {
+	for _, hash := range sortedKeys(snap.objects) {
+		object := snap.objects[hash]
 		_, hasFooter := snap.footers[hash]
 		_, isParked := snap.parkedXorbs[hash]
 		_, inUse := used[hash]
@@ -330,6 +336,11 @@ func (s *sweep) olderThan(t time.Time, age time.Duration) bool {
 
 func (s *sweep) fail(format string, args ...any) {
 	s.report.Errors = append(s.report.Errors, fmt.Sprintf(format, args...))
+}
+
+// sortedKeys keeps the report, and the order of work, the same from run to run.
+func sortedKeys[V any](m map[string]V) []string {
+	return slices.Sorted(maps.Keys(m))
 }
 
 func usedXorbs(files []xetstore.ShardFileInfo) map[string]struct{} {
