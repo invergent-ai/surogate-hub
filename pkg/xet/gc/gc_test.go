@@ -153,7 +153,10 @@ func TestSweepParksUnheldOldFilesOnly(t *testing.T) {
 	f.hold(t, "o/r", "file-held")
 	f.file(t, "file-young", "xorb-2", young)
 	f.file(t, "file-old", "xorb-3", oldTime)
-	f.file(t, "file-legacy", "xorb-4", time.Unix(0, 0))
+	// Stored before registered_at existed: RegisterFile would stamp one, so write it directly.
+	require.NoError(t, f.store.Set(f.ctx, []byte(xetstore.Partition), []byte("xet/file/file-legacy"),
+		[]byte(`{"file_hash":"file-legacy","size_bytes":5,"segments":[{"xorb_hash":"xorb-4","size_bytes":5,"chunk_index_start":0,"chunk_index_end":1}]}`)))
+	f.xorb(t, "xorb-4", oldTime)
 
 	report := f.sweep(t)
 
