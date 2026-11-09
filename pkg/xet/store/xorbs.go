@@ -55,6 +55,10 @@ func XorbWalkURI(cfg config.Config) (*url.URL, error) {
 		return nil, err
 	}
 	if uri.Scheme != block.BlockstoreTypeLocal {
+		// Object-store walkers list by key prefix and return keys relative to the
+		// last "/" in it: without the trailing slash the keys keep "_hub_xet/" and
+		// the prefix also matches sibling folders.
+		uri.Path += "/"
 		return uri, nil
 	}
 	local, err := cfg.StorageConfig().GetStorageByID(config.SingleBlockstoreID).BlockstoreLocalParams()
