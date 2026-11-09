@@ -27,6 +27,9 @@ const (
 	StateParked    ParkedState = "parked"
 	StateRestoring ParkedState = "restoring"
 	StateDeleting  ParkedState = "deleting"
+	// StateRemoved records that the object is gone, so a delete resumed after a
+	// crash never removes an object that was uploaded again since.
+	StateRemoved ParkedState = "removed"
 )
 
 // Parked is a live file record or xorb footer moved aside by xet GC. Data is
@@ -110,7 +113,7 @@ func (r *Registry) Restore(ctx context.Context, kind ParkedKind, hash string, re
 			return NotParked, err
 		}
 		switch p.State {
-		case StateDeleting:
+		case StateDeleting, StateRemoved:
 			return Deleting, nil
 		case StateRestoring:
 			return r.finishRestore(ctx, kind, hash, p, rebuild)
@@ -153,11 +156,31 @@ func (r *Registry) DeleteParked(ctx context.Context, kind ParkedKind, hash strin
 			return false, err
 		}
 	case StateDeleting:
+	case StateRemoved:
+		removeObject = nil
 	default:
 		return false, nil
 	}
+	if removeObject != nil && kind == ParkedXorb {
+		// A live footer next to a deleting key comes from an upload made after
+		// the object was removed: that object is new and must stay.
+		_, err := r.store.Get(ctx, []byte(Partition), liveKey(kind, hash))
+		if err == nil {
+			removeObject = nil
+		} else if !errors.Is(err, kv.ErrNotFound) {
+			return false, err
+		}
+	}
 	if removeObject != nil {
 		if err := removeObject(); err != nil {
+			return false, err
+		}
+		p.State = StateRemoved
+		data, err := json.Marshal(p)
+		if err != nil {
+			return false, err
+		}
+		if err := r.store.Set(ctx, []byte(Partition), parkedKey(kind, hash), data); err != nil {
 			return false, err
 		}
 	}

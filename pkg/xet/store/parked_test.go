@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -243,4 +244,58 @@ func TestGCLockTakesOverExpiredLock(t *testing.T) {
 	require.NoError(t, release(ctx))
 	_, err = registry.AcquireGCLock(ctx, parkedNow.Add(62*time.Minute), time.Hour)
 	require.NoError(t, err)
+}
+
+func TestResumedDeleteKeepsReuploadedXorb(t *testing.T) {
+	ctx := context.Background()
+	store := kvtest.GetStore(ctx, t)
+	registry := NewRegistry(store)
+	setParked(t, store, ParkedXorb, "xorb-a", Parked{State: StateDeleting, ParkedAt: parkedNow.Unix(), Data: []byte("old")})
+	require.NoError(t, registry.PutXorbInfo(ctx, "xorb-a", []byte("reuploaded")))
+
+	deleted, err := registry.DeleteParked(ctx, ParkedXorb, "xorb-a", func() error {
+		t.Fatal("must not remove a xorb that was uploaded again")
+		return nil
+	})
+
+	require.NoError(t, err)
+	require.True(t, deleted)
+	requireNotParked(t, registry, ParkedXorb, "xorb-a")
+	footer, err := registry.GetXorbInfo(ctx, "xorb-a")
+	require.NoError(t, err)
+	require.Equal(t, []byte("reuploaded"), footer)
+}
+
+// failParkedDelete fails deletes of parked keys, as a run killed after removing an object would.
+type failParkedDelete struct {
+	kv.Store
+	fail bool
+}
+
+func (s *failParkedDelete) Delete(ctx context.Context, partitionKey, key []byte) error {
+	if s.fail && strings.HasPrefix(string(key), "xet/gc/") {
+		return errors.New("killed")
+	}
+	return s.Store.Delete(ctx, partitionKey, key)
+}
+
+func TestDeleteParkedNeverRemovesAnObjectTwice(t *testing.T) {
+	ctx := context.Background()
+	store := &failParkedDelete{Store: kvtest.GetStore(ctx, t), fail: true}
+	registry := NewRegistry(store)
+	require.NoError(t, registry.PutXorbInfo(ctx, "xorb-a", []byte("footer")))
+	_, err := registry.Park(ctx, ParkedXorb, "xorb-a", parkedNow)
+	require.NoError(t, err)
+	removed := 0
+	remove := func() error { removed++; return nil }
+
+	_, err = registry.DeleteParked(ctx, ParkedXorb, "xorb-a", remove)
+	require.Error(t, err)
+	store.fail = false
+	deleted, err := registry.DeleteParked(ctx, ParkedXorb, "xorb-a", remove)
+
+	require.NoError(t, err)
+	require.True(t, deleted)
+	require.Equal(t, 1, removed)
+	requireNotParked(t, registry, ParkedXorb, "xorb-a")
 }

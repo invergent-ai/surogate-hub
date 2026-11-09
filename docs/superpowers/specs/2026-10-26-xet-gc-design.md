@@ -94,7 +94,10 @@ scope.
   `SetIf` fails, a request is restoring it: skip.
 - A parked xorb key without `data` (an orphan object, step 9) is restored by rebuilding the
   footer from the stored object, as `postXorb` already does today.
-- A crash leaves a parked key in `restoring` or `deleting`. The next run finishes it: for
+- After the object is removed, the parked key moves to `removed` before it is deleted, so a
+  delete resumed after a crash never removes an object again; and a resumed delete of a xorb
+  that has a live footer (uploaded again after its object was removed) keeps the object.
+- A crash leaves a parked key in `restoring`, `deleting` or `removed`. The next run finishes it: for
   `restoring`, write the live key from `data` if absent and delete the parked key; for
   `deleting`, delete the object (idempotent) and the parked key.
 

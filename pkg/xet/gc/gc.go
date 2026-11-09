@@ -191,7 +191,7 @@ func (s *sweep) finishInterrupted(ctx context.Context, snap snapshot) {
 				if s.restore(ctx, kind, hash) {
 					s.report.Finished = append(s.report.Finished, Item{Hash: hash})
 				}
-			case xetstore.StateDeleting:
+			case xetstore.StateDeleting, xetstore.StateRemoved:
 				if s.delete(ctx, kind, hash) {
 					s.report.Finished = append(s.report.Finished, Item{Hash: hash, Bytes: snap.objects[hash].Size})
 				}
