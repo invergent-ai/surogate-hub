@@ -6770,6 +6770,7 @@ func writeAPIThreeByteLE(b *bytes.Buffer, value uint32) {
 }
 
 func TestController_LinkXETRestoresParkedFile(t *testing.T) {
+	viper.Set(config.BlockstoreTypeKey, block.BlockstoreTypeMem)
 	clt, deps := setupClientWithAdmin(t)
 	ctx := context.Background()
 	repo := testUniqueRepoName()
