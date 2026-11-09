@@ -39,6 +39,9 @@ type ShardFileInfo struct {
 	FileHash  string             `json:"file_hash"`
 	SizeBytes uint64             `json:"size_bytes"`
 	Segments  []ShardFileSegment `json:"segments,omitempty"`
+	// RegisteredAt is when the record was stored (Unix seconds); zero in parsed
+	// shards and in records stored before it existed.
+	RegisteredAt int64 `json:"registered_at,omitempty"`
 }
 
 type ShardFileSegment struct {

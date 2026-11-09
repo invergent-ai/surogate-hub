@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/invergent-ai/surogate-hub/pkg/kv"
 )
@@ -34,6 +35,9 @@ func NewRegistry(store kv.Store) *Registry {
 // RegisterFile stores a verified file record. Records are content-addressed, so
 // the first one for a hash wins and later uploads of the same file are no-ops.
 func (r *Registry) RegisterFile(ctx context.Context, file ShardFileInfo) (bool, error) {
+	if file.RegisteredAt == 0 {
+		file.RegisteredAt = time.Now().Unix()
+	}
 	data, err := json.Marshal(file)
 	if err != nil {
 		return false, err
@@ -60,31 +64,26 @@ func (r *Registry) GetFile(ctx context.Context, fileHash string) (ShardFileInfo,
 	return file, nil
 }
 
-func (r *Registry) ListFileHashes(ctx context.Context, batchSize int) ([]string, error) {
-	prefix := "xet/file/"
-	iter, err := r.store.Scan(ctx, []byte(Partition), kv.ScanOptions{
-		KeyStart:  []byte(prefix),
-		BatchSize: batchSize,
+func (r *Registry) ListFiles(ctx context.Context, batchSize int) ([]ShardFileInfo, error) {
+	var files []ShardFileInfo
+	err := r.scanPrefix(ctx, "xet/file/", batchSize, func(hash string, value []byte) error {
+		var file ShardFileInfo
+		if err := json.Unmarshal(value, &file); err != nil {
+			return fmt.Errorf("decode xet file %s: %w", hash, err)
+		}
+		files = append(files, file)
+		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	defer iter.Close()
+	return files, err
+}
 
+func (r *Registry) ListXorbFooterHashes(ctx context.Context, batchSize int) ([]string, error) {
 	var hashes []string
-	for iter.Next() {
-		key := string(iter.Entry().Key)
-		if !strings.HasPrefix(key, prefix) {
-			break
-		}
-		if hash := strings.TrimPrefix(key, prefix); hash != "" {
-			hashes = append(hashes, hash)
-		}
-	}
-	if err := iter.Err(); err != nil && !errors.Is(err, kv.ErrClosedEntries) {
-		return nil, err
-	}
-	return hashes, nil
+	err := r.scanPrefix(ctx, "xet/xorb/", batchSize, func(hash string, _ []byte) error {
+		hashes = append(hashes, hash)
+		return nil
+	})
+	return hashes, err
 }
 
 // PutXorbInfo stores a verified xorb's footer: its chunk hashes, compressed
@@ -149,6 +148,10 @@ func (r *Registry) DeleteRepoFileRefs(ctx context.Context, repo string) error {
 	return nil
 }
 
+func (r *Registry) DeleteFileRef(ctx context.Context, ref FileRef) error {
+	return r.store.Delete(ctx, []byte(Partition), fileRefKey(ref.Repo, ref.FileHash))
+}
+
 func (r *Registry) ListAllFileRefs(ctx context.Context, batchSize int) ([]FileRef, error) {
 	return r.scanFileRefs(ctx, fileRefsPrefix, batchSize)
 }
@@ -184,6 +187,35 @@ func (r *Registry) scanFileRefs(ctx context.Context, prefix string, batchSize in
 		return nil, err
 	}
 	return refs, nil
+}
+
+// scanPrefix calls fn with the rest of the key and the value of every key under prefix.
+func (r *Registry) scanPrefix(ctx context.Context, prefix string, batchSize int, fn func(rest string, value []byte) error) error {
+	iter, err := r.store.Scan(ctx, []byte(Partition), kv.ScanOptions{
+		KeyStart:  []byte(prefix),
+		BatchSize: batchSize,
+	})
+	if err != nil {
+		return err
+	}
+	defer iter.Close()
+	for iter.Next() {
+		entry := iter.Entry()
+		rest, ok := strings.CutPrefix(string(entry.Key), prefix)
+		if !ok {
+			break
+		}
+		if rest == "" {
+			continue
+		}
+		if err := fn(rest, entry.Value); err != nil {
+			return err
+		}
+	}
+	if err := iter.Err(); err != nil && !errors.Is(err, kv.ErrClosedEntries) {
+		return err
+	}
+	return nil
 }
 
 func fileKey(fileHash string) []byte {

@@ -69,13 +69,13 @@ func DryRun(ctx context.Context, params Params) (Report, error) {
 		}
 	}
 
-	files, err := params.Registry.ListFileHashes(ctx, params.ScanBatchSize)
+	files, err := params.Registry.ListFiles(ctx, params.ScanBatchSize)
 	if err != nil {
 		return Report{}, err
 	}
-	for _, fileHash := range files {
-		if _, ok := liveFileHashes[fileHash]; !ok {
-			report.StaleFiles = append(report.StaleFiles, fileHash)
+	for _, file := range files {
+		if _, ok := liveFileHashes[file.FileHash]; !ok {
+			report.StaleFiles = append(report.StaleFiles, file.FileHash)
 		}
 	}
 
