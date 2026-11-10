@@ -37,3 +37,7 @@ xet:
     min_age: 24h
     xorb_min_age: 168h
     scan_batch_size: 1000
+  # Chunk lookup scope: "owner" finds chunks of the same owner's repositories,
+  # "global" finds chunks of any repository.
+  dedup:
+    scope: owner

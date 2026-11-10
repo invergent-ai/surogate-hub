@@ -2,7 +2,6 @@ package store
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"testing"
 
@@ -146,12 +145,4 @@ func writeHash(t *testing.T, b *bytes.Buffer, value string) {
 
 func writeBookendHash(b *bytes.Buffer) {
 	b.Write(bytes.Repeat([]byte{0xff}, 32))
-}
-
-func writeU32(b *bytes.Buffer, value uint32) {
-	_ = binary.Write(b, binary.LittleEndian, value)
-}
-
-func writeU64(b *bytes.Buffer, value uint64) {
-	_ = binary.Write(b, binary.LittleEndian, value)
 }

@@ -485,6 +485,12 @@ type BaseConfig struct {
 			XorbMinAge    time.Duration `mapstructure:"xorb_min_age"`
 			ScanBatchSize int           `mapstructure:"scan_batch_size"`
 		} `mapstructure:"gc"`
+		Dedup struct {
+			// Scope of hf_xet's chunk lookup: XETDedupScopeOwner finds chunks
+			// uploaded to the same owner's repositories, XETDedupScopeGlobal
+			// finds chunks of any repository.
+			Scope string `mapstructure:"scope"`
+		} `mapstructure:"dedup"`
 	} `mapstructure:"xet"`
 	Graveler struct {
 		EnsureReadableRootNamespace bool `mapstructure:"ensure_readable_root_namespace"`
@@ -644,7 +650,23 @@ func (c *BaseConfig) Validate() error {
 	if len(missingKeys) > 0 {
 		return fmt.Errorf("%w: %v", ErrMissingRequiredKeys, missingKeys)
 	}
+	if err := c.ValidateXET(); err != nil {
+		return err
+	}
 	return ValidateBlockstore(&c.Blockstore)
+}
+
+const (
+	XETDedupScopeOwner  = "owner"
+	XETDedupScopeGlobal = "global"
+)
+
+func (c *BaseConfig) ValidateXET() error {
+	switch c.XET.Dedup.Scope {
+	case XETDedupScopeOwner, XETDedupScopeGlobal:
+		return nil
+	}
+	return fmt.Errorf("xet.dedup.scope must be %q or %q, got %q", XETDedupScopeOwner, XETDedupScopeGlobal, c.XET.Dedup.Scope)
 }
 
 const (
