@@ -146,3 +146,46 @@ func writeHash(t *testing.T, b *bytes.Buffer, value string) {
 func writeBookendHash(b *bytes.Buffer) {
 	b.Write(bytes.Repeat([]byte{0xff}, 32))
 }
+
+func TestComputeRangeHashMatchesHFShard(t *testing.T) {
+	files, err := ParseShardFiles(testFooterlessHFShard(t))
+	require.NoError(t, err)
+	require.Len(t, files[0].RangeHashes, 1)
+
+	// The shard's only xorb holds one chunk, so its chunk hash is the xorb hash.
+	got, err := ComputeRangeHash([]ShardChunkInfo{{Hash: files[0].Segments[0].XorbHash}})
+	require.NoError(t, err)
+	require.Equal(t, files[0].RangeHashes[0], got)
+}
+
+func TestVerifyFileRequiresMatchingRangeHashes(t *testing.T) {
+	chunks := []ShardChunkInfo{{Hash: ComputeDataHash([]byte("a")), SizeBytes: 1}, {Hash: ComputeDataHash([]byte("b")), SizeBytes: 1}}
+	xorbHash, err := ComputeXorbMerkleHash(chunks)
+	require.NoError(t, err)
+	fileHash, err := ComputeFileMerkleHash(chunks)
+	require.NoError(t, err)
+	rangeHash, err := ComputeRangeHash(chunks)
+	require.NoError(t, err)
+	xorbs := map[string][]ShardChunkInfo{xorbHash: chunks}
+	file := func(rangeHashes ...string) ShardFileInfo {
+		return ShardFileInfo{FileHash: fileHash, Segments: []ShardFileSegment{{XorbHash: xorbHash, ChunkIndexEnd: 2}}, RangeHashes: rangeHashes}
+	}
+
+	_, err = VerifyFile(file(rangeHash), xorbs)
+	require.NoError(t, err)
+
+	// Without verification entries a client could register a file over a xorb
+	// whose chunk hashes it never had: a whole-xorb file's hash follows from the
+	// xorb hash alone.
+	_, err = VerifyFile(file(), xorbs)
+	require.ErrorContains(t, err, "verification")
+	_, err = VerifyFile(file(ComputeDataHash([]byte("wrong"))), xorbs)
+	require.ErrorContains(t, err, "verification")
+
+	// A mismatch never echoes the hash the hub computed.
+	wrong := file(rangeHash)
+	wrong.FileHash = ComputeDataHash([]byte("other"))
+	_, err = VerifyFile(wrong, xorbs)
+	require.ErrorContains(t, err, "file hash mismatch")
+	require.NotContains(t, err.Error(), fileHash)
+}

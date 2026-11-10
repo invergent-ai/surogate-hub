@@ -114,6 +114,7 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 			xetcas.WithReconstructionCapabilityChecker(func(ctx context.Context, fileHash string, grant xetcas.TokenGrant) error {
 				return checkXETReconstructionCandidate(ctx, catalog, authService, fileHash, grant)
 			}),
+			xetcas.WithDedupShardValidFor(xetcas.DedupShardValidFor(cfg.GetBaseConfig().XET.GC.XorbMinAge)),
 		}
 		if cfg.GetBaseConfig().XET.Dedup.Scope == config.XETDedupScopeGlobal {
 			xetOpts = append(xetOpts, xetcas.WithGlobalDedup())

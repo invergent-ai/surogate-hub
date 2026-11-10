@@ -49,6 +49,7 @@ type Handler struct {
 	tokenTTL                           time.Duration
 	tokenAuthRequired                  bool
 	globalDedup                        bool
+	dedupValidFor                      time.Duration
 }
 
 type HandlerOption func(*Handler)
@@ -160,10 +161,11 @@ type proxyGrant struct {
 
 func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler {
 	h := &Handler{
-		registry:     registry,
-		verifyTokens: make(chan struct{}, normalizeVerifyMaxConcurrent(0)),
-		verifyXorb:   validateSerializedXorb,
-		tokenTTL:     time.Hour,
+		registry:      registry,
+		verifyTokens:  make(chan struct{}, normalizeVerifyMaxConcurrent(0)),
+		verifyXorb:    validateSerializedXorb,
+		tokenTTL:      time.Hour,
+		dedupValidFor: defaultDedupShardValidFor,
 	}
 	for _, opt := range opts {
 		opt(h)
@@ -557,6 +559,12 @@ func (h *Handler) postShard(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		wasInserted = wasInserted || inserted
+		if grant, ok := r.Context().Value(tokenGrantKey{}).(TokenGrant); ok && grant.Repo != "" {
+			if err := h.registry.AddUploadClaim(r.Context(), grant.Repo, file.FileHash); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
 	}
 	h.indexDedupChunks(r, files, chunks)
 

@@ -26,7 +26,7 @@ func TestXETSmartClientSmoke(t *testing.T) {
 	path := "models/smoke-checkpoint.bin"
 	token := xetToken(t, "write", repo, mainBranch, path)
 	postXETXorb(t, token, xorbHash, xorbBytes)
-	registerXETShard(t, token, xettest.Shard(t, fileHash, xorbHash, 0, 1, uint32(len(chunk))))
+	registerXETShard(t, token, xettest.Shard(t, fileHash, xorbHash, 0, 1, uint32(len(chunk)), chunk))
 
 	physicalAddress := "xet://" + fileHash
 	linkResp, err := client.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), mainBranch, &apigen.LinkPhysicalAddressParams{

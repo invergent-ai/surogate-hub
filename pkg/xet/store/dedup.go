@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net/url"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/invergent-ai/surogate-hub/pkg/kv"
 	"lukechampine.com/blake3"
 )
 
@@ -29,25 +32,48 @@ func GlobalDedupEligible(chunkHash string) bool {
 	return err == nil && word%globalDedupChunkModulus == 0
 }
 
-// IndexDedupChunks records that fileHash holds each chunk, so a chunk lookup in
-// the same scope finds the file. The newest file wins.
-func (r *Registry) IndexDedupChunks(ctx context.Context, scope, fileHash string, chunkHashes []string) error {
-	for _, chunk := range chunkHashes {
-		if err := r.store.Set(ctx, []byte(Partition), dedupChunkKey(scope, chunk), []byte(fileHash)); err != nil {
+// DedupEntry is what a chunk lookup answers from: the file holding the chunk
+// and the xorb of that file holding it.
+type DedupEntry struct {
+	FileHash string
+	XorbHash string
+}
+
+// IndexDedupChunks records, for each chunk, the file and xorb a chunk lookup in
+// scope should answer from. An entry whose file record is still live is kept:
+// a newer upload may never be linked, and GC would then make its entries miss.
+func (r *Registry) IndexDedupChunks(ctx context.Context, scope string, entries map[string]DedupEntry) error {
+	for chunk, entry := range entries {
+		key := dedupChunkKey(scope, chunk)
+		existing, err := r.DedupEntryForChunk(ctx, scope, chunk)
+		if err == nil && existing.FileHash != entry.FileHash {
+			if _, err := r.GetFile(ctx, existing.FileHash); err == nil {
+				continue
+			} else if !errors.Is(err, kv.ErrNotFound) {
+				return err
+			}
+		} else if err != nil && !errors.Is(err, kv.ErrNotFound) {
+			return err
+		}
+		if err := r.store.Set(ctx, []byte(Partition), key, []byte(entry.FileHash+"|"+entry.XorbHash)); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// DedupFileForChunk returns the file a chunk lookup in scope should answer
-// from, or kv.ErrNotFound.
-func (r *Registry) DedupFileForChunk(ctx context.Context, scope, chunkHash string) (string, error) {
+// DedupEntryForChunk returns the entry a chunk lookup in scope answers from, or
+// kv.ErrNotFound.
+func (r *Registry) DedupEntryForChunk(ctx context.Context, scope, chunkHash string) (DedupEntry, error) {
 	res, err := r.store.Get(ctx, []byte(Partition), dedupChunkKey(scope, chunkHash))
 	if err != nil {
-		return "", err
+		return DedupEntry{}, err
 	}
-	return string(res.Value), nil
+	fileHash, xorbHash, ok := strings.Cut(string(res.Value), "|")
+	if !ok {
+		return DedupEntry{}, fmt.Errorf("decode xet dedup entry for chunk %s", chunkHash)
+	}
+	return DedupEntry{FileHash: fileHash, XorbHash: xorbHash}, nil
 }
 
 // ponytail: index keys of files xet GC deleted are never removed; lookups treat

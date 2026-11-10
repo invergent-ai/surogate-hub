@@ -30,6 +30,12 @@ var internalNodeHashKey = [32]byte{
 	93, 221, 83, 111, 55, 199, 109, 210, 248, 99, 82, 230, 74, 83, 113, 63,
 }
 
+// verificationKey is xet-core's VERIFICATION_KEY for shard range hashes.
+var verificationKey = [32]byte{
+	127, 24, 87, 214, 206, 86, 237, 102, 18, 127, 249, 19, 231, 165, 195, 243,
+	164, 205, 38, 213, 181, 219, 73, 230, 65, 36, 152, 127, 40, 251, 148, 195,
+}
+
 var dataHashKey = [32]byte{
 	102, 151, 245, 119, 91, 149, 80, 222, 49, 53, 203, 172, 165, 151, 24, 28,
 	157, 228, 33, 16, 155, 235, 43, 88, 180, 208, 176, 75, 147, 173, 242, 41,
@@ -42,6 +48,8 @@ type ShardFileInfo struct {
 	// RegisteredAt is when the record was stored (Unix seconds); zero in parsed
 	// shards and in records stored before it existed.
 	RegisteredAt int64 `json:"registered_at,omitempty"`
+	// RangeHashes are the shard's verification entries, one per segment; never stored.
+	RangeHashes []string `json:"-"`
 }
 
 type ShardFileSegment struct {
@@ -142,9 +150,17 @@ func readShardFiles(reader io.Reader) ([]ShardFileInfo, error) {
 				ChunkIndexEnd:   chunkIndexEnd,
 			})
 		}
+		var rangeHashes []string
 		if flags&mdbFileFlagWithVerification != 0 {
-			if err := skipBytes(reader, uint64(numEntries)*mdbShardEntrySize); err != nil {
-				return nil, fmt.Errorf("read shard file verification entries: %w", err)
+			for range segments {
+				rangeHash, _, err := readMDBHash(reader)
+				if err != nil {
+					return nil, fmt.Errorf("read shard file verification entries: %w", err)
+				}
+				if err := skipBytes(reader, mdbShardEntrySize-32); err != nil {
+					return nil, fmt.Errorf("read shard file verification entries: %w", err)
+				}
+				rangeHashes = append(rangeHashes, rangeHash)
 			}
 		}
 		if flags&mdbFileFlagWithMetadataExt != 0 {
@@ -153,23 +169,36 @@ func readShardFiles(reader io.Reader) ([]ShardFileInfo, error) {
 			}
 		}
 		files = append(files, ShardFileInfo{
-			FileHash:  fileHash,
-			SizeBytes: sizeBytes,
-			Segments:  segments,
+			FileHash:    fileHash,
+			SizeBytes:   sizeBytes,
+			Segments:    segments,
+			RangeHashes: rangeHashes,
 		})
 	}
 	return files, nil
 }
 
 // VerifyFile checks a shard's file entry against the chunks of the xorbs it
-// references and returns it with sizes taken from those chunks.
+// references and returns it with sizes taken from those chunks. Each segment's
+// range hash proves the uploader has the real chunk hashes: without it a whole-
+// xorb file could be registered from the xorb hash alone, and then read.
 func VerifyFile(file ShardFileInfo, xorbChunks map[string][]ShardChunkInfo) (ShardFileInfo, error) {
+	if len(file.RangeHashes) != len(file.Segments) {
+		return ShardFileInfo{}, fmt.Errorf("file %s has no verification entries", file.FileHash)
+	}
 	var chunks []ShardChunkInfo
 	file.SizeBytes = 0
 	for i, segment := range file.Segments {
 		xorb := xorbChunks[segment.XorbHash]
 		if segment.ChunkIndexEnd < segment.ChunkIndexStart || int(segment.ChunkIndexEnd) > len(xorb) {
 			return ShardFileInfo{}, fmt.Errorf("file %s references invalid chunk range %d-%d in xorb %s", file.FileHash, segment.ChunkIndexStart, segment.ChunkIndexEnd, segment.XorbHash)
+		}
+		rangeHash, err := ComputeRangeHash(xorb[segment.ChunkIndexStart:segment.ChunkIndexEnd])
+		if err != nil {
+			return ShardFileInfo{}, err
+		}
+		if rangeHash != file.RangeHashes[i] {
+			return ShardFileInfo{}, fmt.Errorf("file %s fails verification of segment %d", file.FileHash, i)
 		}
 		file.Segments[i].SizeBytes = 0
 		for _, chunk := range xorb[segment.ChunkIndexStart:segment.ChunkIndexEnd] {
@@ -183,9 +212,23 @@ func VerifyFile(file ShardFileInfo, xorbChunks map[string][]ShardChunkInfo) (Sha
 		return ShardFileInfo{}, err
 	}
 	if computed != file.FileHash {
-		return ShardFileInfo{}, fmt.Errorf("file hash mismatch: shard has %s, computed %s", file.FileHash, computed)
+		return ShardFileInfo{}, fmt.Errorf("file hash mismatch for %s", file.FileHash)
 	}
 	return file, nil
+}
+
+// ComputeRangeHash is xet-core's range_hash_from_chunks: the keyed hash of the
+// chunks' raw hashes, concatenated.
+func ComputeRangeHash(chunks []ShardChunkInfo) (string, error) {
+	var buf bytes.Buffer
+	for _, chunk := range chunks {
+		raw, err := mdbHexToRaw(chunk.Hash)
+		if err != nil {
+			return "", err
+		}
+		buf.Write(raw)
+	}
+	return keyedHashHex(verificationKey[:], buf.Bytes()), nil
 }
 
 func ComputeFileMerkleHash(chunks []ShardChunkInfo) (string, error) {

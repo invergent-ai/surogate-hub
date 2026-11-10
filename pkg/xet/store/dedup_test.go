@@ -29,25 +29,46 @@ func TestDedupIndexIsKeyedByScope(t *testing.T) {
 	ctx := context.Background()
 	registry := NewRegistry(kvtest.GetStore(ctx, t))
 	chunk := ComputeDataHash([]byte("chunk"))
+	entry := DedupEntry{FileHash: "file-1", XorbHash: "xorb-1"}
 
-	require.NoError(t, registry.IndexDedupChunks(ctx, "owner-a", "file-1", []string{chunk}))
+	require.NoError(t, registry.IndexDedupChunks(ctx, "owner-a", map[string]DedupEntry{chunk: entry}))
 
-	file, err := registry.DedupFileForChunk(ctx, "owner-a", chunk)
+	got, err := registry.DedupEntryForChunk(ctx, "owner-a", chunk)
 	require.NoError(t, err)
-	require.Equal(t, "file-1", file)
-	_, err = registry.DedupFileForChunk(ctx, "owner-b", chunk)
+	require.Equal(t, entry, got)
+	_, err = registry.DedupEntryForChunk(ctx, "owner-b", chunk)
 	require.ErrorIs(t, err, kv.ErrNotFound)
+}
 
-	require.NoError(t, registry.IndexDedupChunks(ctx, "owner-a", "file-2", []string{chunk}))
-	file, err = registry.DedupFileForChunk(ctx, "owner-a", chunk)
+func TestDedupIndexKeepsALiveFileAndReplacesAGoneOne(t *testing.T) {
+	ctx := context.Background()
+	registry := NewRegistry(kvtest.GetStore(ctx, t))
+	chunk := ComputeDataHash([]byte("chunk"))
+	live := DedupEntry{FileHash: "file-live", XorbHash: "xorb-1"}
+	_, err := registry.RegisterFile(ctx, ShardFileInfo{FileHash: live.FileHash})
 	require.NoError(t, err)
-	require.Equal(t, "file-2", file, "the newest file wins")
+	require.NoError(t, registry.IndexDedupChunks(ctx, "", map[string]DedupEntry{chunk: live}))
+
+	// A newer upload that may never be linked does not take over a live file's entry.
+	require.NoError(t, registry.IndexDedupChunks(ctx, "", map[string]DedupEntry{chunk: {FileHash: "file-new", XorbHash: "xorb-2"}}))
+	got, err := registry.DedupEntryForChunk(ctx, "", chunk)
+	require.NoError(t, err)
+	require.Equal(t, live, got)
+
+	// Once that file is gone, the next upload holding the chunk replaces it.
+	_, err = registry.Park(ctx, ParkedFile, live.FileHash, time.Now())
+	require.NoError(t, err)
+	next := DedupEntry{FileHash: "file-next", XorbHash: "xorb-3"}
+	require.NoError(t, registry.IndexDedupChunks(ctx, "", map[string]DedupEntry{chunk: next}))
+	got, err = registry.DedupEntryForChunk(ctx, "", chunk)
+	require.NoError(t, err)
+	require.Equal(t, next, got)
 }
 
 func TestDedupIndexKeysDoNotOverlapFileOrXorbScans(t *testing.T) {
 	ctx := context.Background()
 	registry := NewRegistry(kvtest.GetStore(ctx, t))
-	require.NoError(t, registry.IndexDedupChunks(ctx, "", "file-1", []string{ComputeDataHash([]byte("c"))}))
+	require.NoError(t, registry.IndexDedupChunks(ctx, "", map[string]DedupEntry{ComputeDataHash([]byte("c")): {FileHash: "file-1", XorbHash: "xorb-1"}}))
 
 	files, err := registry.ListFiles(ctx, 0)
 	require.NoError(t, err)

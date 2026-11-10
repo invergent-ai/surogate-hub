@@ -113,7 +113,25 @@ func FileHash(t testing.TB, chunks ...[]byte) string {
 
 // Shard returns a footerless shard with one file made of one segment, and no
 // xorb section, like the shards hf_xet sends for files built from known xorbs.
-func Shard(t testing.TB, fileHash, xorbHash string, chunkStart, chunkEnd, sizeBytes uint32) []byte {
+// rangeChunks are the chunks of the segment, for its verification entry.
+func Shard(t testing.TB, fileHash, xorbHash string, chunkStart, chunkEnd, sizeBytes uint32, rangeChunks ...[]byte) []byte {
+	t.Helper()
+	infos := make([]xetstore.ShardChunkInfo, 0, len(rangeChunks))
+	for _, chunk := range rangeChunks {
+		infos = append(infos, xetstore.ShardChunkInfo{Hash: xetstore.ComputeDataHash(chunk)})
+	}
+	rangeHash, err := xetstore.ComputeRangeHash(infos)
+	require.NoError(t, err)
+	return shard(t, fileHash, xorbHash, chunkStart, chunkEnd, sizeBytes, rangeHash)
+}
+
+// UnverifiedShard is Shard without the verification entry hf_xet always sends.
+func UnverifiedShard(t testing.TB, fileHash, xorbHash string, chunkStart, chunkEnd, sizeBytes uint32) []byte {
+	t.Helper()
+	return shard(t, fileHash, xorbHash, chunkStart, chunkEnd, sizeBytes, "")
+}
+
+func shard(t testing.TB, fileHash, xorbHash string, chunkStart, chunkEnd, sizeBytes uint32, rangeHash string) []byte {
 	t.Helper()
 	var b bytes.Buffer
 	b.Write([]byte{'H', 'F', 'R', 'e', 'p', 'o', 'M', 'e', 't', 'a', 'D', 'a', 't', 'a', 0, 85,
@@ -122,7 +140,11 @@ func Shard(t testing.TB, fileHash, xorbHash string, chunkStart, chunkEnd, sizeBy
 	writeU64(&b, 0)
 
 	WriteHash(t, &b, fileHash)
-	writeU32(&b, 0)
+	var flags uint32
+	if rangeHash != "" {
+		flags = 1 << 31 // file has verification entries
+	}
+	writeU32(&b, flags)
 	writeU32(&b, 1)
 	writeU64(&b, 0)
 
@@ -131,6 +153,11 @@ func Shard(t testing.TB, fileHash, xorbHash string, chunkStart, chunkEnd, sizeBy
 	writeU32(&b, sizeBytes)
 	writeU32(&b, chunkStart)
 	writeU32(&b, chunkEnd)
+
+	if rangeHash != "" {
+		WriteHash(t, &b, rangeHash)
+		b.Write(make([]byte, 16))
+	}
 
 	writeBookend(&b)
 	writeBookend(&b)

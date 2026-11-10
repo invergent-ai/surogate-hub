@@ -134,7 +134,21 @@ func (r *Registry) RepoXetBytes(ctx context.Context, repo string) (int64, error)
 	return total, nil
 }
 
-// DeleteRepoFileRefs drops every file ref of a deleted repository.
+// AddUploadClaim records that a verified shard registered the file for repo:
+// the uploader proved it has the file's chunk hashes, so repo may link it.
+func (r *Registry) AddUploadClaim(ctx context.Context, repo, fileHash string) error {
+	return r.store.Set(ctx, []byte(Partition), uploadClaimKey(repo, fileHash), []byte{1})
+}
+
+func (r *Registry) HasUploadClaim(ctx context.Context, repo, fileHash string) (bool, error) {
+	_, err := r.store.Get(ctx, []byte(Partition), uploadClaimKey(repo, fileHash))
+	if errors.Is(err, kv.ErrNotFound) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+// DeleteRepoFileRefs drops every file ref and upload claim of a deleted repository.
 func (r *Registry) DeleteRepoFileRefs(ctx context.Context, repo string) error {
 	refs, err := r.scanFileRefs(ctx, repoFileRefPrefix(repo), 0)
 	if err != nil {
@@ -142,6 +156,18 @@ func (r *Registry) DeleteRepoFileRefs(ctx context.Context, repo string) error {
 	}
 	for _, ref := range refs {
 		if err := r.store.Delete(ctx, []byte(Partition), fileRefKey(ref.Repo, ref.FileHash)); err != nil {
+			return err
+		}
+	}
+	var claims []string
+	if err := r.scanPrefix(ctx, repoUploadClaimPrefix(repo), 0, func(fileHash string, _ []byte) error {
+		claims = append(claims, fileHash)
+		return nil
+	}); err != nil {
+		return err
+	}
+	for _, fileHash := range claims {
+		if err := r.store.Delete(ctx, []byte(Partition), uploadClaimKey(repo, fileHash)); err != nil {
 			return err
 		}
 	}
@@ -235,6 +261,14 @@ func repoFileRefPrefix(repo string) string {
 
 func fileRefKey(repo, fileHash string) []byte {
 	return []byte(repoFileRefPrefix(repo) + fileHash)
+}
+
+func repoUploadClaimPrefix(repo string) string {
+	return "xet/claims/" + url.PathEscape(repo) + "/"
+}
+
+func uploadClaimKey(repo, fileHash string) []byte {
+	return []byte(repoUploadClaimPrefix(repo) + fileHash)
 }
 
 func parseFileRefKey(key string) (FileRef, bool) {

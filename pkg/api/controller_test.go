@@ -95,6 +95,7 @@ func TestController_LinkXETPhysicalAddressWritesFileRef(t *testing.T) {
 	require.NoError(t, err)
 	registry := xetstore.NewRegistry(deps.catalog.KVStore)
 	fileHash, _, _ := xettest.SeedFile(t, ctx, registry, deps.blocks, "mem://_hub_xet", []byte("hello world!"))
+	require.NoError(t, xetstore.NewRegistry(deps.catalog.KVStore).AddUploadClaim(ctx, repo, fileHash))
 
 	physicalAddress := "xet://" + fileHash
 	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.LinkPhysicalAddressParams{
@@ -130,6 +131,7 @@ func TestController_CopyObjectXETPhysicalAddress(t *testing.T) {
 	require.NoError(t, err)
 	registry := xetstore.NewRegistry(deps.catalog.KVStore)
 	fileHash, _, _ := xettest.SeedFile(t, ctx, registry, deps.blocks, "mem://_hub_xet", []byte("hello world!"))
+	require.NoError(t, xetstore.NewRegistry(deps.catalog.KVStore).AddUploadClaim(ctx, repo, fileHash))
 
 	physicalAddress := "xet://" + fileHash
 	linkResp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.LinkPhysicalAddressParams{
@@ -167,6 +169,7 @@ func TestController_GetUnderlyingPropertiesXETPhysicalAddressReturnsBadRequest(t
 	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
 	require.NoError(t, err)
 	fileHash, _, _ := xettest.SeedFile(t, ctx, xetstore.NewRegistry(deps.catalog.KVStore), deps.blocks, "mem://_hub_xet", []byte("hello world!"))
+	require.NoError(t, xetstore.NewRegistry(deps.catalog.KVStore).AddUploadClaim(ctx, repo, fileHash))
 
 	physicalAddress := "xet://" + fileHash
 	linkResp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.LinkPhysicalAddressParams{
@@ -268,6 +271,7 @@ func TestController_LinkXETPhysicalAddressRejectsSizeMismatch(t *testing.T) {
 	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), "main", false)
 	require.NoError(t, err)
 	fileHash, _, _ := xettest.SeedFile(t, ctx, xetstore.NewRegistry(deps.catalog.KVStore), deps.blocks, "mem://_hub_xet", []byte("hello world!"))
+	require.NoError(t, xetstore.NewRegistry(deps.catalog.KVStore).AddUploadClaim(ctx, repo, fileHash))
 
 	physicalAddress := "xet://" + fileHash
 	resp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), "main", &apigen.LinkPhysicalAddressParams{
@@ -352,6 +356,7 @@ func TestController_LinkXETPhysicalAddressWritesFileRefBeforeEntry(t *testing.T)
 
 	chunk := []byte("hello world!")
 	fileHash, _, _ := xettest.SeedFile(t, ctx, xetstore.NewRegistry(deps.catalog.KVStore), deps.blocks, "mem://_hub_xet", chunk)
+	require.NoError(t, xetstore.NewRegistry(deps.catalog.KVStore).AddUploadClaim(ctx, repo, fileHash))
 
 	failingStore := &failOnceFileRefSetStore{Store: deps.catalog.KVStore}
 	deps.catalog.KVStore = failingStore
@@ -6778,6 +6783,7 @@ func TestController_LinkXETRestoresParkedFile(t *testing.T) {
 	require.NoError(t, err)
 	registry := xetstore.NewRegistry(deps.catalog.KVStore)
 	fileHash, _, _ := xettest.SeedFile(t, ctx, registry, deps.blocks, "mem://_hub_xet", []byte("hello world!"))
+	require.NoError(t, xetstore.NewRegistry(deps.catalog.KVStore).AddUploadClaim(ctx, repo, fileHash))
 	_, err = registry.Park(ctx, xetstore.ParkedFile, fileHash, time.Now())
 	require.NoError(t, err)
 
@@ -6796,4 +6802,38 @@ func TestController_LinkXETRestoresParkedFile(t *testing.T) {
 	held, err := registry.HasFileRef(ctx, repo, fileHash)
 	require.NoError(t, err)
 	require.True(t, held)
+}
+
+func TestController_LinkXETPhysicalAddressRequiresAnUploadClaim(t *testing.T) {
+	clt, deps := setupClientWithAdmin(t)
+	ctx := context.Background()
+	repo := testUniqueRepoName()
+	const branch = "main"
+	_, err := deps.catalog.CreateRepository(ctx, repo, "", onBlock(deps, "bucket/prefix"), branch, false)
+	require.NoError(t, err)
+	registry := xetstore.NewRegistry(deps.catalog.KVStore)
+	// Registered by someone else: a file hash alone must not let a repository link the file.
+	fileHash, _, _ := xettest.SeedFile(t, ctx, registry, deps.blocks, "mem://_hub_xet", []byte("hello world!"))
+
+	link := func(path string) int {
+		physicalAddress := "xet://" + fileHash
+		resp, err := clt.LinkPhysicalAddressWithResponse(ctx, apigen.RepositoryOwner(repo), apigen.RepositoryName(repo), branch, &apigen.LinkPhysicalAddressParams{
+			Path: path,
+		}, apigen.LinkPhysicalAddressJSONRequestBody{
+			Checksum:  "checksum-a",
+			SizeBytes: 12,
+			Staging:   apigen.StagingLocation{PhysicalAddress: &physicalAddress},
+		})
+		require.NoError(t, err)
+		return resp.StatusCode()
+	}
+
+	require.Equal(t, http.StatusNotFound, link("a.bin"))
+	require.NoError(t, registry.AddUploadClaim(ctx, repo, fileHash))
+	require.Equal(t, http.StatusOK, link("a.bin"))
+	// Once the repository holds the file, it may link it again without a new claim.
+	require.NoError(t, registry.DeleteRepoFileRefs(ctx, repo))
+	_, err = registry.AddFileRef(ctx, xetstore.FileRef{FileHash: fileHash, Repo: repo, SizeBytes: 12})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, link("b.bin"))
 }

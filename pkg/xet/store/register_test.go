@@ -191,3 +191,21 @@ func TestDeleteFileRef(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []FileRef{keep}, refs)
 }
+
+func TestUploadClaimsAreScopedToTheRepositoryAndDroppedWithIt(t *testing.T) {
+	ctx := context.Background()
+	registry := NewRegistry(kvtest.GetStore(ctx, t))
+	require.NoError(t, registry.AddUploadClaim(ctx, "owner/repo-a", "file-1"))
+
+	claimed, err := registry.HasUploadClaim(ctx, "owner/repo-a", "file-1")
+	require.NoError(t, err)
+	require.True(t, claimed)
+	claimed, err = registry.HasUploadClaim(ctx, "owner/repo-b", "file-1")
+	require.NoError(t, err)
+	require.False(t, claimed)
+
+	require.NoError(t, registry.DeleteRepoFileRefs(ctx, "owner/repo-a"))
+	claimed, err = registry.HasUploadClaim(ctx, "owner/repo-a", "file-1")
+	require.NoError(t, err)
+	require.False(t, claimed)
+}

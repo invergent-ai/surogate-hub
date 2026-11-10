@@ -373,7 +373,7 @@ func TestPostShardRegistersFileBuiltFromUploadedXorb(t *testing.T) {
 	postTestXorb(t, handler, xorbHash, xorbBytes)
 
 	// The claimed segment size is ignored in favour of the xorb's chunk sizes.
-	shard := xettest.Shard(t, fileHash, xorbHash, 0, 1, 999)
+	shard := xettest.Shard(t, fileHash, xorbHash, 0, 1, 999, chunk)
 	for _, post := range []struct {
 		path   string
 		result int
@@ -398,7 +398,7 @@ func TestPostShardRejectsUnknownXorb(t *testing.T) {
 	chunk := []byte("hello world!")
 	xorbHash, _ := xettest.SerializedXorb(t, chunk)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewReader(xettest.Shard(t, xettest.FileHash(t, chunk), xorbHash, 0, 1, 12)))
+	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewReader(xettest.Shard(t, xettest.FileHash(t, chunk), xorbHash, 0, 1, 12, chunk)))
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -414,7 +414,7 @@ func TestPostShardRejectsFileHashNotMatchingXorbChunks(t *testing.T) {
 	postTestXorb(t, handler, xorbHash, xorbBytes)
 	otherFileHash := xettest.FileHash(t, []byte("other bytes!"))
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewReader(xettest.Shard(t, otherFileHash, xorbHash, 0, 1, 12)))
+	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewReader(xettest.Shard(t, otherFileHash, xorbHash, 0, 1, 12, []byte("hello world!"))))
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -763,7 +763,7 @@ func TestPostShardRestoresParkedFooter(t *testing.T) {
 	_, err := registry.Park(ctx, xetstore.ParkedXorb, xorbHash, time.Now())
 	require.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewReader(xettest.Shard(t, xettest.FileHash(t, chunk), xorbHash, 0, 1, 12)))
+	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewReader(xettest.Shard(t, xettest.FileHash(t, chunk), xorbHash, 0, 1, 12, chunk)))
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -799,4 +799,23 @@ func TestReadRestoresParkedFileAndFooter(t *testing.T) {
 	require.NoError(t, err)
 	_, err = registry.GetXorbInfo(ctx, xorbHash)
 	require.NoError(t, err)
+}
+
+func TestPostShardRejectsShardWithoutVerification(t *testing.T) {
+	ctx := context.Background()
+	registry := xetstore.NewRegistry(kvtest.GetStore(ctx, t))
+	handler := NewHandler(registry, WithXorbStore(NewXorbStore(mem.New(ctx), "mem://xet-cas")))
+	chunk := []byte("hello world!")
+	xorbHash, xorbBytes := xettest.SerializedXorb(t, chunk)
+	postTestXorb(t, handler, xorbHash, xorbBytes)
+	fileHash := xettest.FileHash(t, chunk)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/shards", bytes.NewReader(xettest.UnverifiedShard(t, fileHash, xorbHash, 0, 1, 12)))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Contains(t, rec.Body.String(), "verification")
+	_, err := registry.GetFile(ctx, fileHash)
+	require.ErrorIs(t, err, kv.ErrNotFound)
 }

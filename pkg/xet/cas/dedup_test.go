@@ -57,7 +57,7 @@ func (f dedupFixture) upload(t *testing.T, repo string, chunks ...[]byte) (fileH
 	for _, c := range chunks {
 		size += uint32(len(c))
 	}
-	rec = f.do(t, http.MethodPost, "/v1/shards", xettest.Shard(t, fileHash, xorbHash, 0, uint32(len(chunks)), size), "write", repo)
+	rec = f.do(t, http.MethodPost, "/v1/shards", xettest.Shard(t, fileHash, xorbHash, 0, uint32(len(chunks)), size, chunks...), "write", repo)
 	require.Equalf(t, http.StatusOK, rec.Code, "body: %s", rec.Body.String())
 	return fileHash, xorbHash
 }
@@ -121,14 +121,14 @@ func rawHash(t *testing.T, hash string) []byte {
 func TestPostShardIndexesTheFirstAndEligibleChunks(t *testing.T) {
 	f := newDedupFixture(t)
 	first, eligible, other := ineligibleChunk(t, "first"), eligibleChunk(t, "eligible"), ineligibleChunk(t, "other")
-	fileHash, _ := f.upload(t, "owner-a/repo", first, eligible, other)
+	fileHash, xorbHash := f.upload(t, "owner-a/repo", first, eligible, other)
 
 	for _, c := range [][]byte{first, eligible} {
-		got, err := f.registry.DedupFileForChunk(f.ctx, "owner-a", xetstore.ComputeDataHash(c))
+		got, err := f.registry.DedupEntryForChunk(f.ctx, "owner-a", xetstore.ComputeDataHash(c))
 		require.NoError(t, err)
-		require.Equal(t, fileHash, got)
+		require.Equal(t, xetstore.DedupEntry{FileHash: fileHash, XorbHash: xorbHash}, got)
 	}
-	_, err := f.registry.DedupFileForChunk(f.ctx, "owner-a", xetstore.ComputeDataHash(other))
+	_, err := f.registry.DedupEntryForChunk(f.ctx, "owner-a", xetstore.ComputeDataHash(other))
 	require.ErrorIs(t, err, kv.ErrNotFound)
 }
 
@@ -220,7 +220,7 @@ func TestChunkLookupStartsAtTheXorbHoldingTheChunk(t *testing.T) {
 	a1, a2 := ineligibleChunk(t, "a1"), ineligibleChunk(t, "a2")
 	b1, b2 := eligibleChunk(t, "b1"), ineligibleChunk(t, "b2")
 	fileHash, xorbs := f.registerFileOfXorbs(t, [][]byte{a1, a2}, [][]byte{b1, b2})
-	require.NoError(t, f.registry.IndexDedupChunks(f.ctx, "owner-a", fileHash, []string{xetstore.ComputeDataHash(b1)}))
+	require.NoError(t, f.registry.IndexDedupChunks(f.ctx, "owner-a", map[string]xetstore.DedupEntry{xetstore.ComputeDataHash(b1): {FileHash: fileHash, XorbHash: xorbs[1]}}))
 
 	rec := f.lookup(t, b1, "owner-a/repo")
 	require.Equalf(t, http.StatusOK, rec.Code, "body: %s", rec.Body.String())
@@ -234,10 +234,59 @@ func TestChunkLookupNeverOffersALaterOneChunkXorb(t *testing.T) {
 	lone := ineligibleChunk(t, "lone")
 	c1, c2 := ineligibleChunk(t, "c1"), ineligibleChunk(t, "c2")
 	fileHash, xorbs := f.registerFileOfXorbs(t, [][]byte{a1, a2}, [][]byte{lone}, [][]byte{c1, c2})
-	require.NoError(t, f.registry.IndexDedupChunks(f.ctx, "owner-a", fileHash, []string{xetstore.ComputeDataHash(a1)}))
+	require.NoError(t, f.registry.IndexDedupChunks(f.ctx, "owner-a", map[string]xetstore.DedupEntry{xetstore.ComputeDataHash(a1): {FileHash: fileHash, XorbHash: xorbs[0]}}))
 
 	rec := f.lookup(t, a1, "owner-a/repo")
 	require.Equalf(t, http.StatusOK, rec.Code, "body: %s", rec.Body.String())
 	requireKeyedShard(t, rec.Body.Bytes(), []string{xorbs[0], xorbs[2]}, a1, a2, c1, c2)
 	require.False(t, bytes.Contains(rec.Body.Bytes(), rawHash(t, xorbs[1])), "a one-chunk xorb's hash is a real chunk hash")
+}
+
+func TestPostShardClaimsTheFileForTheTokenRepository(t *testing.T) {
+	f := newDedupFixture(t)
+	fileHash, _ := f.upload(t, "owner-a/repo", ineligibleChunk(t, "a"), ineligibleChunk(t, "b"))
+
+	claimed, err := f.registry.HasUploadClaim(f.ctx, "owner-a/repo", fileHash)
+	require.NoError(t, err)
+	require.True(t, claimed)
+	claimed, err = f.registry.HasUploadClaim(f.ctx, "owner-a/other", fileHash)
+	require.NoError(t, err)
+	require.False(t, claimed)
+}
+
+func shardKey(body []byte) []byte {
+	return body[len(body)-200+72 : len(body)-200+104]
+}
+
+func TestChunkLookupKeyIsStablePerScope(t *testing.T) {
+	f := newDedupFixture(t)
+	a := ineligibleChunk(t, "a")
+	b := ineligibleChunk(t, "b")
+	f.upload(t, "owner-a/repo", a, ineligibleChunk(t, "a2"))
+	f.upload(t, "owner-b/repo", b, ineligibleChunk(t, "b2"))
+
+	first := f.lookup(t, a, "owner-a/repo")
+	again := f.lookup(t, a, "owner-a/other")
+	other := f.lookup(t, b, "owner-b/repo")
+	for _, rec := range []*httptest.ResponseRecorder{first, again, other} {
+		require.Equalf(t, http.StatusOK, rec.Code, "body: %s", rec.Body.String())
+	}
+	// One key per scope and day keeps the client to one shard collection per key.
+	require.Equal(t, shardKey(first.Body.Bytes()), shardKey(again.Body.Bytes()))
+	require.NotEqual(t, shardKey(first.Body.Bytes()), shardKey(other.Body.Bytes()))
+}
+
+func TestChunkLookupIsOffWhenAShardWouldOutliveTheXorbGrace(t *testing.T) {
+	f := newDedupFixture(t, WithDedupShardValidFor(0))
+	a := ineligibleChunk(t, "a")
+	f.upload(t, "owner-a/repo", a, ineligibleChunk(t, "a2"))
+
+	require.Equal(t, http.StatusNotFound, f.lookup(t, a, "owner-a/repo").Code)
+}
+
+func TestDedupShardValidForStaysWellUnderTheXorbGrace(t *testing.T) {
+	require.Equal(t, 24*time.Hour, DedupShardValidFor(168*time.Hour))
+	require.Equal(t, 12*time.Hour, DedupShardValidFor(48*time.Hour))
+	require.Zero(t, DedupShardValidFor(2*time.Hour))
+	require.Zero(t, DedupShardValidFor(0))
 }
