@@ -552,13 +552,15 @@ func (h *Handler) postShard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	wasInserted := false
-	for _, file := range files {
-		inserted, err := h.registry.RegisterFile(r.Context(), file)
+	inserted := make([]bool, len(files))
+	for i, file := range files {
+		var err error
+		inserted[i], err = h.registry.RegisterFile(r.Context(), file)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		wasInserted = wasInserted || inserted
+		wasInserted = wasInserted || inserted[i]
 		if grant, ok := r.Context().Value(tokenGrantKey{}).(TokenGrant); ok && grant.Repo != "" {
 			if err := h.registry.AddUploadClaim(r.Context(), grant.Repo, file.FileHash); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -566,7 +568,7 @@ func (h *Handler) postShard(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	h.indexDedupChunks(r, files, chunks)
+	h.indexDedupChunks(r, files, inserted, chunks)
 
 	responseResult := 0
 	if wasInserted {

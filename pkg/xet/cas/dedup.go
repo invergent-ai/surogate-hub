@@ -62,35 +62,76 @@ func (h *Handler) dedupScope(r *http.Request) string {
 }
 
 // indexDedupChunks records the chunks hf_xet looks up (each file's first chunk
-// and the eligible chunks of its xorbs) for verified, registered files. It is
-// best effort: a failure only costs dedup, never the upload.
-func (h *Handler) indexDedupChunks(r *http.Request, files []xetstore.ShardFileInfo, chunks map[string][]xetstore.ShardChunkInfo) {
+// and the eligible chunks of its xorbs) for verified, registered files. A file
+// that was already registered is indexed from its stored record: the first
+// upload's segments are what lookups answer from, and the re-upload's own xorbs
+// are used by no record. It is best effort: a failure only costs dedup, never
+// the upload.
+func (h *Handler) indexDedupChunks(r *http.Request, files []xetstore.ShardFileInfo, inserted []bool, chunks map[string][]xetstore.ShardChunkInfo) {
+	ctx := r.Context()
+	log := logging.FromContext(ctx)
 	scope := h.dedupScope(r)
-	for _, file := range files {
-		if len(file.Segments) == 0 {
-			continue
-		}
-		entries := make(map[string]xetstore.DedupEntry)
-		seen := make(map[string]struct{})
-		for _, segment := range file.Segments {
-			if _, dup := seen[segment.XorbHash]; dup {
+	for i, file := range files {
+		if !inserted[i] {
+			stored, err := h.registry.GetFile(ctx, file.FileHash)
+			if err != nil {
+				log.WithError(err).WithField("file_hash", file.FileHash).Warn("Failed to read xet file record for dedup")
 				continue
 			}
-			seen[segment.XorbHash] = struct{}{}
-			for _, chunk := range chunks[segment.XorbHash] {
-				if _, done := entries[chunk.Hash]; !done && xetstore.GlobalDedupEligible(chunk.Hash) {
-					entries[chunk.Hash] = xetstore.DedupEntry{FileHash: file.FileHash, XorbHash: segment.XorbHash}
-				}
+			if err := h.loadChunks(ctx, stored.Segments, chunks); err != nil {
+				log.WithError(err).WithField("file_hash", file.FileHash).Warn("Failed to read xet footers for dedup")
+				continue
 			}
+			file = stored
 		}
-		first := file.Segments[0]
-		if xorb := chunks[first.XorbHash]; int(first.ChunkIndexStart) < len(xorb) {
-			entries[xorb[first.ChunkIndexStart].Hash] = xetstore.DedupEntry{FileHash: file.FileHash, XorbHash: first.XorbHash}
-		}
-		if err := h.registry.IndexDedupChunks(r.Context(), scope, entries); err != nil {
-			logging.FromContext(r.Context()).WithError(err).WithField("file_hash", file.FileHash).Warn("Failed to index xet chunks for dedup")
+		if err := h.registry.IndexDedupChunks(ctx, scope, dedupEntries(file, chunks)); err != nil {
+			log.WithError(err).WithField("file_hash", file.FileHash).Warn("Failed to index xet chunks for dedup")
 		}
 	}
+}
+
+// loadChunks adds the chunk lists of the segments' xorbs missing from chunks,
+// from their live footers.
+func (h *Handler) loadChunks(ctx context.Context, segments []xetstore.ShardFileSegment, chunks map[string][]xetstore.ShardChunkInfo) error {
+	for _, segment := range segments {
+		if _, ok := chunks[segment.XorbHash]; ok {
+			continue
+		}
+		footer, err := h.registry.GetXorbInfo(ctx, segment.XorbHash)
+		if err != nil {
+			return fmt.Errorf("xorb %s: %w", segment.XorbHash, err)
+		}
+		info, _, err := parseXorbInfo(footer)
+		if err != nil {
+			return fmt.Errorf("xorb %s: %w", segment.XorbHash, err)
+		}
+		chunks[segment.XorbHash] = shardChunksFromParsedXorb(info)
+	}
+	return nil
+}
+
+func dedupEntries(file xetstore.ShardFileInfo, chunks map[string][]xetstore.ShardChunkInfo) map[string]xetstore.DedupEntry {
+	entries := make(map[string]xetstore.DedupEntry)
+	if len(file.Segments) == 0 {
+		return entries
+	}
+	seen := make(map[string]struct{})
+	for _, segment := range file.Segments {
+		if _, dup := seen[segment.XorbHash]; dup {
+			continue
+		}
+		seen[segment.XorbHash] = struct{}{}
+		for _, chunk := range chunks[segment.XorbHash] {
+			if _, done := entries[chunk.Hash]; !done && xetstore.GlobalDedupEligible(chunk.Hash) {
+				entries[chunk.Hash] = xetstore.DedupEntry{FileHash: file.FileHash, XorbHash: segment.XorbHash}
+			}
+		}
+	}
+	first := file.Segments[0]
+	if xorb := chunks[first.XorbHash]; int(first.ChunkIndexStart) < len(xorb) {
+		entries[xorb[first.ChunkIndexStart].Hash] = xetstore.DedupEntry{FileHash: file.FileHash, XorbHash: first.XorbHash}
+	}
+	return entries
 }
 
 // getDedupShard answers hf_xet's chunk lookup with a shard describing the live
