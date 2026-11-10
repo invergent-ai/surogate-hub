@@ -104,8 +104,7 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 	r.Mount("/openapi.json", http.HandlerFunc(swaggerSpecHandler))
 	if xetNamespace := xetstore.StorageNamespace(cfg); xetNamespace != "" {
 		xetRegistry := xetstore.NewRegistry(catalog.KVStore)
-		r.Mount("/xet", xetTokenIssuerAuthMiddleware(xetcas.NewHandler(
-			xetRegistry,
+		xetOpts := []xetcas.HandlerOption{
 			xetcas.WithXorbStore(xetcas.NewXorbStore(blockAdapter, xetNamespace)),
 			xetcas.WithVerifyMaxConcurrent(cfg.GetBaseConfig().XET.Verify.MaxConcurrent),
 			xetcas.WithProxyGrantKey([]byte(cfg.GetBaseConfig().Auth.Encrypt.SecretKey.SecureValue())),
@@ -115,7 +114,12 @@ func Serve(cfg config.Config, catalog *catalog.Catalog, middlewareAuthenticator 
 			xetcas.WithReconstructionCapabilityChecker(func(ctx context.Context, fileHash string, grant xetcas.TokenGrant) error {
 				return checkXETReconstructionCandidate(ctx, catalog, authService, fileHash, grant)
 			}),
-		)))
+			xetcas.WithDedupShardValidFor(xetcas.DedupShardValidFor(cfg.GetBaseConfig().XET.GC.XorbMinAge)),
+		}
+		if cfg.GetBaseConfig().XET.Dedup.Scope == config.XETDedupScopeGlobal {
+			xetOpts = append(xetOpts, xetcas.WithGlobalDedup())
+		}
+		r.Mount("/xet", xetTokenIssuerAuthMiddleware(xetcas.NewHandler(xetRegistry, xetOpts...)))
 	}
 	r.Mount(apiutil.BaseURL, http.HandlerFunc(InvalidAPIEndpointHandler))
 	r.Mount("/logout", NewLogoutHandler(sessionStore, logger, cfg.GetBaseConfig().Auth.LogoutRedirectURL))

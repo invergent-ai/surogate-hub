@@ -173,10 +173,15 @@ func TestStorageUsage_AfterReconcilerIsEstimateFalse(t *testing.T) {
 	require.NotNil(t, resp.JSON200.LastReconciledAt)
 }
 
-// seedXETFile stores a xet file of len(content) bytes outside every repository and returns its hash.
-func seedXETFile(t *testing.T, ctx context.Context, deps *dependencies, content string) string {
+// seedXETFile stores a xet file of len(content) bytes outside every repository,
+// claimed for repos as a verified upload to each would, and returns its hash.
+func seedXETFile(t *testing.T, ctx context.Context, deps *dependencies, content string, repos ...string) string {
 	t.Helper()
-	fileHash, _, _ := xettest.SeedFile(t, ctx, xetstore.NewRegistry(deps.kvStore), deps.blocks, "mem://_hub_xet", []byte(content))
+	registry := xetstore.NewRegistry(deps.kvStore)
+	fileHash, _, _ := xettest.SeedFile(t, ctx, registry, deps.blocks, "mem://_hub_xet", []byte(content))
+	for _, repo := range repos {
+		require.NoError(t, registry.AddUploadClaim(ctx, repo, fileHash))
+	}
 	return fileHash
 }
 
@@ -202,7 +207,7 @@ func TestStorageUsage_LinkXETOverQuotaLeavesNoState(t *testing.T) {
 	_, err := deps.catalog.CreateRepository(ctx, repoID, "", onBlock(deps, repoID), branch, false)
 	require.NoError(t, err)
 	content := "twelve bytes"
-	fileHash := seedXETFile(t, ctx, deps, content)
+	fileHash := seedXETFile(t, ctx, deps, content, repoID)
 	require.NoError(t, deps.kvStore.Set(ctx, stats.StoragePartition, stats.StorageQuotaKey(owner), []byte("10")))
 
 	status := linkXETFile(t, ctx, clt, repoID, branch, "model.bin", fileHash, int64(len(content)))
@@ -226,7 +231,7 @@ func TestStorageUsage_LinkXETChargesEachRepositoryOnce(t *testing.T) {
 	const owner, repoA, repoB, branch = "alice", "training", "evals", "main"
 	content := "twelve bytes"
 	size := int64(len(content))
-	fileHash := seedXETFile(t, ctx, deps, content)
+	fileHash := seedXETFile(t, ctx, deps, content, owner+"/"+repoA, owner+"/"+repoB)
 	for _, repoName := range []string{repoA, repoB} {
 		repoID := owner + "/" + repoName
 		_, err := deps.catalog.CreateRepository(ctx, repoID, "", onBlock(deps, repoID), branch, false)
@@ -264,7 +269,7 @@ func TestStorageUsage_LinkXETFailedEntryWriteStaysChargedOnce(t *testing.T) {
 	require.NoError(t, err)
 	content := "twelve bytes"
 	size := int64(len(content))
-	fileHash := seedXETFile(t, ctx, deps, content)
+	fileHash := seedXETFile(t, ctx, deps, content, repoID)
 	require.NoError(t, deps.catalog.CreateEntry(ctx, repoID, branch, catalog.DBEntry{Path: "model.bin", PhysicalAddress: onBlock(deps, "existing"), CreationDate: time.Now(), Size: 1, Checksum: "existing"}))
 
 	physicalAddress := "xet://" + fileHash
@@ -295,7 +300,7 @@ func TestStorageUsage_ReconcilerCountsXETFiles(t *testing.T) {
 	_, err := deps.catalog.CreateRepository(ctx, repoID, "", onBlock(deps, repoID), branch, false)
 	require.NoError(t, err)
 	content := "twelve bytes"
-	fileHash := seedXETFile(t, ctx, deps, content)
+	fileHash := seedXETFile(t, ctx, deps, content, repoID)
 	require.Equal(t, http.StatusOK, linkXETFile(t, ctx, clt, repoID, branch, "model.bin", fileHash, int64(len(content))))
 
 	require.NoError(t, deps.storageReconciler.RunOnce(ctx))
@@ -314,7 +319,7 @@ func TestDeleteRepository_RemovesXETFileRefs(t *testing.T) {
 	_, err := deps.catalog.CreateRepository(ctx, repoID, "", onBlock(deps, repoID), branch, false)
 	require.NoError(t, err)
 	content := "twelve bytes"
-	fileHash := seedXETFile(t, ctx, deps, content)
+	fileHash := seedXETFile(t, ctx, deps, content, repoID)
 	require.Equal(t, http.StatusOK, linkXETFile(t, ctx, clt, repoID, branch, "model.bin", fileHash, int64(len(content))))
 	registry := xetstore.NewRegistry(deps.kvStore)
 	held, err := registry.HasFileRef(ctx, repoID, fileHash)

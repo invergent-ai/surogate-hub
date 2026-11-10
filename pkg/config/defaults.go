@@ -175,6 +175,7 @@ func setBaseDefaults(cfgType string) {
 	viper.SetDefault("xet.gc.min_age", 24*time.Hour)
 	viper.SetDefault("xet.gc.xorb_min_age", 168*time.Hour)
 	viper.SetDefault("xet.gc.scan_batch_size", 1000)
+	viper.SetDefault("xet.dedup.scope", "owner")
 
 	viper.SetDefault("usage_report.flush_interval", 5*time.Minute)
 

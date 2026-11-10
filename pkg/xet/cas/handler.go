@@ -48,6 +48,8 @@ type Handler struct {
 	tokenSigningKey                    []byte
 	tokenTTL                           time.Duration
 	tokenAuthRequired                  bool
+	globalDedup                        bool
+	dedupValidFor                      time.Duration
 }
 
 type HandlerOption func(*Handler)
@@ -159,10 +161,11 @@ type proxyGrant struct {
 
 func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler {
 	h := &Handler{
-		registry:     registry,
-		verifyTokens: make(chan struct{}, normalizeVerifyMaxConcurrent(0)),
-		verifyXorb:   validateSerializedXorb,
-		tokenTTL:     time.Hour,
+		registry:      registry,
+		verifyTokens:  make(chan struct{}, normalizeVerifyMaxConcurrent(0)),
+		verifyXorb:    validateSerializedXorb,
+		tokenTTL:      time.Hour,
+		dedupValidFor: defaultDedupShardValidFor,
 	}
 	for _, opt := range opts {
 		opt(h)
@@ -175,6 +178,7 @@ func NewHandler(registry *xetstore.Registry, opts ...HandlerOption) http.Handler
 	r.With(h.requireXETScope("write")).Post("/shards", h.postShard)
 	r.With(h.requireXETScope("write")).Post("/v1/shards", h.postShard)
 	r.With(h.requireXETScope("write")).Post("/v1/xorbs/{prefix}/{hash}", h.postXorb)
+	r.With(h.requireXETScope("write")).Get("/v1/chunks/{prefix}/{hash}", h.getDedupShard)
 	return r
 }
 
@@ -555,7 +559,14 @@ func (h *Handler) postShard(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		wasInserted = wasInserted || inserted
+		if grant, ok := r.Context().Value(tokenGrantKey{}).(TokenGrant); ok && grant.Repo != "" {
+			if err := h.registry.AddUploadClaim(r.Context(), grant.Repo, file.FileHash); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
 	}
+	h.indexDedupChunks(r, files, chunks)
 
 	responseResult := 0
 	if wasInserted {

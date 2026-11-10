@@ -181,3 +181,13 @@ func TestConfig_JSONLogger(t *testing.T) {
 		t.Fatalf("expected a msg field, could not find one")
 	}
 }
+
+func TestValidateXETDedupScope(t *testing.T) {
+	for scope, ok := range map[string]bool{"owner": true, "global": true, "": false, "tenant": false} {
+		c := &config.BaseConfig{}
+		c.XET.Dedup.Scope = scope
+		if err := c.ValidateXET(); (err == nil) != ok {
+			t.Errorf("scope %q: got err %v, want ok=%v", scope, err, ok)
+		}
+	}
+}

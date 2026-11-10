@@ -832,6 +832,21 @@ func (c *Controller) LinkPhysicalAddress(w http.ResponseWriter, r *http.Request,
 			writeError(w, r, http.StatusInternalServerError, err)
 			return
 		}
+		// A file hash is not a read capability: a whole-xorb file's hash follows
+		// from the xorb hash, which reads hand out. Only a repository that already
+		// holds the file, or for which a verified shard registered it, may link it.
+		mayLink, err := xetRegistry.HasFileRef(ctx, repo.Name, xetFileHash)
+		if err == nil && !mayLink {
+			mayLink, err = xetRegistry.HasUploadClaim(ctx, repo.Name, xetFileHash)
+		}
+		if err != nil {
+			writeError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+		if !mayLink {
+			writeError(w, r, http.StatusNotFound, "xet file not found")
+			return
+		}
 		if body.SizeBytes != int64(file.SizeBytes) {
 			writeError(w, r, http.StatusBadRequest, fmt.Sprintf("size_bytes %d does not match xet file size %d", body.SizeBytes, file.SizeBytes))
 			return
