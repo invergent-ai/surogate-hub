@@ -22,7 +22,12 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           labels:
-            {{- include "shub.selectorLabels" . | nindent 12 }}
+            # Not the server's selector labels: the hub Services would route
+            # requests to this pod while it runs.
+            app: {{ include "shub.name" . }}-xet-gc
+            app.kubernetes.io/name: {{ include "shub.name" . }}-xet-gc
+            app.kubernetes.io/instance: {{ .Release.Name }}
+            app.kubernetes.io/component: xet-gc
         spec:
           restartPolicy: Never
           {{- if (.Values.image.privateRegistry).enabled }}
