@@ -290,3 +290,23 @@ func TestDedupShardValidForStaysWellUnderTheXorbGrace(t *testing.T) {
 	require.Zero(t, DedupShardValidFor(2*time.Hour))
 	require.Zero(t, DedupShardValidFor(0))
 }
+
+func TestChunkLookupAnswersFromTheStoredRecordWhenAFileIsReuploaded(t *testing.T) {
+	f := newDedupFixture(t)
+	c1, c2 := ineligibleChunk(t, "c1"), ineligibleChunk(t, "c2")
+	fileHash, firstXorb := f.upload(t, "owner-a/repo", c1, c2)
+
+	// The same file uploaded again with its chunks grouped into another xorb:
+	// the stored record keeps the first upload's segments.
+	extra := ineligibleChunk(t, "extra")
+	otherXorb, otherBytes := xettest.SerializedXorb(t, extra, c1, c2)
+	rec := f.do(t, http.MethodPost, "/v1/xorbs/default/"+otherXorb, otherBytes, "write", "owner-b/repo")
+	require.Equalf(t, http.StatusOK, rec.Code, "body: %s", rec.Body.String())
+	rec = f.do(t, http.MethodPost, "/v1/shards", xettest.Shard(t, fileHash, otherXorb, 1, 3, uint32(len(c1)+len(c2)), c1, c2), "write", "owner-b/repo")
+	require.Equalf(t, http.StatusOK, rec.Code, "body: %s", rec.Body.String())
+
+	rec = f.lookup(t, c1, "owner-b/repo")
+	require.Equalf(t, http.StatusOK, rec.Code, "body: %s", rec.Body.String())
+	requireKeyedShard(t, rec.Body.Bytes(), []string{firstXorb}, c1, c2)
+	require.False(t, bytes.Contains(rec.Body.Bytes(), rawHash(t, otherXorb)), "the re-upload's xorb is used by no record")
+}
